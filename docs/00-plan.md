@@ -109,6 +109,19 @@ Doel is een praktisch preflight-hulpmiddel, geen certified EFB — dus met duide
   harde waarden bevatten — alles moet uit deze JSON-laag worden gelezen, ook
   toekomstige config zoals METAR-bron-instellingen
 
+*Bekende bugs/UI-polish (mee te nemen in deze fase):*
+- **W&B-invoer wordt niet per kist onthouden**: de laatst ingevulde waarden
+  (piloot, copiloot, brandstof, bagage) op het W&B-scherm van een registratie
+  moeten bewaard blijven en bij het opnieuw openen van diezelfde kist
+  automatisch getoond worden. Nu reset het scherm steeds naar de
+  stepper-defaults, wat onhandig is als je vaker met dezelfde kist rekent.
+- **Ondergrond-selector schaalt niet goed op alle schermformaten**: de
+  segmented-button-rij (Asfalt/Droog gras/Nat gras/Zacht(e grond)/Aangepast)
+  moet netjes op 1 óf op 2 regels passen, nooit een mix. Zodra de tekst van
+  één knop naar een tweede regel omslaat, moeten alle knoppen in die rij naar
+  dezelfde 2-regelige hoogte gaan, zodat de rij optisch gelijk blijft in
+  plaats van ongelijke knophoogtes te tonen.
+
 **Fase 2d — Bereik, wind, METAR-versheid (nieuw, toegevoegd na overleg) — data gedigitaliseerd**
 
 *Bereik/range:*
