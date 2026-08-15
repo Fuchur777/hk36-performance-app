@@ -14,6 +14,7 @@ import nl.glcillustrious.hk36ttc.core.perf.PerformanceCorrectionsData
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceNormalData
 import nl.glcillustrious.hk36ttc.core.perf.TakeoffResult
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
+import nl.glcillustrious.hk36ttc.data.local.TakeoffInputEntity
 
 /**
  * Dry grass keeps the AFM's own minimum penalty (§5.3.3, confirmed by AIC P173 §5) — wet
@@ -55,7 +56,22 @@ class TakeoffViewModel(
     init {
         viewModelScope.launch {
             val entity = repository.getById(profileId)
-            _state.update { it.copy(registration = entity?.registration) }
+            val savedInput = repository.getTakeoffInput(profileId)
+            _state.update {
+                if (savedInput == null) {
+                    it.copy(registration = entity?.registration)
+                } else {
+                    it.copy(
+                        registration = entity?.registration,
+                        oatC = savedInput.oatC,
+                        pressureAltM = savedInput.pressureAltM,
+                        headwindKts = savedInput.headwindKts,
+                        surfaceType = TakeoffSurfaceType.valueOf(savedInput.surfaceType),
+                        slopePct = savedInput.slopePct,
+                        marginFactorPct = savedInput.marginFactorPct
+                    )
+                }
+            }
             recalculate()
         }
     }
@@ -84,6 +100,15 @@ class TakeoffViewModel(
             marginFactor = s.marginFactorPct / 100.0
         )
         _state.update { it.copy(result = result) }
+
+        viewModelScope.launch {
+            repository.saveTakeoffInput(
+                TakeoffInputEntity(
+                    profileId, s.oatC, s.pressureAltM, s.headwindKts,
+                    s.surfaceType.name, s.slopePct, s.marginFactorPct
+                )
+            )
+        }
     }
 
     companion object {

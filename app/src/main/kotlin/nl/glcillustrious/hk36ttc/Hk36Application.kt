@@ -19,7 +19,11 @@ class Hk36Application : Application() {
         repository = AircraftProfileRepository(
             database.aircraftProfileDao(),
             database.lastWbResultDao(),
-            database.favoriteSailplaneTypeDao()
+            database.favoriteSailplaneTypeDao(),
+            database.wbInputDao(),
+            database.takeoffInputDao(),
+            database.landingInputDao(),
+            database.sleepvluchtInputDao()
         )
         calculationDataStore = CalculationDataStore(this)
     }

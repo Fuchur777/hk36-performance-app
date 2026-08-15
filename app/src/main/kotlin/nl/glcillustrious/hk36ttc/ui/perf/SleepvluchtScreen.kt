@@ -4,9 +4,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -195,26 +198,30 @@ fun SleepvluchtScreen(
 private fun SleepSurfaceSelector(surfaceType: SleepvluchtSurfaceType, onSelected: (SleepvluchtSurfaceType) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(R.string.perf_surface_label), style = MaterialTheme.typography.labelLarge)
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
             SegmentedButton(
                 selected = surfaceType == SleepvluchtSurfaceType.ASFALT,
                 onClick = { onSelected(SleepvluchtSurfaceType.ASFALT) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 4)
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 4),
+                modifier = Modifier.fillMaxHeight()
             ) { Text(stringResource(R.string.perf_surface_asfalt)) }
             SegmentedButton(
                 selected = surfaceType == SleepvluchtSurfaceType.DROOG_GRAS,
                 onClick = { onSelected(SleepvluchtSurfaceType.DROOG_GRAS) },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 4)
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 4),
+                modifier = Modifier.fillMaxHeight()
             ) { Text(stringResource(R.string.perf_surface_droog_gras)) }
             SegmentedButton(
                 selected = surfaceType == SleepvluchtSurfaceType.NAT_GRAS,
                 onClick = { onSelected(SleepvluchtSurfaceType.NAT_GRAS) },
-                shape = SegmentedButtonDefaults.itemShape(index = 2, count = 4)
+                shape = SegmentedButtonDefaults.itemShape(index = 2, count = 4),
+                modifier = Modifier.fillMaxHeight()
             ) { Text(stringResource(R.string.perf_surface_nat_gras)) }
             SegmentedButton(
                 selected = surfaceType == SleepvluchtSurfaceType.ZACHT,
                 onClick = { onSelected(SleepvluchtSurfaceType.ZACHT) },
-                shape = SegmentedButtonDefaults.itemShape(index = 3, count = 4)
+                shape = SegmentedButtonDefaults.itemShape(index = 3, count = 4),
+                modifier = Modifier.fillMaxHeight()
             ) { Text(stringResource(R.string.perf_surface_zacht)) }
         }
         when (surfaceType) {

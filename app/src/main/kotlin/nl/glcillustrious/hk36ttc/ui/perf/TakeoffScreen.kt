@@ -2,8 +2,11 @@ package nl.glcillustrious.hk36ttc.ui.perf
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -134,26 +137,30 @@ fun TakeoffScreen(
 private fun TakeoffSurfaceSelector(surfaceType: TakeoffSurfaceType, onSelected: (TakeoffSurfaceType) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(R.string.perf_surface_label), style = MaterialTheme.typography.labelLarge)
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
             SegmentedButton(
                 selected = surfaceType == TakeoffSurfaceType.ASFALT,
                 onClick = { onSelected(TakeoffSurfaceType.ASFALT) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 4)
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 4),
+                modifier = Modifier.fillMaxHeight()
             ) { Text(stringResource(R.string.perf_surface_asfalt)) }
             SegmentedButton(
                 selected = surfaceType == TakeoffSurfaceType.DROOG_GRAS,
                 onClick = { onSelected(TakeoffSurfaceType.DROOG_GRAS) },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 4)
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 4),
+                modifier = Modifier.fillMaxHeight()
             ) { Text(stringResource(R.string.perf_surface_droog_gras)) }
             SegmentedButton(
                 selected = surfaceType == TakeoffSurfaceType.NAT_GRAS,
                 onClick = { onSelected(TakeoffSurfaceType.NAT_GRAS) },
-                shape = SegmentedButtonDefaults.itemShape(index = 2, count = 4)
+                shape = SegmentedButtonDefaults.itemShape(index = 2, count = 4),
+                modifier = Modifier.fillMaxHeight()
             ) { Text(stringResource(R.string.perf_surface_nat_gras)) }
             SegmentedButton(
                 selected = surfaceType == TakeoffSurfaceType.ZACHTE_GROND,
                 onClick = { onSelected(TakeoffSurfaceType.ZACHTE_GROND) },
-                shape = SegmentedButtonDefaults.itemShape(index = 3, count = 4)
+                shape = SegmentedButtonDefaults.itemShape(index = 3, count = 4),
+                modifier = Modifier.fillMaxHeight()
             ) { Text(stringResource(R.string.perf_surface_zacht)) }
         }
         when (surfaceType) {

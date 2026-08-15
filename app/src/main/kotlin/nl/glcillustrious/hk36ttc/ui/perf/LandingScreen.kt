@@ -2,8 +2,11 @@ package nl.glcillustrious.hk36ttc.ui.perf
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -144,26 +147,30 @@ fun LandingScreen(
 private fun LandingSurfaceSelector(surfaceType: LandingSurfaceType, onSelected: (LandingSurfaceType) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(R.string.perf_surface_label), style = MaterialTheme.typography.labelLarge)
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
             SegmentedButton(
                 selected = surfaceType == LandingSurfaceType.ASFALT,
                 onClick = { onSelected(LandingSurfaceType.ASFALT) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 4)
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 4),
+                modifier = Modifier.fillMaxHeight()
             ) { Text(stringResource(R.string.perf_surface_asfalt)) }
             SegmentedButton(
                 selected = surfaceType == LandingSurfaceType.DROOG_GRAS,
                 onClick = { onSelected(LandingSurfaceType.DROOG_GRAS) },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 4)
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 4),
+                modifier = Modifier.fillMaxHeight()
             ) { Text(stringResource(R.string.perf_surface_droog_gras)) }
             SegmentedButton(
                 selected = surfaceType == LandingSurfaceType.NAT_GRAS,
                 onClick = { onSelected(LandingSurfaceType.NAT_GRAS) },
-                shape = SegmentedButtonDefaults.itemShape(index = 2, count = 4)
+                shape = SegmentedButtonDefaults.itemShape(index = 2, count = 4),
+                modifier = Modifier.fillMaxHeight()
             ) { Text(stringResource(R.string.perf_surface_nat_gras)) }
             SegmentedButton(
                 selected = surfaceType == LandingSurfaceType.AANGEPAST,
                 onClick = { onSelected(LandingSurfaceType.AANGEPAST) },
-                shape = SegmentedButtonDefaults.itemShape(index = 3, count = 4)
+                shape = SegmentedButtonDefaults.itemShape(index = 3, count = 4),
+                modifier = Modifier.fillMaxHeight()
             ) { Text(stringResource(R.string.landing_surface_aangepast)) }
         }
         if (surfaceType != LandingSurfaceType.ASFALT) {

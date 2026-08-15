@@ -14,6 +14,7 @@ import nl.glcillustrious.hk36ttc.core.wb.WBInput
 import nl.glcillustrious.hk36ttc.core.wb.WBResult
 import nl.glcillustrious.hk36ttc.core.wb.WbConstantsData
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
+import nl.glcillustrious.hk36ttc.data.local.WbInputEntity
 import nl.glcillustrious.hk36ttc.data.local.toDomain
 
 /**
@@ -46,7 +47,16 @@ class WbViewModel(
             if (entity == null) {
                 _state.update { it.copy(profileNotFound = true) }
             } else {
-                _state.update { it.copy(profile = entity.toDomain()) }
+                val savedInput = repository.getWbInput(profileId)
+                _state.update {
+                    it.copy(
+                        profile = entity.toDomain(),
+                        pilotKg = savedInput?.pilotKg ?: it.pilotKg,
+                        copilotKg = savedInput?.copilotKg ?: it.copilotKg,
+                        fuelLiters = savedInput?.fuelLiters ?: it.fuelLiters,
+                        baggageKg = savedInput?.baggageKg ?: it.baggageKg
+                    )
+                }
                 recalculate()
             }
         }
@@ -82,6 +92,9 @@ class WbViewModel(
         // this aircraft's actual current weight instead of a separately-entered guess.
         viewModelScope.launch {
             repository.saveLastWbResult(profileId, result.totalMassKg)
+            repository.saveWbInput(
+                WbInputEntity(profileId, current.pilotKg, current.copilotKg, current.fuelLiters, current.baggageKg)
+            )
         }
     }
 

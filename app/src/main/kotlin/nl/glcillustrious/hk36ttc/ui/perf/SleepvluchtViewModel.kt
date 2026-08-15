@@ -20,6 +20,7 @@ import nl.glcillustrious.hk36ttc.core.perf.TowClassSelectionResult
 import nl.glcillustrious.hk36ttc.core.perf.TowPerformanceCalculator
 import nl.glcillustrious.hk36ttc.core.perf.TowTakeoffResult
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
+import nl.glcillustrious.hk36ttc.data.local.SleepvluchtInputEntity
 
 /**
  * The AFM Sup 1 tow table is itself baselined on dry grass ("level short dry grass runway",
@@ -93,11 +94,33 @@ class SleepvluchtViewModel(
         viewModelScope.launch {
             val entity = repository.getById(profileId)
             val lastWb = repository.getLastWbResult(profileId)
+            val savedInput = repository.getSleepvluchtInput(profileId)
             _state.update {
-                it.copy(
-                    registration = entity?.registration,
-                    towplaneMassFromWbKg = lastWb?.totalMassKg?.roundToInt()
-                )
+                if (savedInput == null) {
+                    it.copy(
+                        registration = entity?.registration,
+                        towplaneMassFromWbKg = lastWb?.totalMassKg?.roundToInt()
+                    )
+                } else {
+                    it.copy(
+                        registration = entity?.registration,
+                        towplaneMassFromWbKg = lastWb?.totalMassKg?.roundToInt(),
+                        oatC = savedInput.oatC,
+                        pressureAltM = savedInput.pressureAltM,
+                        headwindKts = savedInput.headwindKts,
+                        slopePct = savedInput.slopePct,
+                        marginFactorPct = savedInput.marginFactorPct,
+                        sailplaneMassKg = savedInput.sailplaneMassKg,
+                        ldRatioKnown = savedInput.ldRatioKnown,
+                        ldRatio = savedInput.ldRatio,
+                        instructionFlight = savedInput.instructionFlight,
+                        surfaceType = SleepvluchtSurfaceType.valueOf(savedInput.surfaceType),
+                        selectedSailplaneTypeName = savedInput.selectedSailplaneTypeName,
+                        selectedSailplaneTypeUsedFallback = savedInput.selectedSailplaneTypeUsedFallback,
+                        towplaneMassManualOverride = savedInput.towplaneMassManualOverride,
+                        towplaneMassManualKg = savedInput.towplaneMassManualKg
+                    )
+                }
             }
             recalculate()
         }
@@ -167,6 +190,28 @@ class SleepvluchtViewModel(
             surfaceCorrectionFactor = surfaceFactorFor(s.surfaceType)
         )
         _state.update { it.copy(result = result) }
+
+        viewModelScope.launch {
+            repository.saveSleepvluchtInput(
+                SleepvluchtInputEntity(
+                    profileId = profileId,
+                    oatC = s.oatC,
+                    pressureAltM = s.pressureAltM,
+                    headwindKts = s.headwindKts,
+                    slopePct = s.slopePct,
+                    marginFactorPct = s.marginFactorPct,
+                    sailplaneMassKg = s.sailplaneMassKg,
+                    ldRatioKnown = s.ldRatioKnown,
+                    ldRatio = s.ldRatio,
+                    instructionFlight = s.instructionFlight,
+                    surfaceType = s.surfaceType.name,
+                    selectedSailplaneTypeName = s.selectedSailplaneTypeName,
+                    selectedSailplaneTypeUsedFallback = s.selectedSailplaneTypeUsedFallback,
+                    towplaneMassManualOverride = s.towplaneMassManualOverride,
+                    towplaneMassManualKg = s.towplaneMassManualKg
+                )
+            )
+        }
     }
 
     companion object {

@@ -73,10 +73,10 @@ fun ProfileListScreen(
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.documents_title)) },
+                            text = { Text(stringResource(R.string.settings_title)) },
                             onClick = {
                                 menuExpanded = false
-                                onOpenDocuments()
+                                onOpenSettings()
                             }
                         )
                         DropdownMenuItem(
@@ -87,17 +87,17 @@ fun ProfileListScreen(
                             }
                         )
                         DropdownMenuItem(
+                            text = { Text(stringResource(R.string.documents_title)) },
+                            onClick = {
+                                menuExpanded = false
+                                onOpenDocuments()
+                            }
+                        )
+                        DropdownMenuItem(
                             text = { Text(stringResource(R.string.about_title)) },
                             onClick = {
                                 menuExpanded = false
                                 onOpenAbout()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.settings_title)) },
-                            onClick = {
-                                menuExpanded = false
-                                onOpenSettings()
                             }
                         )
                     }

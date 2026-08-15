@@ -14,6 +14,7 @@ import nl.glcillustrious.hk36ttc.core.perf.PerformanceCalculator
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceCorrectionsData
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceNormalData
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
+import nl.glcillustrious.hk36ttc.data.local.LandingInputEntity
 
 /** Supplement 11 publishes no landing correction for anything but a paved runway — the grass
  * factors come from AIC P173 instead, and "Aangepast" lets the pilot enter their own estimate
@@ -50,7 +51,22 @@ class LandingViewModel(
     init {
         viewModelScope.launch {
             val entity = repository.getById(profileId)
-            _state.update { it.copy(registration = entity?.registration) }
+            val savedInput = repository.getLandingInput(profileId)
+            _state.update {
+                if (savedInput == null) {
+                    it.copy(registration = entity?.registration)
+                } else {
+                    it.copy(
+                        registration = entity?.registration,
+                        oatC = savedInput.oatC,
+                        pressureAltM = savedInput.pressureAltM,
+                        surfaceType = LandingSurfaceType.valueOf(savedInput.surfaceType),
+                        customSurfaceFactorPct = savedInput.customSurfaceFactorPct,
+                        slopePct = savedInput.slopePct,
+                        marginFactorPct = savedInput.marginFactorPct
+                    )
+                }
+            }
             recalculate()
         }
     }
@@ -78,6 +94,15 @@ class LandingViewModel(
             marginFactor = s.marginFactorPct / 100.0
         )
         _state.update { it.copy(result = result) }
+
+        viewModelScope.launch {
+            repository.saveLandingInput(
+                LandingInputEntity(
+                    profileId, s.oatC, s.pressureAltM, s.surfaceType.name,
+                    s.customSurfaceFactorPct, s.slopePct, s.marginFactorPct
+                )
+            )
+        }
     }
 
     /** Upper bound for the "Aangepast" custom surface-factor stepper, from AIC P173. */

@@ -7,7 +7,11 @@ import nl.glcillustrious.hk36ttc.core.wb.AircraftProfile
 class AircraftProfileRepository(
     private val dao: AircraftProfileDao,
     private val lastWbResultDao: LastWbResultDao,
-    private val favoriteSailplaneTypeDao: FavoriteSailplaneTypeDao
+    private val favoriteSailplaneTypeDao: FavoriteSailplaneTypeDao,
+    private val wbInputDao: WbInputDao,
+    private val takeoffInputDao: TakeoffInputDao,
+    private val landingInputDao: LandingInputDao,
+    private val sleepvluchtInputDao: SleepvluchtInputDao
 ) {
 
     fun observeAll(): Flow<List<AircraftProfileEntity>> = dao.observeAll()
@@ -39,4 +43,18 @@ class AircraftProfileRepository(
         if (favorite) favoriteSailplaneTypeDao.insert(FavoriteSailplaneTypeEntity(name))
         else favoriteSailplaneTypeDao.delete(name)
     }
+
+    /** Last-entered form values per registration, so reopening a calculation screen for the
+     * same registration shows what was last typed there instead of resetting to defaults. */
+    suspend fun getWbInput(profileId: Long): WbInputEntity? = wbInputDao.get(profileId)
+    suspend fun saveWbInput(entity: WbInputEntity) = wbInputDao.upsert(entity)
+
+    suspend fun getTakeoffInput(profileId: Long): TakeoffInputEntity? = takeoffInputDao.get(profileId)
+    suspend fun saveTakeoffInput(entity: TakeoffInputEntity) = takeoffInputDao.upsert(entity)
+
+    suspend fun getLandingInput(profileId: Long): LandingInputEntity? = landingInputDao.get(profileId)
+    suspend fun saveLandingInput(entity: LandingInputEntity) = landingInputDao.upsert(entity)
+
+    suspend fun getSleepvluchtInput(profileId: Long): SleepvluchtInputEntity? = sleepvluchtInputDao.get(profileId)
+    suspend fun saveSleepvluchtInput(entity: SleepvluchtInputEntity) = sleepvluchtInputDao.upsert(entity)
 }

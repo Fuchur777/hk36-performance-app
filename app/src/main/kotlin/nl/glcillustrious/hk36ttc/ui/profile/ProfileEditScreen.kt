@@ -2,8 +2,11 @@ package nl.glcillustrious.hk36ttc.ui.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -187,12 +190,13 @@ private fun FuelTankSelector(selected: FuelTankType, onSelected: (FuelTankType) 
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(R.string.profile_edit_fuel_tank_label), style = MaterialTheme.typography.labelLarge)
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
             options.forEachIndexed { index, type ->
                 SegmentedButton(
                     selected = type == selected,
                     onClick = { onSelected(type) },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    modifier = Modifier.fillMaxHeight()
                 ) {
                     Text(label(type))
                 }
