@@ -71,12 +71,13 @@ verband met Fase 2c zelf, maar wel opgepakt vóór die fase van start gaat)**
    resetten alle schermen steeds naar de stepper-defaults, wat onhandig is als
    je vaker met dezelfde kist rekent.
    **Status (2026-08-16)**: geïmplementeerd voor W&B, Take-off, Landing en
-   Sleepvlucht (Room-tabellen per scherm) — getest door Frank: W&B werkt
-   correct (ook na force-quit, per registratie eigen waarden), maar Take-off,
-   Landing en Sleepvlucht onthouden nog niets en resetten steeds naar de
-   stepper-defaults. Root cause nog niet gevonden via code review alleen
-   (patroon is identiek aan de werkende W&B-implementatie) — wordt verder
-   onderzocht via logcat.
+   Sleepvlucht (Room-tabellen per scherm). Take-off/Landing/Sleepvlucht
+   bleken de zojuist ingevoerde waarden alsnog te overschrijven met de
+   stepper-defaults rond het navigeren — root cause via logcat gevonden:
+   `recalculate()` sloeg altijd op, ook vóórdat de opgeslagen invoer was
+   ingeladen (W&B had hier al een impliciete guard tegen via `profile ==
+   null`). Gefixt met een `loaded`-vlag die de opslag pas toestaat na de
+   initiële load — nog te bevestigen door Frank.
 2. **Segmented-button-rijen schalen niet goed op alle schermformaten**: dit
    geldt voor elke ondergrond-selector (Take-off, Landing, Sleepvlucht:
    Asfalt/Droog gras/Nat gras/Zacht(e grond)/Aangepast) én voor de
