@@ -57,6 +57,7 @@ class TakeoffViewModel(
         viewModelScope.launch {
             val entity = repository.getById(profileId)
             val savedInput = repository.getTakeoffInput(profileId)
+            android.util.Log.d("HK36Persist", "Takeoff LOAD profileId=$profileId savedInput=$savedInput")
             _state.update {
                 if (savedInput == null) {
                     it.copy(registration = entity?.registration)
@@ -102,12 +103,12 @@ class TakeoffViewModel(
         _state.update { it.copy(result = result) }
 
         viewModelScope.launch {
-            repository.saveTakeoffInput(
-                TakeoffInputEntity(
-                    profileId, s.oatC, s.pressureAltM, s.headwindKts,
-                    s.surfaceType.name, s.slopePct, s.marginFactorPct
-                )
+            val toSave = TakeoffInputEntity(
+                profileId, s.oatC, s.pressureAltM, s.headwindKts,
+                s.surfaceType.name, s.slopePct, s.marginFactorPct
             )
+            android.util.Log.d("HK36Persist", "Takeoff SAVE $toSave")
+            repository.saveTakeoffInput(toSave)
         }
     }
 
