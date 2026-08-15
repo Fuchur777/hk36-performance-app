@@ -73,7 +73,7 @@ data class SleepvluchtFormState(
 
 class SleepvluchtViewModel(
     private val repository: AircraftProfileRepository,
-    profileId: Long,
+    private val profileId: Long,
     private val performanceTow: PerformanceTowData,
     private val performanceNormal: PerformanceNormalData,
     private val corrections: PerformanceCorrectionsData,

@@ -37,8 +37,8 @@ data class LandingFormState(
 )
 
 class LandingViewModel(
-    repository: AircraftProfileRepository,
-    profileId: Long,
+    private val repository: AircraftProfileRepository,
+    private val profileId: Long,
     private val performanceNormal: PerformanceNormalData,
     private val corrections: PerformanceCorrectionsData
 ) : ViewModel() {

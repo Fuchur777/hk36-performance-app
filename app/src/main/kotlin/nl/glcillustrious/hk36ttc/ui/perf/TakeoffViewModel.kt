@@ -42,8 +42,8 @@ data class TakeoffFormState(
 )
 
 class TakeoffViewModel(
-    repository: AircraftProfileRepository,
-    profileId: Long,
+    private val repository: AircraftProfileRepository,
+    private val profileId: Long,
     private val performanceNormal: PerformanceNormalData,
     private val corrections: PerformanceCorrectionsData
 ) : ViewModel() {
