@@ -60,6 +60,31 @@ Doel is een praktisch preflight-hulpmiddel, geen certified EFB — dus met duide
 - Opgeslagen vluchten/loadouts (historie)
 - Export van berekening als PDF (voor logboek/briefing)
 
+**Op te pakken vóór Fase 2c start — losse bugfixes/UI-polish (geen inhoudelijk
+verband met Fase 2c zelf, maar wel opgepakt vóór die fase van start gaat)**
+1. **Invoer wordt niet per kist onthouden, op géén van de rekenschermen**: dit
+   geldt niet alleen voor W&B (piloot, copiloot, brandstof, bagage), maar
+   evengoed voor Take-off, Landing en Sleepvlucht (OAT, drukhoogte, tegenwind,
+   ondergrond, helling, marge-factor, sleepgewicht/L-D, etc.). De laatst
+   ingevulde waarden per scherm **per registratie** moeten bewaard blijven en
+   bij het opnieuw openen van diezelfde kist automatisch getoond worden. Nu
+   resetten alle schermen steeds naar de stepper-defaults, wat onhandig is als
+   je vaker met dezelfde kist rekent.
+2. **Segmented-button-rijen schalen niet goed op alle schermformaten**: dit
+   geldt voor elke ondergrond-selector (Take-off, Landing, Sleepvlucht:
+   Asfalt/Droog gras/Nat gras/Zacht(e grond)/Aangepast) én voor de
+   brandstoftank-selector (Standaard/Long range) op het scherm voor het
+   bewerken van de kistinstellingen — dus app-breed, elke plek waar dit
+   segmented-button-patroon wordt gebruikt. Zo'n rij moet netjes op 1 óf op 2
+   regels passen, nooit een mix. Zodra de tekst van één knop naar een tweede
+   regel omslaat, moeten alle knoppen in die rij naar dezelfde 2-regelige
+   hoogte gaan, zodat de rij optisch gelijk blijft in plaats van ongelijke
+   knophoogtes te tonen.
+3. **Menu-volgorde op het startscherm aanpassen**: het overflow-menu (rechts-
+   boven op het registratie-overzicht) moet van boven naar beneden deze
+   volgorde krijgen: Instellingen, Zweeftypes, Brondocumenten, Over deze app
+   (nu: Brondocumenten, Zweeftypes, Over deze app, Instellingen).
+
 **Fase 2c — Locatie, weer, baanconfiguratie (nieuw, toegevoegd na overleg)**
 
 *Locatie:*
@@ -108,22 +133,6 @@ Doel is een praktisch preflight-hulpmiddel, geen certified EFB — dus met duide
 - Consequentie voor Claude Code: de rekenkern (`rekenlogica.md`) mag nooit
   harde waarden bevatten — alles moet uit deze JSON-laag worden gelezen, ook
   toekomstige config zoals METAR-bron-instellingen
-
-*Bekende bugs/UI-polish (mee te nemen in deze fase):*
-- **Invoer wordt niet per kist onthouden, op géén van de rekenschermen**: dit
-  geldt niet alleen voor W&B (piloot, copiloot, brandstof, bagage), maar
-  evengoed voor Take-off, Landing en Sleepvlucht (OAT, drukhoogte, tegenwind,
-  ondergrond, helling, marge-factor, sleepgewicht/L-D, etc.). De laatst
-  ingevulde waarden per scherm **per registratie** moeten bewaard blijven en
-  bij het opnieuw openen van diezelfde kist automatisch getoond worden. Nu
-  resetten alle schermen steeds naar de stepper-defaults, wat onhandig is als
-  je vaker met dezelfde kist rekent.
-- **Ondergrond-selector schaalt niet goed op alle schermformaten**: de
-  segmented-button-rij (Asfalt/Droog gras/Nat gras/Zacht(e grond)/Aangepast)
-  moet netjes op 1 óf op 2 regels passen, nooit een mix. Zodra de tekst van
-  één knop naar een tweede regel omslaat, moeten alle knoppen in die rij naar
-  dezelfde 2-regelige hoogte gaan, zodat de rij optisch gelijk blijft in
-  plaats van ongelijke knophoogtes te tonen.
 
 **Fase 2d — Bereik, wind, METAR-versheid (nieuw, toegevoegd na overleg) — data gedigitaliseerd**
 
