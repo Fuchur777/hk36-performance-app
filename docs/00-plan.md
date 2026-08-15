@@ -100,8 +100,11 @@ verband met Fase 2c zelf, maar wel opgepakt vóór die fase van start gaat)**
    **Status (2026-08-16)**: geïmplementeerd — prullenbak-icoon per
    registratie op het startscherm, met bevestigingsdialoog en cascade-
    verwijdering van alle bijbehorende opgeslagen rekeninvoer (W&B, Take-off,
-   Landing, Sleepvlucht, laatste W&B-resultaat) — nog te bevestigen door
-   Frank.
+   Landing, Sleepvlucht, laatste W&B-resultaat) — **bevestigd werkend door
+   Frank**.
+
+Alle vier punten in deze lijst zijn hiermee afgerond, op punt 2 na (nog niet
+visueel bevestigd — implementatie staat er wel).
 
 **Fase 2c — Locatie, weer, baanconfiguratie (nieuw, toegevoegd na overleg)**
 
