@@ -30,4 +30,7 @@ interface LastWbResultDao {
 
     @Upsert
     suspend fun upsert(entity: LastWbResultEntity)
+
+    @Query("DELETE FROM last_wb_results WHERE profileId = :profileId")
+    suspend fun deleteByProfileId(profileId: Long)
 }

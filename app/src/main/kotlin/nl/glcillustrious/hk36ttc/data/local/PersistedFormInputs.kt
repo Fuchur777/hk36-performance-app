@@ -27,6 +27,9 @@ interface WbInputDao {
 
     @Upsert
     suspend fun upsert(entity: WbInputEntity)
+
+    @Query("DELETE FROM wb_inputs WHERE profileId = :profileId")
+    suspend fun deleteByProfileId(profileId: Long)
 }
 
 @Entity(tableName = "takeoff_inputs")
@@ -47,6 +50,9 @@ interface TakeoffInputDao {
 
     @Upsert
     suspend fun upsert(entity: TakeoffInputEntity)
+
+    @Query("DELETE FROM takeoff_inputs WHERE profileId = :profileId")
+    suspend fun deleteByProfileId(profileId: Long)
 }
 
 @Entity(tableName = "landing_inputs")
@@ -67,6 +73,9 @@ interface LandingInputDao {
 
     @Upsert
     suspend fun upsert(entity: LandingInputEntity)
+
+    @Query("DELETE FROM landing_inputs WHERE profileId = :profileId")
+    suspend fun deleteByProfileId(profileId: Long)
 }
 
 @Entity(tableName = "sleepvlucht_inputs")
@@ -95,4 +104,7 @@ interface SleepvluchtInputDao {
 
     @Upsert
     suspend fun upsert(entity: SleepvluchtInputEntity)
+
+    @Query("DELETE FROM sleepvlucht_inputs WHERE profileId = :profileId")
+    suspend fun deleteByProfileId(profileId: Long)
 }

@@ -17,6 +17,9 @@ local.properties
 /emulator-screenshot*.png
 /logo_preview.svg
 /logo_view.html
+/logcat-dump.txt
+/persist-log.txt
+/*.db
 
 # Room schema exports (generated, regenerate via ksp)
 app/schemas/

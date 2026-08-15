@@ -12,8 +12,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -26,6 +28,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -58,6 +61,7 @@ fun ProfileListScreen(
     val viewModel: ProfileListViewModel = viewModel(factory = ProfileListViewModel.factory(repository))
     val profiles by viewModel.profiles.collectAsState()
     var menuExpanded by remember { mutableStateOf(false) }
+    var profilePendingDelete by remember { mutableStateOf<AircraftProfileEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -161,6 +165,13 @@ fun ProfileListScreen(
                                     IconButton(onClick = { onEditProfile(profile) }) {
                                         Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.profile_list_edit_content_description))
                                     }
+                                    IconButton(onClick = { profilePendingDelete = profile }) {
+                                        Icon(
+                                            Icons.Filled.Delete,
+                                            contentDescription = stringResource(R.string.profile_list_delete_content_description),
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
                                     Icon(Icons.Filled.ChevronRight, contentDescription = null)
                                 }
                             },
@@ -172,5 +183,26 @@ fun ProfileListScreen(
                 }
             }
         }
+    }
+
+    profilePendingDelete?.let { profile ->
+        AlertDialog(
+            onDismissRequest = { profilePendingDelete = null },
+            title = { Text(stringResource(R.string.profile_list_delete_confirm_title)) },
+            text = { Text(stringResource(R.string.profile_list_delete_confirm_body_format, profile.registration)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteProfile(profile)
+                    profilePendingDelete = null
+                }) {
+                    Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { profilePendingDelete = null }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
     }
 }

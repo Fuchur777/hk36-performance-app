@@ -4,6 +4,8 @@
 
     <!-- Gedeeld -->
     <string name="common_back">Terug</string>
+    <string name="common_cancel">Annuleren</string>
+    <string name="common_delete">Verwijderen</string>
 
     <!-- Instellingen -->
     <string name="settings_title">Instellingen</string>
@@ -48,6 +50,9 @@
     <string name="profile_list_empty_body">Voeg een HK36 TTC-registratie toe met de gegevens uit je eigen Weighing Report / Mass and Balance Form.</string>
     <string name="profile_list_mtow_format">MTOW %1$d kg</string>
     <string name="profile_list_edit_content_description">Bewerken</string>
+    <string name="profile_list_delete_content_description">Registratie verwijderen</string>
+    <string name="profile_list_delete_confirm_title">Registratie verwijderen?</string>
+    <string name="profile_list_delete_confirm_body_format">Weet je zeker dat je %1$s wilt verwijderen? Dit verwijdert ook alle opgeslagen rekeninvoer (W&amp;B, Take-off, Landing, Sleepvlucht) voor deze registratie. Dit kan niet ongedaan worden gemaakt.</string>
 
     <!-- Registratie-hub -->
     <string name="hub_title_fallback">Registratie</string>

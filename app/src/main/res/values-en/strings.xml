@@ -4,6 +4,8 @@
 
     <!-- Shared -->
     <string name="common_back">Back</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_delete">Delete</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
@@ -48,6 +50,9 @@
     <string name="profile_list_empty_body">Add an HK36 TTC registration with the data from your own Weighing Report / Mass and Balance Form.</string>
     <string name="profile_list_mtow_format">MTOW %1$d kg</string>
     <string name="profile_list_edit_content_description">Edit</string>
+    <string name="profile_list_delete_content_description">Delete registration</string>
+    <string name="profile_list_delete_confirm_title">Delete registration?</string>
+    <string name="profile_list_delete_confirm_body_format">Are you sure you want to delete %1$s? This also removes all saved calculation input (W&amp;B, Take-off, Landing, Glider tow) for this registration. This cannot be undone.</string>
 
     <!-- Registration hub -->
     <string name="hub_title_fallback">Registration</string>

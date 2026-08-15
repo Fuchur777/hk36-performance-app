@@ -29,6 +29,18 @@ class AircraftProfileRepository(
 
     suspend fun delete(profile: AircraftProfileEntity) = dao.delete(profile)
 
+    /** Deletes a registration and every per-registration calculation input tied to it (W&B,
+     * Take-off, Landing, Sleepvlucht, last W&B result), so removing a registration doesn't
+     * leave orphaned rows behind under a profileId that will never be reused. */
+    suspend fun deleteProfileCascade(profile: AircraftProfileEntity) {
+        dao.delete(profile)
+        lastWbResultDao.deleteByProfileId(profile.id)
+        wbInputDao.deleteByProfileId(profile.id)
+        takeoffInputDao.deleteByProfileId(profile.id)
+        landingInputDao.deleteByProfileId(profile.id)
+        sleepvluchtInputDao.deleteByProfileId(profile.id)
+    }
+
     /** Called after every W&B recalculation so other modules can read "what this aircraft
      * actually weighs right now" instead of a separate, easily-stale manual entry. */
     suspend fun saveLastWbResult(profileId: Long, totalMassKg: Double) =

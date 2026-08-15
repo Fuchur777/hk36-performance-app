@@ -16,10 +16,16 @@ import nl.glcillustrious.hk36ttc.core.wb.WbConstantsData
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileEntity
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 
-class ProfileListViewModel(repository: AircraftProfileRepository) : ViewModel() {
+class ProfileListViewModel(private val repository: AircraftProfileRepository) : ViewModel() {
 
     val profiles: StateFlow<List<AircraftProfileEntity>> = repository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun deleteProfile(profile: AircraftProfileEntity) {
+        viewModelScope.launch {
+            repository.deleteProfileCascade(profile)
+        }
+    }
 
     companion object {
         fun factory(repository: AircraftProfileRepository) = object : ViewModelProvider.Factory {

@@ -71,13 +71,10 @@ verband met Fase 2c zelf, maar wel opgepakt vóór die fase van start gaat)**
    resetten alle schermen steeds naar de stepper-defaults, wat onhandig is als
    je vaker met dezelfde kist rekent.
    **Status (2026-08-16)**: geïmplementeerd voor W&B, Take-off, Landing en
-   Sleepvlucht (Room-tabellen per scherm). Take-off/Landing/Sleepvlucht
-   bleken de zojuist ingevoerde waarden alsnog te overschrijven met de
-   stepper-defaults rond het navigeren — root cause via logcat gevonden:
-   `recalculate()` sloeg altijd op, ook vóórdat de opgeslagen invoer was
-   ingeladen (W&B had hier al een impliciete guard tegen via `profile ==
-   null`). Gefixt met een `loaded`-vlag die de opslag pas toestaat na de
-   initiële load — nog te bevestigen door Frank.
+   Sleepvlucht (Room-tabellen per scherm). Root cause van het
+   overschrijf-probleem gevonden via logcat (`recalculate()` sloeg ook op
+   vóórdat de opgeslagen invoer was ingeladen) en gefixt met een
+   `loaded`-vlag — **bevestigd werkend door Frank**.
 2. **Segmented-button-rijen schalen niet goed op alle schermformaten**: dit
    geldt voor elke ondergrond-selector (Take-off, Landing, Sleepvlucht:
    Asfalt/Droog gras/Nat gras/Zacht(e grond)/Aangepast) én voor de
@@ -100,6 +97,11 @@ verband met Fase 2c zelf, maar wel opgepakt vóór die fase van start gaat)**
    toegevoegd worden (met een bevestigingsstap, gezien dit destructief is en
    ook de bijbehorende opgeslagen W&B/rekeninvoer voor die registratie
    meeneemt).
+   **Status (2026-08-16)**: geïmplementeerd — prullenbak-icoon per
+   registratie op het startscherm, met bevestigingsdialoog en cascade-
+   verwijdering van alle bijbehorende opgeslagen rekeninvoer (W&B, Take-off,
+   Landing, Sleepvlucht, laatste W&B-resultaat) — nog te bevestigen door
+   Frank.
 
 **Fase 2c — Locatie, weer, baanconfiguratie (nieuw, toegevoegd na overleg)**
 
