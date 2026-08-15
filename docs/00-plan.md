@@ -110,11 +110,14 @@ Doel is een praktisch preflight-hulpmiddel, geen certified EFB — dus met duide
   toekomstige config zoals METAR-bron-instellingen
 
 *Bekende bugs/UI-polish (mee te nemen in deze fase):*
-- **W&B-invoer wordt niet per kist onthouden**: de laatst ingevulde waarden
-  (piloot, copiloot, brandstof, bagage) op het W&B-scherm van een registratie
-  moeten bewaard blijven en bij het opnieuw openen van diezelfde kist
-  automatisch getoond worden. Nu reset het scherm steeds naar de
-  stepper-defaults, wat onhandig is als je vaker met dezelfde kist rekent.
+- **Invoer wordt niet per kist onthouden, op géén van de rekenschermen**: dit
+  geldt niet alleen voor W&B (piloot, copiloot, brandstof, bagage), maar
+  evengoed voor Take-off, Landing en Sleepvlucht (OAT, drukhoogte, tegenwind,
+  ondergrond, helling, marge-factor, sleepgewicht/L-D, etc.). De laatst
+  ingevulde waarden per scherm **per registratie** moeten bewaard blijven en
+  bij het opnieuw openen van diezelfde kist automatisch getoond worden. Nu
+  resetten alle schermen steeds naar de stepper-defaults, wat onhandig is als
+  je vaker met dezelfde kist rekent.
 - **Ondergrond-selector schaalt niet goed op alle schermformaten**: de
   segmented-button-rij (Asfalt/Droog gras/Nat gras/Zacht(e grond)/Aangepast)
   moet netjes op 1 óf op 2 regels passen, nooit een mix. Zodra de tekst van
