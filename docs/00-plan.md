@@ -70,6 +70,13 @@ verband met Fase 2c zelf, maar wel opgepakt vóór die fase van start gaat)**
    bij het opnieuw openen van diezelfde kist automatisch getoond worden. Nu
    resetten alle schermen steeds naar de stepper-defaults, wat onhandig is als
    je vaker met dezelfde kist rekent.
+   **Status (2026-08-16)**: geïmplementeerd voor W&B, Take-off, Landing en
+   Sleepvlucht (Room-tabellen per scherm) — getest door Frank: W&B werkt
+   correct (ook na force-quit, per registratie eigen waarden), maar Take-off,
+   Landing en Sleepvlucht onthouden nog niets en resetten steeds naar de
+   stepper-defaults. Root cause nog niet gevonden via code review alleen
+   (patroon is identiek aan de werkende W&B-implementatie) — wordt verder
+   onderzocht via logcat.
 2. **Segmented-button-rijen schalen niet goed op alle schermformaten**: dit
    geldt voor elke ondergrond-selector (Take-off, Landing, Sleepvlucht:
    Asfalt/Droog gras/Nat gras/Zacht(e grond)/Aangepast) én voor de
@@ -80,10 +87,18 @@ verband met Fase 2c zelf, maar wel opgepakt vóór die fase van start gaat)**
    regel omslaat, moeten alle knoppen in die rij naar dezelfde 2-regelige
    hoogte gaan, zodat de rij optisch gelijk blijft in plaats van ongelijke
    knophoogtes te tonen.
+   **Status (2026-08-16)**: geïmplementeerd, nog niet visueel getest door
+   Frank.
 3. **Menu-volgorde op het startscherm aanpassen**: het overflow-menu (rechts-
    boven op het registratie-overzicht) moet van boven naar beneden deze
    volgorde krijgen: Instellingen, Zweeftypes, Brondocumenten, Over deze app
    (nu: Brondocumenten, Zweeftypes, Over deze app, Instellingen).
+   **Status (2026-08-16)**: geïmplementeerd en bevestigd door Frank.
+4. **Registratie verwijderen ontbreekt** (nieuw, 2026-08-16): er is nog geen
+   manier om een aangemaakte registratie weer te verwijderen — dit moet
+   toegevoegd worden (met een bevestigingsstap, gezien dit destructief is en
+   ook de bijbehorende opgeslagen W&B/rekeninvoer voor die registratie
+   meeneemt).
 
 **Fase 2c — Locatie, weer, baanconfiguratie (nieuw, toegevoegd na overleg)**
 
