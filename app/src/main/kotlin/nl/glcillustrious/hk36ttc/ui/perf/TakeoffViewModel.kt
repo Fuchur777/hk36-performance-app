@@ -53,11 +53,17 @@ class TakeoffViewModel(
     private val _state = MutableStateFlow(TakeoffFormState(marginFactorPct = marginFactorDefaultPct))
     val state: StateFlow<TakeoffFormState> = _state
 
+    /** Guards the persistence write in [recalculate] against firing with the still-default
+     * [_state] before the saved input has actually loaded — without this, a `recalculate()`
+     * called before [init]'s load completes (or from a stray extra instance) would overwrite
+     * previously-saved values with defaults. Same rationale as [WbViewModel]'s
+     * `profile == null` early-return, generalized since this state has no such sentinel. */
+    private var loaded = false
+
     init {
         viewModelScope.launch {
             val entity = repository.getById(profileId)
             val savedInput = repository.getTakeoffInput(profileId)
-            android.util.Log.d("HK36Persist", "Takeoff LOAD profileId=$profileId savedInput=$savedInput")
             _state.update {
                 if (savedInput == null) {
                     it.copy(registration = entity?.registration)
@@ -73,6 +79,7 @@ class TakeoffViewModel(
                     )
                 }
             }
+            loaded = true
             recalculate()
         }
     }
@@ -102,13 +109,15 @@ class TakeoffViewModel(
         )
         _state.update { it.copy(result = result) }
 
-        viewModelScope.launch {
-            val toSave = TakeoffInputEntity(
-                profileId, s.oatC, s.pressureAltM, s.headwindKts,
-                s.surfaceType.name, s.slopePct, s.marginFactorPct
-            )
-            android.util.Log.d("HK36Persist", "Takeoff SAVE $toSave")
-            repository.saveTakeoffInput(toSave)
+        if (loaded) {
+            viewModelScope.launch {
+                repository.saveTakeoffInput(
+                    TakeoffInputEntity(
+                        profileId, s.oatC, s.pressureAltM, s.headwindKts,
+                        s.surfaceType.name, s.slopePct, s.marginFactorPct
+                    )
+                )
+            }
         }
     }
 

@@ -48,6 +48,10 @@ class LandingViewModel(
     private val _state = MutableStateFlow(LandingFormState(marginFactorPct = marginFactorDefaultPct))
     val state: StateFlow<LandingFormState> = _state
 
+    /** Guards the persistence write in [recalculate] against firing with the still-default
+     * [_state] before the saved input has actually loaded — see [TakeoffViewModel.loaded]. */
+    private var loaded = false
+
     init {
         viewModelScope.launch {
             val entity = repository.getById(profileId)
@@ -67,6 +71,7 @@ class LandingViewModel(
                     )
                 }
             }
+            loaded = true
             recalculate()
         }
     }
@@ -95,13 +100,15 @@ class LandingViewModel(
         )
         _state.update { it.copy(result = result) }
 
-        viewModelScope.launch {
-            repository.saveLandingInput(
-                LandingInputEntity(
-                    profileId, s.oatC, s.pressureAltM, s.surfaceType.name,
-                    s.customSurfaceFactorPct, s.slopePct, s.marginFactorPct
+        if (loaded) {
+            viewModelScope.launch {
+                repository.saveLandingInput(
+                    LandingInputEntity(
+                        profileId, s.oatC, s.pressureAltM, s.surfaceType.name,
+                        s.customSurfaceFactorPct, s.slopePct, s.marginFactorPct
+                    )
                 )
-            )
+            }
         }
     }
 

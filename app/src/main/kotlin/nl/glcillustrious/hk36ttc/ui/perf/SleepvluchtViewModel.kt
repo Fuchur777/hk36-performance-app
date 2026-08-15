@@ -90,6 +90,10 @@ class SleepvluchtViewModel(
             .map { names -> val nameSet = names.toSet(); sailplaneTypes.types.filter { it.name in nameSet } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /** Guards the persistence write in [recalculate] against firing with the still-default
+     * [_state] before the saved input has actually loaded — see [TakeoffViewModel.loaded]. */
+    private var loaded = false
+
     init {
         viewModelScope.launch {
             val entity = repository.getById(profileId)
@@ -122,6 +126,7 @@ class SleepvluchtViewModel(
                     )
                 }
             }
+            loaded = true
             recalculate()
         }
     }
@@ -191,26 +196,28 @@ class SleepvluchtViewModel(
         )
         _state.update { it.copy(result = result) }
 
-        viewModelScope.launch {
-            repository.saveSleepvluchtInput(
-                SleepvluchtInputEntity(
-                    profileId = profileId,
-                    oatC = s.oatC,
-                    pressureAltM = s.pressureAltM,
-                    headwindKts = s.headwindKts,
-                    slopePct = s.slopePct,
-                    marginFactorPct = s.marginFactorPct,
-                    sailplaneMassKg = s.sailplaneMassKg,
-                    ldRatioKnown = s.ldRatioKnown,
-                    ldRatio = s.ldRatio,
-                    instructionFlight = s.instructionFlight,
-                    surfaceType = s.surfaceType.name,
-                    selectedSailplaneTypeName = s.selectedSailplaneTypeName,
-                    selectedSailplaneTypeUsedFallback = s.selectedSailplaneTypeUsedFallback,
-                    towplaneMassManualOverride = s.towplaneMassManualOverride,
-                    towplaneMassManualKg = s.towplaneMassManualKg
+        if (loaded) {
+            viewModelScope.launch {
+                repository.saveSleepvluchtInput(
+                    SleepvluchtInputEntity(
+                        profileId = profileId,
+                        oatC = s.oatC,
+                        pressureAltM = s.pressureAltM,
+                        headwindKts = s.headwindKts,
+                        slopePct = s.slopePct,
+                        marginFactorPct = s.marginFactorPct,
+                        sailplaneMassKg = s.sailplaneMassKg,
+                        ldRatioKnown = s.ldRatioKnown,
+                        ldRatio = s.ldRatio,
+                        instructionFlight = s.instructionFlight,
+                        surfaceType = s.surfaceType.name,
+                        selectedSailplaneTypeName = s.selectedSailplaneTypeName,
+                        selectedSailplaneTypeUsedFallback = s.selectedSailplaneTypeUsedFallback,
+                        towplaneMassManualOverride = s.towplaneMassManualOverride,
+                        towplaneMassManualKg = s.towplaneMassManualKg
+                    )
                 )
-            )
+            }
         }
     }
 
