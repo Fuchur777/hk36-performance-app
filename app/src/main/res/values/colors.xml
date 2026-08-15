@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Illustrious brand colors, see docs/look-and-feel.md -->
+    <color name="illustrious_blue">#176FC1</color>
+    <color name="illustrious_orange">#F68712</color>
+    <color name="background_dark">#1A1A1A</color>
+    <color name="surface_dark">#242424</color>
+</resources>

@@ -1,0 +1,29 @@
+{
+  "source": {
+    "document": "UK CAA AIC P 173/2024 - Take-off, Climb and Landing Performance of Light Aeroplanes",
+    "related_source": "Same source family as CAP 1535 'SkyWay Code'",
+    "note": "NON-AFM guidance, used only where the HK36 TTC AFM and its supplements specify nothing at all (their baseline is always 'level, paved runway'). Never an EASA or AFM requirement - every value here must stay user-adjustable/switchable in the app, and every result it affects must be labeled [AIC P173] next to it, never presented as if it were an AFM figure. See rekenlogica.md sections 2.1-2.2b for the full source discussion and the [AFM]/[AIC P173]/[APP] labeling convention this file follows."
+  },
+  "grass_landing_factors": {
+    "note": "Supplement No. 11 section 5.2.8 gives NO grass-runway correction for landing - its baseline is explicitly 'level, paved runway' with no alternative. These multipliers (AIC P173 section 7.6) are an optional, user-selectable estimate applied on top of the paved-runway AFM figure. Default is asphalt/1.0 (no correction) unless the user explicitly picks a grass surface.",
+    "dry_grass_up_to_20cm_factor": 1.15,
+    "wet_grass_up_to_20cm_factor": 1.35,
+    "very_short_smooth_grass_factor_upper_bound": 1.60,
+    "very_short_smooth_grass_note": "AIC P173 gives this only as an upper bound, not a precise figure - the app must let the user set their own value up to this bound rather than inventing a single number."
+  },
+  "grass_takeoff_factors": {
+    "note": "Unlike landing, the HK36 TTC AFM DOES give a take-off grass-runway correction (Suppl./AFM section 5.3.3, minimum +20%, see performance_normal.json takeoff.grass_runway_penalty_min_pct) - AIC P173 section 5 confirms the same dry-grass figure, so the dry-grass value is not duplicated here to avoid the two files drifting apart. Wet grass and soft ground have no AFM equivalent at all for take-off and come from AIC P173 section 5 only.",
+    "wet_grass_factor": 1.30,
+    "soft_ground_factor": 1.25
+  },
+  "slope_correction": {
+    "note": "The AFM and both supplements give no runway-slope data at all - 'level runway' is the baseline in all three source documents. AIC P173 sections 5.5 (takeoff) and 7.5 (landing) give a single correction coefficient, applied only in the adverse direction: uphill slope for takeoff, downhill slope for landing. A flat or favorable slope gets no correction at all - the source does not quantify a benefit for that direction, so the app must not invent one.",
+    "factor_per_percent_slope": 0.05,
+    "formula": "factor = 1 + factor_per_percent_slope * slope_pct, applied only when slope_pct is adverse for the operation (positive/uphill for takeoff, positive/downhill for landing); otherwise factor = 1.0"
+  },
+  "margin_factor_defaults": {
+    "note": "AIC P173 sections 5.10-5.11 (takeoff) and 7.7-7.8 (landing), same source family as CAP 1535 'SkyWay Code'. A recommended voluntary 'additional safety factor' for private flights, applied AFTER every other correction (grass, slope). Not an EASA Part-NCO requirement - NCO.OP.175/NCO.OP.205 only require the pilot-in-command to be satisfied a safe take-off/landing is possible based on available information, with no fixed numeric factor. These are starting defaults for the app's own margin-factor stepper, always user-adjustable.",
+    "takeoff_default_factor": 1.33,
+    "landing_default_factor": 1.43
+  }
+}

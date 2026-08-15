@@ -1,0 +1,112 @@
+{
+  "aircraft_type": "HK 36 TTC / TTS",
+  "configuration": "normal",
+  "source": {
+    "document": "Airplane Flight Manual HK 36 TTC",
+    "doc_no": "3.01.20-E",
+    "issue": "03 Mar 1997",
+    "revision": "4",
+    "revision_date": "2024-02-16"
+  },
+  "units": {
+    "distance": "m",
+    "speed": "km/h",
+    "mass": "kg",
+    "temperature": "C",
+    "pressure_altitude": "m",
+    "rate_of_climb": "m/s"
+  },
+  "takeoff": {
+    "source_section": "5.2.3 / 5.3.3",
+    "source_pages": "5-5 to 5-8",
+    "baseline": {
+      "conditions": "MTOW, 15 C, 1013 hPa, calm, full throttle, propeller TAKE-OFF, level asphalt runway",
+      "takeoff_roll_m": 182,
+      "takeoff_distance_15m_obstacle_m": 274,
+      "rotation_speed_kmh": 80,
+      "liftoff_speed_kmh": 90,
+      "climb_speed_kmh": 97
+    },
+    "grass_runway_penalty_min_pct": 20,
+    "notes": "No safety margin included in these figures (AFM warning).",
+    "table": [
+      { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 0,    "s1_m": 158, "s2_m": 244 },
+      { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 400,  "s1_m": 172, "s2_m": 260 },
+      { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 800,  "s1_m": 186, "s2_m": 277 },
+      { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 1200, "s1_m": 202, "s2_m": 297 },
+      { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 0,    "s1_m": 182, "s2_m": 274 },
+      { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 400,  "s1_m": 197, "s2_m": 292 },
+      { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 800,  "s1_m": 214, "s2_m": 314 },
+      { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 1200, "s1_m": 231, "s2_m": 336 },
+      { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 0,    "s1_m": 208, "s2_m": 307 },
+      { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 400,  "s1_m": 225, "s2_m": 328 },
+      { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 800,  "s1_m": 251, "s2_m": 363 },
+      { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 1200, "s1_m": 282, "s2_m": 400 },
+
+      { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 0,    "s1_m": 129, "s2_m": 206 },
+      { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 400,  "s1_m": 141, "s2_m": 220 },
+      { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 800,  "s1_m": 153, "s2_m": 235 },
+      { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 1200, "s1_m": 167, "s2_m": 253 },
+      { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 0,    "s1_m": 149, "s2_m": 232 },
+      { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 400,  "s1_m": 162, "s2_m": 248 },
+      { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 800,  "s1_m": 177, "s2_m": 267 },
+      { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 1200, "s1_m": 192, "s2_m": 287 },
+      { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 0,    "s1_m": 171, "s2_m": 261 },
+      { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 400,  "s1_m": 186, "s2_m": 280 },
+      { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 800,  "s1_m": 209, "s2_m": 309 },
+      { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 1200, "s1_m": 236, "s2_m": 344 },
+
+      { "headwind_kts": 10, "oat_c": 0,  "pressure_alt_m": 0,    "s1_m": 103, "s2_m": 171 },
+      { "headwind_kts": 10, "oat_c": 0,  "pressure_alt_m": 400,  "s1_m": 112, "s2_m": 183 },
+      { "headwind_kts": 10, "oat_c": 0,  "pressure_alt_m": 800,  "s1_m": 123, "s2_m": 197 },
+      { "headwind_kts": 10, "oat_c": 0,  "pressure_alt_m": 1200, "s1_m": 135, "s2_m": 212 },
+      { "headwind_kts": 10, "oat_c": 15, "pressure_alt_m": 0,    "s1_m": 119, "s2_m": 193 },
+      { "headwind_kts": 10, "oat_c": 15, "pressure_alt_m": 400,  "s1_m": 130, "s2_m": 208 },
+      { "headwind_kts": 10, "oat_c": 15, "pressure_alt_m": 800,  "s1_m": 143, "s2_m": 224 },
+      { "headwind_kts": 10, "oat_c": 15, "pressure_alt_m": 1200, "s1_m": 157, "s2_m": 241 },
+      { "headwind_kts": 10, "oat_c": 30, "pressure_alt_m": 0,    "s1_m": 137, "s2_m": 218 },
+      { "headwind_kts": 10, "oat_c": 30, "pressure_alt_m": 400,  "s1_m": 150, "s2_m": 236 },
+      { "headwind_kts": 10, "oat_c": 30, "pressure_alt_m": 800,  "s1_m": 170, "s2_m": 261 },
+      { "headwind_kts": 10, "oat_c": 30, "pressure_alt_m": 1200, "s1_m": 193, "s2_m": 291 }
+    ]
+  },
+  "landing": {
+    "source_document": "Supplement No. 11 - Additional Performance Data",
+    "source_doc_no": "3.01.15-E",
+    "source_issue_date": "1999-11-10",
+    "source_section": "5.2.8",
+    "source_pages": "9-11-6 and 9-11-7",
+    "baseline": {
+      "conditions": "MTOW, idle power, propeller TAKE-OFF, approach 105 km/h, level paved runway, brake flaps extended",
+      "landing_roll_m": 195,
+      "landing_distance_15m_obstacle_m": 395,
+      "approach_speed_kmh": 105
+    },
+    "notes": "No safety margin included in these figures (AFM warning). No headwind variable in source table. No weight variation published - all figures apply at MTOW only (770 kg), unlike the takeoff table. No grass-runway correction published - baseline is 'level, paved runway' only. See rekenlogica.md sections 2.2 and 2.2b for how the app must handle these gaps (AIC P173-based optional corrections, clearly labeled as non-AFM).",
+    "table": [
+      { "oat_c": 0,  "pressure_alt_m": 0,    "l1_m": 185, "l2_m": 375 },
+      { "oat_c": 0,  "pressure_alt_m": 400,  "l1_m": 194, "l2_m": 393 },
+      { "oat_c": 0,  "pressure_alt_m": 800,  "l1_m": 203, "l2_m": 411 },
+      { "oat_c": 0,  "pressure_alt_m": 1200, "l1_m": 213, "l2_m": 432 },
+      { "oat_c": 15, "pressure_alt_m": 0,    "l1_m": 195, "l2_m": 395 },
+      { "oat_c": 15, "pressure_alt_m": 400,  "l1_m": 205, "l2_m": 414 },
+      { "oat_c": 15, "pressure_alt_m": 800,  "l1_m": 214, "l2_m": 434 },
+      { "oat_c": 15, "pressure_alt_m": 1200, "l1_m": 225, "l2_m": 456 },
+      { "oat_c": 30, "pressure_alt_m": 0,    "l1_m": 205, "l2_m": 415 },
+      { "oat_c": 30, "pressure_alt_m": 400,  "l1_m": 216, "l2_m": 435 },
+      { "oat_c": 30, "pressure_alt_m": 800,  "l1_m": 225, "l2_m": 457 },
+      { "oat_c": 30, "pressure_alt_m": 1200, "l1_m": 237, "l2_m": 489 }
+    ]
+  },
+  "climb": {
+    "source_section": "5.3.5",
+    "source_page": "5-9",
+    "conditions": "Sea level, full power, MTOW",
+    "vy_kmh": 110,
+    "propeller_rpm": 2260,
+    "manifold_pressure_inhg": [34, 35.4],
+    "max_rate_of_climb_ms": 5.4,
+    "service_ceiling_m": 5000
+  },
+  "demonstrated_crosswind_kmh": 15
+}

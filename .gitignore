@@ -1,0 +1,30 @@
+# Gradle
+.gradle/
+build/
+*/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+local.properties
+.cxx/
+.kotlin/
+
+# Ad-hoc verification screenshots/scratch design files (not project deliverables)
+/screen-*.png
+/p2-*.png
+/emulator-screenshot*.png
+/logo_preview.svg
+/logo_view.html
+
+# Room schema exports (generated, regenerate via ksp)
+app/schemas/
+
+# APK / AAB outputs outside releases/
+*.apk
+*.aab
+
+# OS
+.DS_Store
+Thumbs.db

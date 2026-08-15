@@ -1,0 +1,191 @@
+{
+  "aircraft_type": "HK 36 TTS",
+  "configuration": "tow-plane operation (sailplane towing)",
+  "source": {
+    "document": "Supplement No. 1 to the AFM - Tow-Plane Operation",
+    "doc_no": "3.01.15-E",
+    "issue": "03 Mar 1997",
+    "revision": "1",
+    "revision_date": "2011-11-24"
+  },
+  "units": {
+    "distance": "m",
+    "speed": "km/h",
+    "mass": "kg",
+    "temperature": "C",
+    "pressure_altitude": "m",
+    "rate_of_climb": "m/s"
+  },
+  "limits": {
+    "source_section": "2.2 / 2.6 / 2.10 / 2.14",
+    "source_pages": "9-1-8 and 9-1-9",
+    "max_speed_kmh": 135,
+    "max_speed_note": "or max permissible towing speed of the towed sailplane, whichever is lowest",
+    "min_speed_kmh": 97,
+    "min_speed_note": "or 1.2 x vS1 of the towed sailplane, whichever is greater",
+    "min_design_aerotow_speed_sailplane_kmh": 110,
+    "max_towed_sailplane_mass_kg": 750,
+    "max_towplane_takeoff_mass_solo_kg": 720,
+    "max_towplane_takeoff_mass_dual_instruction_kg": 770,
+    "max_towed_sailplane_mass_dual_instruction_kg": 380,
+    "crew": "solo pilot, except dual flight for instruction purposes under the mass limits above",
+    "max_simultaneous_sailplanes": 1,
+    "demonstrated_crosswind_kmh": 15,
+    "normal_towing_speed_kmh": 115,
+    "normal_towing_speed_high_wing_loading_or_turbulence_kmh": 120,
+    "cg_envelope_note": "Permissible empty mass CG range and CG range during flight remain UNCHANGED from normal (non-tow) configuration. No separate CG data required (Suppl. 1, section 6.1)."
+  },
+  "takeoff_classes": {
+    "source_section": "5.2.3.1 / 5.2.3.2",
+    "source_pages": "9-1-16 to 9-1-23",
+    "common_conditions": "Towing plane take-off mass 720 kg (unless noted), max take-off power, propeller TAKE-OFF, level short dry grass runway, no crosswind, constant headwind, liftoff ~90 km/h, climb speed ~97 km/h",
+    "class_selection_rule": "If the sailplane has a suitable mass but a lower lift-to-drag (L/D) ratio than the class requires, use the NEXT HEAVIER class table. No data available for: 300-450kg with L/D<25, or 600-750kg with L/D<58.",
+    "climb_speed_penalty": "For climb speeds above 97 km/h, s2 increases by up to 220 m per 10 km/h increment.",
+    "classes": [
+      {
+        "id": "up_to_300kg",
+        "sailplane_mass_max_kg": 300,
+        "ld_ratio_min": 25,
+        "towplane_mass_kg": 720,
+        "table": [
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 0,   "s1_m": 197, "s2_m": 363 },
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 400, "s1_m": 219, "s2_m": 395 },
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 800, "s1_m": 242, "s2_m": 433 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 0,   "s1_m": 226, "s2_m": 410 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 400, "s1_m": 251, "s2_m": 448 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 800, "s1_m": 280, "s2_m": 492 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 0,   "s1_m": 259, "s2_m": 463 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 400, "s1_m": 288, "s2_m": 507 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 800, "s1_m": 326, "s2_m": 564 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 0,   "s1_m": 158, "s2_m": 309 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 400, "s1_m": 177, "s2_m": 338 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 800, "s1_m": 198, "s2_m": 370 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 0,   "s1_m": 183, "s2_m": 350 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 400, "s1_m": 204, "s2_m": 383 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 800, "s1_m": 229, "s2_m": 421 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 0,   "s1_m": 211, "s2_m": 397 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 400, "s1_m": 236, "s2_m": 436 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 800, "s1_m": 269, "s2_m": 486 }
+        ]
+      },
+      {
+        "id": "300_to_450kg",
+        "sailplane_mass_min_kg": 300,
+        "sailplane_mass_max_kg": 450,
+        "ld_ratio_min": 38,
+        "towplane_mass_kg": 720,
+        "table": [
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 0,   "s1_m": 240, "s2_m": 439 },
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 400, "s1_m": 267, "s2_m": 479 },
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 800, "s1_m": 297, "s2_m": 524 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 0,   "s1_m": 277, "s2_m": 497 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 400, "s1_m": 307, "s2_m": 543 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 800, "s1_m": 342, "s2_m": 595 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 0,   "s1_m": 316, "s2_m": 559 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 400, "s1_m": 352, "s2_m": 613 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 800, "s1_m": 398, "s2_m": 686 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 0,   "s1_m": 196, "s2_m": 376 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 400, "s1_m": 218, "s2_m": 411 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 800, "s1_m": 243, "s2_m": 451 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 0,   "s1_m": 226, "s2_m": 426 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 400, "s1_m": 252, "s2_m": 466 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 800, "s1_m": 282, "s2_m": 513 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 0,   "s1_m": 260, "s2_m": 482 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 400, "s1_m": 291, "s2_m": 529 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 800, "s1_m": 330, "s2_m": 593 }
+        ]
+      },
+      {
+        "id": "450_to_600kg",
+        "sailplane_mass_min_kg": 450,
+        "sailplane_mass_max_kg": 600,
+        "ld_ratio_min": 25,
+        "towplane_mass_kg": 720,
+        "table": [
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 0,   "s1_m": 289, "s2_m": 525 },
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 400, "s1_m": 324, "s2_m": 577 },
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 800, "s1_m": 364, "s2_m": 635 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 0,   "s1_m": 337, "s2_m": 598 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 400, "s1_m": 378, "s2_m": 660 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 800, "s1_m": 426, "s2_m": 730 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 0,   "s1_m": 390, "s2_m": 682 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 400, "s1_m": 440, "s2_m": 754 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 800, "s1_m": 505, "s2_m": 852 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 0,   "s1_m": 234, "s2_m": 446 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 400, "s1_m": 262, "s2_m": 491 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 800, "s1_m": 296, "s2_m": 542 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 0,   "s1_m": 273, "s2_m": 510 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 400, "s1_m": 307, "s2_m": 565 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 800, "s1_m": 348, "s2_m": 625 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 0,   "s1_m": 319, "s2_m": 583 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 400, "s1_m": 360, "s2_m": 647 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 800, "s1_m": 416, "s2_m": 732 }
+        ]
+      },
+      {
+        "id": "600_to_750kg",
+        "sailplane_mass_min_kg": 600,
+        "sailplane_mass_max_kg": 750,
+        "ld_ratio_min": 58,
+        "towplane_mass_kg": 720,
+        "table": [
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 0,   "s1_m": 291, "s2_m": 530 },
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 400, "s1_m": 324, "s2_m": 579 },
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 800, "s1_m": 361, "s2_m": 636 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 0,   "s1_m": 336, "s2_m": 600 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 400, "s1_m": 373, "s2_m": 657 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 800, "s1_m": 416, "s2_m": 722 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 0,   "s1_m": 385, "s2_m": 678 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 400, "s1_m": 428, "s2_m": 743 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 800, "s1_m": 486, "s2_m": 830 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 0,   "s1_m": 233, "s2_m": 450 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 400, "s1_m": 261, "s2_m": 494 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 800, "s1_m": 292, "s2_m": 543 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 0,   "s1_m": 270, "s2_m": 511 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 400, "s1_m": 302, "s2_m": 561 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 800, "s1_m": 340, "s2_m": 618 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 0,   "s1_m": 312, "s2_m": 579 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 400, "s1_m": 350, "s2_m": 637 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 800, "s1_m": 399, "s2_m": 713 }
+        ]
+      },
+      {
+        "id": "instruction_flight",
+        "description": "Dual flight, instruction purposes",
+        "towplane_mass_kg": 770,
+        "sailplane_mass_max_kg": 380,
+        "ld_ratio_min": 38,
+        "table": [
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 0,   "s1_m": 224, "s2_m": 412 },
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 400, "s1_m": 249, "s2_m": 449 },
+          { "headwind_kts": 0, "oat_c": 0,  "pressure_alt_m": 800, "s1_m": 276, "s2_m": 490 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 0,   "s1_m": 258, "s2_m": 464 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 400, "s1_m": 286, "s2_m": 507 },
+          { "headwind_kts": 0, "oat_c": 15, "pressure_alt_m": 800, "s1_m": 319, "s2_m": 557 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 0,   "s1_m": 294, "s2_m": 523 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 400, "s1_m": 328, "s2_m": 573 },
+          { "headwind_kts": 0, "oat_c": 30, "pressure_alt_m": 800, "s1_m": 372, "s2_m": 639 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 0,   "s1_m": 180, "s2_m": 350 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 400, "s1_m": 201, "s2_m": 383 },
+          { "headwind_kts": 5, "oat_c": 0,  "pressure_alt_m": 800, "s1_m": 224, "s2_m": 419 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 0,   "s1_m": 209, "s2_m": 397 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 400, "s1_m": 234, "s2_m": 435 },
+          { "headwind_kts": 5, "oat_c": 15, "pressure_alt_m": 800, "s1_m": 261, "s2_m": 477 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 0,   "s1_m": 240, "s2_m": 447 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 400, "s1_m": 269, "s2_m": 493 },
+          { "headwind_kts": 5, "oat_c": 30, "pressure_alt_m": 800, "s1_m": 306, "s2_m": 550 }
+        ]
+      }
+    ]
+  },
+  "climb": {
+    "source_section": "5.3.5",
+    "source_page": "9-1-24",
+    "conditions": "Sea level, Standard Atmosphere",
+    "points": [
+      { "sailplane_mass_kg": 600, "max_rate_of_climb_ms": 2.3 },
+      { "sailplane_mass_kg": 750, "max_rate_of_climb_ms": 2.1 }
+    ],
+    "note": "Banner-towing climb data (4.35 m/s at 105 km/h) excluded - banner towing is out of app scope."
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "aircraft_type": "HK 36 TTC",
+  "configuration": "normal (cruise/range planning)",
+  "source": {
+    "document": "Airplane Flight Manual HK 36 TTC",
+    "doc_no": "3.01.20-E",
+    "issue": "03 Mar 1997",
+    "revision": "4",
+    "revision_date": "2024-02-16",
+    "section": "5.3.7",
+    "page": "5-10"
+  },
+  "units": {
+    "fuel_consumption": "l/h",
+    "speed": "km/h TAS",
+    "duration": "h:min",
+    "altitude": "m"
+  },
+  "notes": [
+    "Duration and range figures apply to a FULL TANK and include NO reserve (AFM note). App must subtract the user-configured legal reserve before computing usable range.",
+    "Speed/consumption figures apply to still air, ISA conditions, well-maintained/correctly-adjusted aircraft. Wind must be applied separately by the app (see rekenlogica.md range/wind-correction section).",
+    "Tank capacities: standard tank 55 l (duration column 1), long range tank 79 l (duration column 2). These match the arms in weight_balance_constants.json (727mm standard / 824mm long-range)."
+  ],
+  "table": [
+    {
+      "power_pct_mcp": 115,
+      "manifold_pressure_inhg": [38.4, 39.9],
+      "engine_rpm": 2385,
+      "fuel_consumption_lph": 33,
+      "fuel_consumption_us_gal_ph": 8.7,
+      "tas_kmh": { "1000m": null, "2000m": null, "3000m": null },
+      "max_duration_standard_tank_55l": null,
+      "max_duration_long_range_tank_79l": null,
+      "note": "No cruise/duration data published at 115% (max continuous climb power only, not a cruise setting)."
+    },
+    {
+      "power_pct_mcp": 100,
+      "manifold_pressure_inhg": [34.0, 35.4],
+      "engine_rpm": 2265,
+      "fuel_consumption_lph": 27,
+      "fuel_consumption_us_gal_ph": 7.1,
+      "tas_kmh": { "1000m": 217, "2000m": 222, "3000m": 227 },
+      "max_duration_standard_tank_55l": "2:00",
+      "max_duration_long_range_tank_79l": "2:51"
+    },
+    {
+      "power_pct_mcp": 90,
+      "manifold_pressure_inhg": [32],
+      "engine_rpm": 2200,
+      "fuel_consumption_lph": 24,
+      "fuel_consumption_us_gal_ph": 6.3,
+      "tas_kmh": { "1000m": 210, "2000m": 215, "3000m": 219 },
+      "max_duration_standard_tank_55l": "2:15",
+      "max_duration_long_range_tank_79l": "3:13"
+    },
+    {
+      "power_pct_mcp": 75,
+      "manifold_pressure_inhg": [30],
+      "engine_rpm": 2100,
+      "fuel_consumption_lph": 20,
+      "fuel_consumption_us_gal_ph": 5.3,
+      "tas_kmh": { "1000m": 197, "2000m": 201, "3000m": 205 },
+      "max_duration_standard_tank_55l": "2:42",
+      "max_duration_long_range_tank_79l": "3:51"
+    },
+    {
+      "power_pct_mcp": 60,
+      "manifold_pressure_inhg": [28],
+      "engine_rpm": 2000,
+      "fuel_consumption_lph": 17,
+      "fuel_consumption_us_gal_ph": 4.5,
+      "tas_kmh": { "1000m": 184, "2000m": 187, "3000m": 190 },
+      "max_duration_standard_tank_55l": "3:11",
+      "max_duration_long_range_tank_79l": "4:32"
+    },
+    {
+      "power_pct_mcp": 45,
+      "manifold_pressure_inhg": [26],
+      "engine_rpm": 1900,
+      "fuel_consumption_lph": 14,
+      "fuel_consumption_us_gal_ph": 3.7,
+      "tas_kmh": { "1000m": 168, "2000m": 170, "3000m": 173 },
+      "max_duration_standard_tank_55l": "3:51",
+      "max_duration_long_range_tank_79l": "5:30"
+    }
+  ],
+  "power_reduction_rule_of_thumb": "Reduce manifold pressure by approx. 2 inHg per 100 RPM propeller speed reduction, when reducing below max continuous power (AFM note, 5.3.7)."
+}
