@@ -19,7 +19,7 @@ voor de rekenformules, en [`docs/data/`](docs/data) voor de gedigitaliseerde AFM
 - ❌ Fase 2d (bereik/wind/kaart) — **komt niet**, andere apps dekken dit al goed af (besluit 2026-08-16)
 - ⬜ Fase 3 (optioneel): historie, PDF-export
 
-> **Let op — pre-release (`versionCode = 1`):** `AppDatabase` gebruikt nog
+> **Let op — pre-release (nog geen Play Store/APK-distributie):** `AppDatabase` gebruikt nog
 > `fallbackToDestructiveMigration(dropAllTables = true)`. Elke toekomstige schemaversie-bump
 > wist daarmee stilzwijgend alle lokaal opgeslagen profielen/instellingen. Dat is prima zolang
 > alleen ontwikkelaars testen, maar **moet vervangen worden door échte Room `Migration`-objecten

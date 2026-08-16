@@ -15,11 +15,13 @@ android {
         applicationId = "nl.glcillustrious.hk36ttc"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
 
-        // Generated fresh at build configuration time (not tracked by hand) - shown in the
-        // About screen so Frank can tell which build is on a device without a manual bump.
+        // Generated fresh at build configuration time - shown alongside versionName/versionCode
+        // in the About screen so a specific build can still be pinned down within a day even
+        // though versionCode/versionName are now bumped by hand on every commit (see
+        // docs/00-plan.md).
         buildConfigField(
             "String",
             "BUILD_DATE",

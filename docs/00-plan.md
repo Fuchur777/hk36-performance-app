@@ -325,6 +325,17 @@ Code wordt beheerd op GitHub, in lijn met de bestaande werkwijze voor
 - Commit-berichten verwijzen naar de faseletter/paragraaf, bijv.
   `"fase 1: W&B calculator + aircraft profile scherm"`
 
+**Versienummer (nieuwe regel, 2026-08-16):** `versionCode` en `versionName` in
+`app/build.gradle.kts` worden voortaan **bij elke commit met codewijzigingen**
+met de hand opgehoogd — niet meer alleen bij "grote" releases. Concreet:
+`versionCode` altijd +1; `versionName`'s patch-cijfer (het laatste getal, bv.
+`0.1.0` → `0.1.1`) standaard +1 per commit, met een minor-bump (`0.1.x` →
+`0.2.0`) wanneer een commit een echte nieuwe feature toevoegt in plaats van
+een fix/opschoning/testtoevoeging — Frank geeft aan wanneer dat laatste van
+toepassing is. `BUILD_DATE` in het Over-scherm blijft ernaast bestaan (voor
+het geval binnen één dag meerdere builds nodig zijn), maar vervangt de
+versienummers niet langer.
+
 **Verificatie-efficiëntie (2026-08-16), om onnodig credit-/tijdverbruik tijdens
 het bouwen te voorkomen:**
 - **Batchen i.p.v. fix→verify→fix→verify**: een reeks kleine, gerelateerde
