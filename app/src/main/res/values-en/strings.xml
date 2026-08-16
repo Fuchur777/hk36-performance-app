@@ -268,10 +268,6 @@
     <string name="airfield_edit_runway_surface_grass">Grass</string>
     <string name="airfield_edit_runway_slope_label">Slope direction A</string>
 
-    <!-- Shared derived-value card -->
-    <string name="derived_value_edit_content_description">Edit manually</string>
-    <string name="derived_value_reset">Back to recommendation</string>
-    <string name="derived_value_overridden_note">Manually adjusted</string>
 
     <!-- Flight context (Airfield/Manual toggle, shared by Take-off/Landing/Glider tow) -->
     <string name="flight_context_mode_label">Weather &amp; runway</string>
@@ -287,15 +283,13 @@
     <string name="weather_mode_label">Weather data</string>
     <string name="weather_mode_metar">METAR</string>
     <string name="weather_mode_manual">Manual</string>
-    <string name="flight_context_runway_section_title">Runway choice</string>
-    <string name="flight_context_runway_status_preferred">Recommended</string>
+    <string name="flight_context_runway_section_title">Results per runway</string>
+    <string name="flight_context_runway_status_recommended">Recommended</string>
     <string name="flight_context_runway_status_fits">Fits</string>
+    <string name="flight_context_runway_status_fits_without_margin">Fits without safety margin</string>
     <string name="flight_context_runway_status_does_not_fit">Doesn\'t fit</string>
     <string name="flight_context_runway_status_tailwind">Tailwind — not available</string>
     <string name="flight_context_runway_detail_format">Headwind %1$d kt · Crosswind %2$d kt</string>
-    <string name="flight_context_runway_remaining_format">%1$+d m margin</string>
-    <string name="flight_context_runway_reset_to_auto">Back to automatic recommendation</string>
+    <string name="flight_context_runway_remaining_label">Runway remaining</string>
     <string name="flight_context_crosswind_exceeded_warning">Crosswind above the demonstrated limit</string>
-    <string name="flight_context_confirm_button">Confirm weather and runway</string>
-    <string name="flight_context_confirmed_label">Confirmed</string>
 </resources>

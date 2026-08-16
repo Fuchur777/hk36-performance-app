@@ -268,11 +268,6 @@
     <string name="airfield_edit_runway_surface_grass">Gras</string>
     <string name="airfield_edit_runway_slope_label">Helling richting A</string>
 
-    <!-- Gedeelde afgeleide-waarde-kaart -->
-    <string name="derived_value_edit_content_description">Handmatig wijzigen</string>
-    <string name="derived_value_reset">Terug naar advies</string>
-    <string name="derived_value_overridden_note">Handmatig aangepast</string>
-
     <!-- Vlucht-context (Vliegveld/Handmatig toggle, gedeeld door Take-off/Landing/Sleepvlucht) -->
     <string name="flight_context_mode_label">Weer &amp; baan</string>
     <string name="flight_context_mode_airfield">Vliegveld</string>
@@ -287,15 +282,13 @@
     <string name="weather_mode_label">Weergegevens</string>
     <string name="weather_mode_metar">METAR</string>
     <string name="weather_mode_manual">Handmatig</string>
-    <string name="flight_context_runway_section_title">Baankeuze</string>
-    <string name="flight_context_runway_status_preferred">Aanbevolen</string>
+    <string name="flight_context_runway_section_title">Resultaten per baan</string>
+    <string name="flight_context_runway_status_recommended">Aanbevolen</string>
     <string name="flight_context_runway_status_fits">Past</string>
+    <string name="flight_context_runway_status_fits_without_margin">Past zonder veiligheidsmarge</string>
     <string name="flight_context_runway_status_does_not_fit">Past niet</string>
     <string name="flight_context_runway_status_tailwind">Rugwind — niet beschikbaar</string>
     <string name="flight_context_runway_detail_format">Tegenwind %1$d kt · Kruiswind %2$d kt</string>
-    <string name="flight_context_runway_remaining_format">%1$+d m marge</string>
-    <string name="flight_context_runway_reset_to_auto">Terug naar automatisch advies</string>
+    <string name="flight_context_runway_remaining_label">Resterende lengte</string>
     <string name="flight_context_crosswind_exceeded_warning">Kruiswind boven de gedemonstreerde limiet</string>
-    <string name="flight_context_confirm_button">Bevestig weer en baan</string>
-    <string name="flight_context_confirmed_label">Bevestigd</string>
 </resources>

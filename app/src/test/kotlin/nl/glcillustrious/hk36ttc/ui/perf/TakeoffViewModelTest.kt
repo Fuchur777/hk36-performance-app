@@ -9,11 +9,18 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceCorrectionsData
 import nl.glcillustrious.hk36ttc.core.perf.parsePerformanceNormalData
 import nl.glcillustrious.hk36ttc.core.wb.FuelTankType
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileEntity
+import nl.glcillustrious.hk36ttc.data.local.AirfieldEntity
 import nl.glcillustrious.hk36ttc.data.local.FakeAircraftProfileDao
+import nl.glcillustrious.hk36ttc.data.local.FakeAirfieldDao
+import nl.glcillustrious.hk36ttc.data.local.FakeRunwayStripDao
+import nl.glcillustrious.hk36ttc.data.local.FlightContextMode
+import nl.glcillustrious.hk36ttc.data.local.RunwayStripEntity
 import nl.glcillustrious.hk36ttc.data.local.fakeAircraftProfileRepository
 
 /**
@@ -191,5 +198,72 @@ class TakeoffViewModelTest {
         assertEquals("PH-ABC", state.registration)
         assertEquals(15, state.oatC)
         assertEquals(TakeoffSurfaceType.ASFALT, state.surfaceType)
+    }
+
+    /**
+     * Regression test for a real crash: [RunwayDirectionOption.designator] holds the display
+     * *label* (e.g. "02"), while [nl.glcillustrious.hk36ttc.core.metar.RunwayCandidate.designator]
+     * holds the stable *id* — mixing the two up in `recalculate()`'s
+     * `directions.first { it.designator == candidate.designator }` lookup meant it could never
+     * match (a label never equals an id), throwing `NoSuchElementException` the moment an
+     * airfield with a usable METAR was selected. Confirmed on-device: a saved airfield with a
+     * runway crashed the Take-off screen as soon as its METAR made the weather derivable.
+     */
+    @Test
+    fun `selecting an airfield with a runway and a usable METAR does not crash`() = runTest {
+        val profileDao = FakeAircraftProfileDao()
+        profileDao.seed(
+            AircraftProfileEntity(
+                id = 1,
+                registration = "PH-XYZ",
+                emptyMassKg = 560.0,
+                emptyMassCgPositionMm = 2350.0,
+                mtowKg = 770.0,
+                cgEnvelopeForwardLimitMm = 2300.0,
+                cgEnvelopeAftLimitMm = 2450.0,
+                fuelTankType = FuelTankType.STANDARD_55L
+            )
+        )
+        val airfieldDao = FakeAirfieldDao()
+        airfieldDao.seed(
+            AirfieldEntity(
+                id = 1,
+                name = "Vliegbasis Gilze-Rijen",
+                icao = "EHGR",
+                metarStationIcao = null,
+                elevationM = 15.0,
+                metarRaw = "EHGR 161350Z 24012G20KT 9999 SCT025 18/12 Q1013 NOSIG",
+                metarEnteredAtEpochMs = null
+            )
+        )
+        val runwayStripDao = FakeRunwayStripDao()
+        runwayStripDao.seed(
+            RunwayStripEntity(
+                id = 1,
+                airfieldId = 1,
+                designatorA = "02",
+                designatorB = "20",
+                headingDegTrueA = 20.0,
+                lengthM = 1730.0,
+                surface = "ASPHALT",
+                slopePctA = 0.0
+            )
+        )
+        val repository = fakeAircraftProfileRepository(
+            profileDao = profileDao, airfieldDao = airfieldDao, runwayStripDao = runwayStripDao
+        )
+
+        val viewModel = TakeoffViewModel(repository, profileId = 1, performanceNormal = performanceNormal, corrections = corrections)
+        testScheduler.advanceUntilIdle()
+
+        viewModel.setFlightContextMode(FlightContextMode.AIRFIELD)
+        testScheduler.advanceUntilIdle()
+        viewModel.selectAirfield(airfieldDao.getById(1)!!)
+        testScheduler.advanceUntilIdle()
+
+        val state = viewModel.state.value
+        assertTrue(state.weatherDerivable)
+        assertTrue(state.runwayResults.isNotEmpty())
+        assertNotNull(state.result)
     }
 }

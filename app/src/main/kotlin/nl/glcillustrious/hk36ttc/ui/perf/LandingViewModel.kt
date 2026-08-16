@@ -15,8 +15,8 @@ import kotlinx.coroutines.launch
 import nl.glcillustrious.hk36ttc.core.metar.MetarParseResult
 import nl.glcillustrious.hk36ttc.core.metar.MetarParser
 import nl.glcillustrious.hk36ttc.core.metar.PressureAltitude
+import nl.glcillustrious.hk36ttc.core.metar.RequiredDistances
 import nl.glcillustrious.hk36ttc.core.metar.RunwayAdvice
-import nl.glcillustrious.hk36ttc.core.metar.RunwayAdviceStatus
 import nl.glcillustrious.hk36ttc.core.metar.RunwayAdvisor
 import nl.glcillustrious.hk36ttc.core.metar.kmhToKts
 import nl.glcillustrious.hk36ttc.core.perf.LandingResult
@@ -42,18 +42,25 @@ import nl.glcillustrious.hk36ttc.ui.common.toCandidate
  * up to the AIC P173-published upper bound for very short, smooth grass. */
 enum class LandingSurfaceType { ASFALT, DROOG_GRAS, NAT_GRAS, AANGEPAST }
 
+/** One runway direction's full landing result — see [TakeoffRunwayResult] for why [fullResult]
+ * (carrying l1/l2) sits alongside [advice] (which only carries l2, the fit-deciding figure). */
+data class LandingRunwayResult(
+    val advice: RunwayAdvice,
+    val surfaceType: LandingSurfaceType,
+    val fullResult: LandingResult?
+)
+
 /**
  * [slopePct] follows "positive = uphill", default 0% (AIC P173 §7.5 — only downhill is
  * adverse for landing). [marginFactorPct] is seeded from
  * [PerformanceCorrectionsData.MarginFactorDefaults.landingDefaultFactor], never a hardcoded
  * literal here.
  *
- * Fase 2c: same split as [TakeoffFormState] between raw/override fields and the `effective*`
- * fields actually used for [result] — see that class's KDoc. Landing has no headwind input at
- * all (the AFM landing tables aren't headwind-indexed), so unlike take-off there's no
- * headwind override here; wind is still shown/ranked for runway *choice* (tailwind landings
- * are excluded from the advisory as an airmanship default, not an AFM limitation — see
- * [LandingViewModel]'s recalculate KDoc).
+ * Fase 2c ronde 3: see [TakeoffFormState] for the general shape — no single "chosen" runway or
+ * confirmation gate anymore, [runwayResults] holds every direction's own live result instead.
+ * Landing has no headwind input at all (the AFM landing tables aren't headwind-indexed); wind
+ * still drives *which* runways are excluded as tailwind in the results list (an airmanship
+ * default, not an AFM limitation — see [LandingViewModel]'s recalculate KDoc).
  */
 data class LandingFormState(
     val registration: String? = null,
@@ -68,22 +75,19 @@ data class LandingFormState(
     val selectedAirfield: AirfieldEntity? = null,
     val runwayStrips: List<RunwayStripEntity> = emptyList(),
     val grassCondition: GrassCondition = GrassCondition.DRY,
-    val chosenRunwayDesignator: String? = null,
-    val flightConfirmed: Boolean = false,
     val weatherMode: WeatherInputMode = WeatherInputMode.METAR,
-    val surfaceOverridden: Boolean = false,
-    val slopeOverridden: Boolean = false,
-    val runwayAdvice: List<RunwayAdvice> = emptyList(),
+    val runwayResults: List<LandingRunwayResult> = emptyList(),
     val weatherDerivable: Boolean = false,
     val pressureAltDerivable: Boolean = false,
     val effectiveOatC: Int = 15,
-    val effectivePressureAltM: Int = 0,
-    val effectiveSurfaceType: LandingSurfaceType = LandingSurfaceType.ASFALT,
-    val effectiveCustomSurfaceFactorPct: Int = 115,
-    val effectiveSlopePct: Int = 0
+    val effectivePressureAltM: Int = 0
 ) {
     val hasGrassRunway: Boolean
         get() = runwayStrips.any { RunwaySurfaceType.valueOf(it.surface) == RunwaySurfaceType.GRASS }
+
+    val showRunwayResults: Boolean
+        get() = flightContextMode == FlightContextMode.AIRFIELD && selectedAirfield != null &&
+            weatherDerivable && runwayResults.isNotEmpty()
 }
 
 class LandingViewModel(
@@ -123,8 +127,7 @@ class LandingViewModel(
                         surfaceType = LandingSurfaceType.valueOf(savedInput.surfaceType),
                         customSurfaceFactorPct = savedInput.customSurfaceFactorPct,
                         slopePct = savedInput.slopePct,
-                        marginFactorPct = savedInput.marginFactorPct,
-                        chosenRunwayDesignator = savedInput.chosenRunwayDesignator
+                        marginFactorPct = savedInput.marginFactorPct
                     )
                 }
                 if (flightContext != null) {
@@ -156,9 +159,7 @@ class LandingViewModel(
     fun selectAirfield(airfield: AirfieldEntity) {
         viewModelScope.launch {
             val strips = repository.getRunwayStrips(airfield.id)
-            _state.update {
-                it.copy(selectedAirfield = airfield, runwayStrips = strips, chosenRunwayDesignator = null)
-            }
+            _state.update { it.copy(selectedAirfield = airfield, runwayStrips = strips) }
             recalculate()
             saveFlightContext()
         }
@@ -170,15 +171,6 @@ class LandingViewModel(
         saveFlightContext()
     }
 
-    fun chooseRunway(designator: String?) {
-        _state.update { it.copy(chosenRunwayDesignator = designator) }
-        recalculate()
-    }
-
-    fun confirmFlightContext() {
-        _state.update { it.copy(flightConfirmed = true) }
-    }
-
     /** See [TakeoffViewModel.setWeatherMode] — same seed-then-switch behavior. */
     fun setWeatherMode(mode: WeatherInputMode) {
         _state.update {
@@ -188,24 +180,6 @@ class LandingViewModel(
                 it.copy(weatherMode = mode)
             }
         }
-        recalculate()
-    }
-
-    fun editSurfaceAndSlope() {
-        _state.update {
-            it.copy(
-                surfaceOverridden = true,
-                slopeOverridden = true,
-                surfaceType = it.effectiveSurfaceType,
-                customSurfaceFactorPct = it.effectiveCustomSurfaceFactorPct,
-                slopePct = it.effectiveSlopePct
-            )
-        }
-        recalculate()
-    }
-
-    fun resetSurfaceAndSlope() {
-        _state.update { it.copy(surfaceOverridden = false, slopeOverridden = false) }
         recalculate()
     }
 
@@ -247,11 +221,12 @@ class LandingViewModel(
         if (type == LandingSurfaceType.AANGEPAST) maxCustomSurfaceFactorPct() else 115
 
     /**
-     * Fase 2c derivation — see [TakeoffViewModel.recalculate] for the general pattern. Landing
-     * has no headwind input, so wind only drives *which runway* is ranked/excluded, never a
-     * calculation parameter: a tailwind heading is excluded from the advisory as a deliberate
-     * airmanship default (landing downwind is always worse), not because the AFM tables lack
-     * tailwind data the way take-off's do — `calculateLanding` doesn't take headwind at all.
+     * Fase 2c ronde 3 derivation — see [TakeoffViewModel.recalculate] for the general pattern.
+     * Landing has no headwind input, so wind only drives *which runway* is ranked/excluded,
+     * never a calculation parameter: a tailwind heading is excluded from the results as a
+     * deliberate airmanship default (landing downwind is always worse), not because the AFM
+     * tables lack tailwind data the way take-off's do — `calculateLanding` doesn't take
+     * headwind at all.
      */
     private fun recalculate() {
         val s = _state.value
@@ -273,74 +248,57 @@ class LandingViewModel(
         }
 
         val directions: List<RunwayDirectionOption> = s.runwayStrips.flatMap { it.directionOptions() }
-        val advice: List<RunwayAdvice> = if (weatherDerivable && directions.isNotEmpty()) {
-            RunwayAdvisor.advise(
+        val runwayResults: List<LandingRunwayResult> = if (weatherDerivable && directions.isNotEmpty()) {
+            val fullResultsByDesignator = mutableMapOf<String, LandingResult>()
+            val advice = RunwayAdvisor.advise(
                 candidates = directions.map { it.toCandidate() },
                 windDirectionDeg = windDirection,
                 windSpeedKts = parsedMetar.windSpeedKts,
                 demonstratedCrosswindKts = kmhToKts(performanceNormal.demonstratedCrosswindKmh),
-                requiredDistanceM = { _, candidate ->
-                    val direction = directions.first { it.designator == candidate.designator }
+                requiredDistances = { _, candidate ->
+                    val direction = directions.first { it.id == candidate.designator }
                     val surfaceType = deriveSurfaceType(direction.strip, s.grassCondition)
-                    PerformanceCalculator.calculateLanding(
+                    val distance = PerformanceCalculator.calculateLanding(
                         performanceNormal, corrections,
                         oatC = effOat.toDouble(),
                         pressureAltM = effPressureAlt.toDouble(),
                         surfaceFactor = surfaceFactorFor(surfaceType, deriveCustomSurfaceFactorPct(surfaceType)),
                         slopePct = candidate.slopePct,
                         marginFactor = s.marginFactorPct / 100.0
-                    ).l2WithMarginM
+                    )
+                    fullResultsByDesignator[candidate.designator] = distance
+                    RequiredDistances(withMarginM = distance.l2WithMarginM, withoutMarginM = distance.l2M)
                 }
             )
+            advice.map { item ->
+                val direction = directions.first { it.id == item.candidate.designator }
+                LandingRunwayResult(
+                    advice = item,
+                    surfaceType = deriveSurfaceType(direction.strip, s.grassCondition),
+                    fullResult = fullResultsByDesignator[item.candidate.designator]
+                )
+            }
         } else {
             emptyList()
         }
-
-        val activeDirection = directions.find { it.designator == s.chosenRunwayDesignator }
-            ?: directions.find { d -> advice.any { it.candidate.designator == d.designator && it.status == RunwayAdviceStatus.PREFERRED } }
-
-        val effSurface = if (!weatherDerivable || s.surfaceOverridden || activeDirection == null) {
-            s.surfaceType
-        } else {
-            deriveSurfaceType(activeDirection.strip, s.grassCondition)
-        }
-        val effCustomFactor = if (!weatherDerivable || s.surfaceOverridden || activeDirection == null) {
-            s.customSurfaceFactorPct
-        } else {
-            deriveCustomSurfaceFactorPct(effSurface)
-        }
-        val effSlope = if (!weatherDerivable || s.slopeOverridden || activeDirection == null) {
-            s.slopePct
-        } else {
-            activeDirection.slopePct.roundToInt()
-        }
-
-        val bundleChanged = s.effectiveOatC != effOat || s.effectivePressureAltM != effPressureAlt ||
-            s.effectiveSurfaceType != effSurface || s.effectiveCustomSurfaceFactorPct != effCustomFactor ||
-            s.effectiveSlopePct != effSlope
-        val stillConfirmed = s.flightConfirmed && !bundleChanged
 
         val result = PerformanceCalculator.calculateLanding(
             performanceNormal, corrections,
             oatC = effOat.toDouble(),
             pressureAltM = effPressureAlt.toDouble(),
-            surfaceFactor = surfaceFactorFor(effSurface, effCustomFactor),
-            slopePct = effSlope.toDouble(),
+            surfaceFactor = surfaceFactorFor(s.surfaceType, s.customSurfaceFactorPct),
+            slopePct = s.slopePct.toDouble(),
             marginFactor = s.marginFactorPct / 100.0
         )
 
         _state.update {
             it.copy(
                 result = result,
-                runwayAdvice = advice,
+                runwayResults = runwayResults,
                 weatherDerivable = weatherDerivable,
                 pressureAltDerivable = pressureAltDerivable,
                 effectiveOatC = effOat,
-                effectivePressureAltM = effPressureAlt,
-                effectiveSurfaceType = effSurface,
-                effectiveCustomSurfaceFactorPct = effCustomFactor,
-                effectiveSlopePct = effSlope,
-                flightConfirmed = stillConfirmed
+                effectivePressureAltM = effPressureAlt
             )
         }
 
@@ -349,7 +307,7 @@ class LandingViewModel(
                 repository.saveLandingInput(
                     LandingInputEntity(
                         profileId, s.oatC, s.pressureAltM, s.surfaceType.name,
-                        s.customSurfaceFactorPct, s.slopePct, s.marginFactorPct, s.chosenRunwayDesignator
+                        s.customSurfaceFactorPct, s.slopePct, s.marginFactorPct, chosenRunwayDesignator = null
                     )
                 )
             }

@@ -25,3 +25,9 @@ val StatusError = Color(0xFFCF6679)
 val StatusWarning = Color(0xFFFCE1C0)
 val OnStatusWarning = OnLight
 val StatusSuccess = Color(0xFF4CAF50)
+
+// Fase 2c ronde 3: the per-runway results list needs a 4th tier between "fits comfortably"
+// (StatusSuccess) and "only fits without margin" (StatusWarning) — a plain, still-safe FITS
+// result that just isn't the best of the bunch. Same light-tint treatment as StatusWarning.
+val StatusCaution = Color(0xFFFFF3B0)
+val OnStatusCaution = OnLight

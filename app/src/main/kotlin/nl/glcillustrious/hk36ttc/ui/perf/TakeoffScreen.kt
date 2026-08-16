@@ -23,7 +23,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,17 +38,19 @@ import nl.glcillustrious.hk36ttc.core.perf.PerformanceCorrectionsData
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceNormalData
 import nl.glcillustrious.hk36ttc.core.perf.TakeoffResult
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
-import nl.glcillustrious.hk36ttc.data.local.FlightContextMode
-import nl.glcillustrious.hk36ttc.ui.common.DerivedValueField
 import nl.glcillustrious.hk36ttc.ui.common.FlightContextCard
+import nl.glcillustrious.hk36ttc.ui.common.GrassConditionSelector
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
+import nl.glcillustrious.hk36ttc.ui.common.MetarSummary
 import nl.glcillustrious.hk36ttc.ui.common.ResettableIntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.ResultRow
-import nl.glcillustrious.hk36ttc.ui.common.RunwayAdviceCard
+import nl.glcillustrious.hk36ttc.ui.common.RunwayResultCard
 import nl.glcillustrious.hk36ttc.ui.common.WeatherInputMode
 import nl.glcillustrious.hk36ttc.ui.common.WeatherModeSelector
+import nl.glcillustrious.hk36ttc.ui.common.runwayStatusPresentation
 import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
 import nl.glcillustrious.hk36ttc.ui.theme.status
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,85 +103,38 @@ fun TakeoffScreen(
                 onModeChange = { viewModel.setFlightContextMode(it) },
                 airfields = airfields,
                 selectedAirfield = state.selectedAirfield,
-                onSelectAirfield = { viewModel.selectAirfield(it) },
-                hasGrassRunway = state.hasGrassRunway,
-                grassCondition = state.grassCondition,
-                onGrassConditionChange = { viewModel.setGrassCondition(it) },
-                metarParsed = state.selectedAirfield?.metarRaw?.let { MetarParser.parse(it) },
-                metarConfig = metarConfig
+                onSelectAirfield = { viewModel.selectAirfield(it) }
             )
-            if (state.flightContextMode == FlightContextMode.AIRFIELD && state.selectedAirfield != null) {
-                RunwayAdviceCard(
-                    runwayAdvice = state.runwayAdvice,
-                    chosenDesignator = state.chosenRunwayDesignator,
-                    onChooseRunway = { viewModel.chooseRunway(it) },
-                    confirmed = state.flightConfirmed,
-                    onConfirm = { viewModel.confirmFlightContext() }
-                )
-            }
 
+            val parsedMetar = state.selectedAirfield?.metarRaw?.let { MetarParser.parse(it) }
             if (state.weatherDerivable) {
                 WeatherModeSelector(mode = state.weatherMode, onModeChange = { viewModel.setWeatherMode(it) })
+                if (state.weatherMode == WeatherInputMode.METAR) {
+                    MetarSummary(parsedMetar, state.selectedAirfield?.elevationM?.roundToInt() ?: 0, metarConfig)
+                }
             }
             val metarWeather = state.weatherDerivable && state.weatherMode == WeatherInputMode.METAR
 
-            if (metarWeather) {
-                DerivedValueField(
-                    label = stringResource(R.string.perf_oat_label),
-                    valueText = "${state.effectiveOatC}°C",
-                    isOverridden = false,
-                    onEdit = { viewModel.setWeatherMode(WeatherInputMode.MANUAL) },
-                    onResetToDerived = {}
-                )
-            } else {
-                IntStepperField(
-                    label = stringResource(R.string.perf_oat_label), value = state.oatC,
-                    onValueChange = { v -> viewModel.update { it.copy(oatC = v) } },
-                    min = -20, max = 45, suffix = "°C"
-                )
-            }
-
-            if (metarWeather && state.pressureAltDerivable) {
-                DerivedValueField(
-                    label = stringResource(R.string.perf_pressure_alt_label),
-                    valueText = "${state.effectivePressureAltM}m",
-                    isOverridden = false,
-                    onEdit = { viewModel.setWeatherMode(WeatherInputMode.MANUAL) },
-                    onResetToDerived = {}
-                )
-            } else {
-                IntStepperField(
-                    label = stringResource(R.string.perf_pressure_alt_label), value = state.pressureAltM,
-                    onValueChange = { v -> viewModel.update { it.copy(pressureAltM = v) } },
-                    min = 0, max = 1500, suffix = "m"
-                )
-            }
-
-            if (metarWeather) {
-                DerivedValueField(
-                    label = stringResource(R.string.perf_headwind_label),
-                    valueText = "${state.effectiveHeadwindKts}kts",
-                    isOverridden = false,
-                    onEdit = { viewModel.setWeatherMode(WeatherInputMode.MANUAL) },
-                    onResetToDerived = {}
-                )
-            } else {
+            if (!state.showRunwayResults) {
+                if (!metarWeather) {
+                    IntStepperField(
+                        label = stringResource(R.string.perf_oat_label), value = state.oatC,
+                        onValueChange = { v -> viewModel.update { it.copy(oatC = v) } },
+                        min = -20, max = 45, suffix = "°C"
+                    )
+                }
+                if (!(metarWeather && state.pressureAltDerivable)) {
+                    IntStepperField(
+                        label = stringResource(R.string.perf_pressure_alt_label), value = state.pressureAltM,
+                        onValueChange = { v -> viewModel.update { it.copy(pressureAltM = v) } },
+                        min = 0, max = 1500, suffix = "m"
+                    )
+                }
                 IntStepperField(
                     label = stringResource(R.string.perf_headwind_label), value = state.headwindKts,
                     onValueChange = { v -> viewModel.update { it.copy(headwindKts = v) } },
                     min = -10, max = 20, suffix = "kts"
                 )
-            }
-
-            if (state.weatherDerivable && !state.surfaceOverridden) {
-                DerivedValueField(
-                    label = stringResource(R.string.perf_surface_label),
-                    valueText = takeoffSurfaceLabel(state.effectiveSurfaceType),
-                    isOverridden = false,
-                    onEdit = { viewModel.editSurfaceAndSlope() },
-                    onResetToDerived = {}
-                )
-            } else {
                 TakeoffSurfaceSelector(
                     surfaceType = state.surfaceType,
                     onSelected = { type -> viewModel.update { it.copy(surfaceType = type) } }
@@ -190,9 +144,6 @@ fun TakeoffScreen(
                     onValueChange = { v -> viewModel.update { it.copy(slopePct = v) } },
                     min = -10, max = 10, suffix = "%"
                 )
-                if (state.weatherDerivable && state.surfaceOverridden) {
-                    TextButton(onClick = { viewModel.resetSurfaceAndSlope() }) { Text(stringResource(R.string.derived_value_reset)) }
-                }
             }
 
             ResettableIntStepperField(
@@ -202,8 +153,32 @@ fun TakeoffScreen(
                 min = 100, max = 200, suffix = "%"
             )
 
-            if (state.flightContextMode == FlightContextMode.MANUAL || state.flightConfirmed) {
-                state.result?.let { TakeoffResultCard(it, state.effectiveSurfaceType) }
+            if (state.hasGrassRunway) {
+                GrassConditionSelector(state.grassCondition, { viewModel.setGrassCondition(it) })
+            }
+
+            if (state.showRunwayResults) {
+                Text(stringResource(R.string.flight_context_runway_section_title), style = MaterialTheme.typography.labelLarge)
+                state.runwayResults.forEach { row ->
+                    val presentation = runwayStatusPresentation(row.advice.status)
+                    RunwayResultCard(
+                        label = row.advice.candidate.label,
+                        statusLabel = presentation.label,
+                        containerColor = presentation.containerColor,
+                        contentColor = presentation.contentColor,
+                        headwindKts = row.advice.headwindKts,
+                        crosswindKts = row.advice.crosswindKts,
+                        crosswindExceeded = row.advice.crosswindExceeded,
+                        groundRunWithMarginM = row.fullResult?.s1WithMarginM,
+                        groundRunRawM = row.fullResult?.s1M,
+                        obstacleWithMarginM = row.fullResult?.s2WithMarginM,
+                        obstacleRawM = row.fullResult?.s2M,
+                        remainingM = row.advice.remainingWithMarginM,
+                        surfaceLabel = takeoffSurfaceLabel(row.surfaceType)
+                    )
+                }
+            } else {
+                state.result?.let { TakeoffResultCard(it, state.surfaceType) }
             }
 
             ClimbReferenceCard(
@@ -216,7 +191,7 @@ fun TakeoffScreen(
 }
 
 @Composable
-private fun takeoffSurfaceLabel(type: TakeoffSurfaceType): String = when (type) {
+internal fun takeoffSurfaceLabel(type: TakeoffSurfaceType): String = when (type) {
     TakeoffSurfaceType.ASFALT -> stringResource(R.string.perf_surface_asfalt)
     TakeoffSurfaceType.DROOG_GRAS -> stringResource(R.string.perf_surface_droog_gras)
     TakeoffSurfaceType.NAT_GRAS -> stringResource(R.string.perf_surface_nat_gras)

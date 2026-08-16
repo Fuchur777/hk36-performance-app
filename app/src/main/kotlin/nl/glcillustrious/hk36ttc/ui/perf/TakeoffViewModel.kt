@@ -15,8 +15,8 @@ import kotlinx.coroutines.launch
 import nl.glcillustrious.hk36ttc.core.metar.MetarParseResult
 import nl.glcillustrious.hk36ttc.core.metar.MetarParser
 import nl.glcillustrious.hk36ttc.core.metar.PressureAltitude
+import nl.glcillustrious.hk36ttc.core.metar.RequiredDistances
 import nl.glcillustrious.hk36ttc.core.metar.RunwayAdvice
-import nl.glcillustrious.hk36ttc.core.metar.RunwayAdviceStatus
 import nl.glcillustrious.hk36ttc.core.metar.RunwayAdvisor
 import nl.glcillustrious.hk36ttc.core.metar.kmhToKts
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceCalculator
@@ -46,16 +46,33 @@ import nl.glcillustrious.hk36ttc.ui.common.toCandidate
 enum class TakeoffSurfaceType { ASFALT, DROOG_GRAS, NAT_GRAS, ZACHTE_GROND }
 
 /**
+ * One runway direction's full take-off result — [RunwayAdvice] alone only carries the
+ * distance-to-15m-obstacle (s2, the figure that decides fit/doesn't-fit), since that's the
+ * one figure [nl.glcillustrious.hk36ttc.core.metar.RunwayAdvisor] itself needs; the ground-roll
+ * (s1) and the surface actually used are display-only extras the ViewModel attaches here.
+ * [fullResult] is null exactly when [advice]'s heading is a tailwind the AFM has no data for.
+ */
+data class TakeoffRunwayResult(
+    val advice: RunwayAdvice,
+    val surfaceType: TakeoffSurfaceType,
+    val fullResult: TakeoffResult?
+)
+
+/**
  * Whole-number inputs matching the stepper UI. [marginFactorPct] is a percentage, seeded from
  * [PerformanceCorrectionsData.MarginFactorDefaults.takeoffDefaultFactor] rather than a literal
  * here — never a hardcoded default deeper than this ViewModel's starting state, and always
  * user-adjustable. [slopePct] follows "positive = uphill" (AIC P173 §5.5), default 0%.
  *
- * Fase 2c: in [FlightContextMode.AIRFIELD] mode, [oatC]/[pressureAltM]/[headwindKts]/
- * [surfaceType]/[slopePct] hold whatever was last typed while overridden or in Handmatig mode
- * — the values actually used for [result] are the `effective*` fields below, derived from the
- * selected airfield/runway/METAR unless a specific `*Overridden` flag says otherwise. This
- * split keeps a pilot's old manual entries intact if they switch back to Handmatig later.
+ * Fase 2c ronde 3: there is no longer a single "chosen" runway or a confirmation gate
+ * (rekenlogica.md §5) — once an airfield with a usable METAR and at least one runway is
+ * selected, [runwayResults] holds every direction's own live result instead, and [result]
+ * (the plain single-value calculation from [oatC]/[headwindKts]/[surfaceType]/[slopePct]) is
+ * only shown when that per-runway list isn't applicable (Handmatig mode, or an airfield with
+ * no METAR/no runways yet). [oatC]/[pressureAltM] still get silently overridden by the METAR
+ * when [weatherMode] is [WeatherInputMode.METAR] — see `effective*` below — but headwind,
+ * surface and slope no longer have a single derived value at all, since there's no one "the"
+ * runway to derive them from anymore.
  */
 data class TakeoffFormState(
     val registration: String? = null,
@@ -70,25 +87,23 @@ data class TakeoffFormState(
     val selectedAirfield: AirfieldEntity? = null,
     val runwayStrips: List<RunwayStripEntity> = emptyList(),
     val grassCondition: GrassCondition = GrassCondition.DRY,
-    val chosenRunwayDesignator: String? = null,
-    val flightConfirmed: Boolean = false,
     val weatherMode: WeatherInputMode = WeatherInputMode.METAR,
-    val surfaceOverridden: Boolean = false,
-    val slopeOverridden: Boolean = false,
-    val runwayAdvice: List<RunwayAdvice> = emptyList(),
+    val runwayResults: List<TakeoffRunwayResult> = emptyList(),
     /** True once an airfield with a usable (non-variable) METAR wind is selected — gates
-     * whether OAT/headwind/surface/slope can be derived at all this calculation. */
+     * whether OAT/pressure altitude can be derived at all this calculation. */
     val weatherDerivable: Boolean = false,
     /** [weatherDerivable] plus the METAR actually having a QNH group. */
     val pressureAltDerivable: Boolean = false,
     val effectiveOatC: Int = 15,
-    val effectivePressureAltM: Int = 0,
-    val effectiveHeadwindKts: Int = 0,
-    val effectiveSurfaceType: TakeoffSurfaceType = TakeoffSurfaceType.ASFALT,
-    val effectiveSlopePct: Int = 0
+    val effectivePressureAltM: Int = 0
 ) {
     val hasGrassRunway: Boolean
         get() = runwayStrips.any { RunwaySurfaceType.valueOf(it.surface) == RunwaySurfaceType.GRASS }
+
+    /** True when the live per-runway results list should replace the single manual result. */
+    val showRunwayResults: Boolean
+        get() = flightContextMode == FlightContextMode.AIRFIELD && selectedAirfield != null &&
+            weatherDerivable && runwayResults.isNotEmpty()
 }
 
 class TakeoffViewModel(
@@ -128,8 +143,7 @@ class TakeoffViewModel(
                         headwindKts = savedInput.headwindKts,
                         surfaceType = TakeoffSurfaceType.valueOf(savedInput.surfaceType),
                         slopePct = savedInput.slopePct,
-                        marginFactorPct = savedInput.marginFactorPct,
-                        chosenRunwayDesignator = savedInput.chosenRunwayDesignator
+                        marginFactorPct = savedInput.marginFactorPct
                     )
                 }
                 if (flightContext != null) {
@@ -161,9 +175,7 @@ class TakeoffViewModel(
     fun selectAirfield(airfield: AirfieldEntity) {
         viewModelScope.launch {
             val strips = repository.getRunwayStrips(airfield.id)
-            _state.update {
-                it.copy(selectedAirfield = airfield, runwayStrips = strips, chosenRunwayDesignator = null)
-            }
+            _state.update { it.copy(selectedAirfield = airfield, runwayStrips = strips) }
             recalculate()
             saveFlightContext()
         }
@@ -175,49 +187,18 @@ class TakeoffViewModel(
         saveFlightContext()
     }
 
-    fun chooseRunway(designator: String?) {
-        _state.update { it.copy(chosenRunwayDesignator = designator) }
-        recalculate()
-    }
-
-    fun confirmFlightContext() {
-        _state.update { it.copy(flightConfirmed = true) }
-    }
-
-    /** Switching to [WeatherInputMode.MANUAL] seeds the raw fields from whatever the METAR
-     * currently derives, so editing starts from those numbers rather than stale/default ones —
-     * switching back to [WeatherInputMode.METAR] needs no such seeding, it just resumes reading
-     * the METAR. */
+    /** Switching to [WeatherInputMode.MANUAL] seeds OAT/pressure altitude from whatever the
+     * METAR currently derives, so editing starts from those numbers rather than stale/default
+     * ones — switching back to [WeatherInputMode.METAR] needs no such seeding, it just resumes
+     * reading the METAR. */
     fun setWeatherMode(mode: WeatherInputMode) {
         _state.update {
             if (mode == WeatherInputMode.MANUAL) {
-                it.copy(
-                    weatherMode = mode,
-                    oatC = it.effectiveOatC,
-                    pressureAltM = it.effectivePressureAltM,
-                    headwindKts = it.effectiveHeadwindKts
-                )
+                it.copy(weatherMode = mode, oatC = it.effectiveOatC, pressureAltM = it.effectivePressureAltM)
             } else {
                 it.copy(weatherMode = mode)
             }
         }
-        recalculate()
-    }
-
-    fun editSurfaceAndSlope() {
-        _state.update {
-            it.copy(
-                surfaceOverridden = true,
-                slopeOverridden = true,
-                surfaceType = it.effectiveSurfaceType,
-                slopePct = it.effectiveSlopePct
-            )
-        }
-        recalculate()
-    }
-
-    fun resetSurfaceAndSlope() {
-        _state.update { it.copy(surfaceOverridden = false, slopeOverridden = false) }
         recalculate()
     }
 
@@ -253,14 +234,16 @@ class TakeoffViewModel(
         }
 
     /**
-     * Fase 2c derivation: resolves OAT/pressure-altitude from the selected airfield's METAR,
-     * then — if the METAR's wind has a usable direction — ranks every runway direction via
-     * [RunwayAdvisor] and derives headwind/surface/slope from whichever direction is chosen or
-     * (absent a choice) recommended. Any field the pilot has explicitly overridden, or that
-     * can't be derived at all (no airfield, no METAR, variable wind), falls back to the plain
-     * manual value. See rekenlogica.md §5/§8; known limitation: if the wind is unusable, the
-     * whole airfield-derived bundle falls back to manual entry rather than partially deriving
-     * only surface/slope from a manually-picked runway — a simplification for this round.
+     * Fase 2c ronde 3 derivation: resolves OAT/pressure-altitude from the selected airfield's
+     * METAR when [TakeoffFormState.weatherMode] is [WeatherInputMode.METAR], then — if the
+     * METAR's wind has a usable direction — computes every runway direction's own live result
+     * via [RunwayAdvisor] (headwind/surface/slope all come from that specific direction, never
+     * a single "chosen" one). The plain manual [TakeoffResult] is always computed too, using
+     * [TakeoffFormState.headwindKts]/[TakeoffFormState.surfaceType]/[TakeoffFormState.slopePct]
+     * directly, for whenever [TakeoffFormState.showRunwayResults] is false. See rekenlogica.md
+     * §5/§8; known limitation: if the wind is unusable, the OAT/pressure-altitude bundle falls
+     * back to manual entry too (weatherMode is ignored) rather than deriving just those two
+     * without a runway list — a simplification carried over from ronde 1.
      */
     private fun recalculate() {
         val s = _state.value
@@ -282,16 +265,17 @@ class TakeoffViewModel(
         }
 
         val directions: List<RunwayDirectionOption> = s.runwayStrips.flatMap { it.directionOptions() }
-        val advice: List<RunwayAdvice> = if (weatherDerivable && directions.isNotEmpty()) {
-            RunwayAdvisor.advise(
+        val runwayResults: List<TakeoffRunwayResult> = if (weatherDerivable && directions.isNotEmpty()) {
+            val fullResultsByDesignator = mutableMapOf<String, TakeoffResult>()
+            val advice = RunwayAdvisor.advise(
                 candidates = directions.map { it.toCandidate() },
                 windDirectionDeg = windDirection,
                 windSpeedKts = parsedMetar.windSpeedKts,
                 demonstratedCrosswindKts = kmhToKts(performanceNormal.demonstratedCrosswindKmh),
-                requiredDistanceM = { headwindKts, candidate ->
-                    val direction = directions.first { it.designator == candidate.designator }
+                requiredDistances = { headwindKts, candidate ->
+                    val direction = directions.first { it.id == candidate.designator }
                     val surfaceType = deriveSurfaceType(direction.strip, s.grassCondition)
-                    PerformanceCalculator.calculateTakeoff(
+                    val distance = PerformanceCalculator.calculateTakeoff(
                         performanceNormal, corrections,
                         oatC = effOat.toDouble(),
                         pressureAltM = effPressureAlt.toDouble(),
@@ -299,59 +283,41 @@ class TakeoffViewModel(
                         surfaceFactor = surfaceFactorFor(surfaceType),
                         slopePct = candidate.slopePct,
                         marginFactor = s.marginFactorPct / 100.0
-                    ).s2WithMarginM
+                    )
+                    fullResultsByDesignator[candidate.designator] = distance
+                    RequiredDistances(withMarginM = distance.s2WithMarginM, withoutMarginM = distance.s2M)
                 }
             )
+            advice.map { item ->
+                val direction = directions.first { it.id == item.candidate.designator }
+                TakeoffRunwayResult(
+                    advice = item,
+                    surfaceType = deriveSurfaceType(direction.strip, s.grassCondition),
+                    fullResult = fullResultsByDesignator[item.candidate.designator]
+                )
+            }
         } else {
             emptyList()
         }
-
-        val activeDirection = directions.find { it.designator == s.chosenRunwayDesignator }
-            ?: directions.find { d -> advice.any { it.candidate.designator == d.designator && it.status == RunwayAdviceStatus.PREFERRED } }
-        val activeAdvice = advice.find { it.candidate.designator == activeDirection?.designator }
-
-        val effHeadwind = if (!weatherDerivable || manualWeather || activeAdvice == null) {
-            s.headwindKts
-        } else {
-            activeAdvice.headwindKts.roundToInt()
-        }
-        val effSurface = if (!weatherDerivable || s.surfaceOverridden || activeDirection == null) {
-            s.surfaceType
-        } else {
-            deriveSurfaceType(activeDirection.strip, s.grassCondition)
-        }
-        val effSlope = if (!weatherDerivable || s.slopeOverridden || activeDirection == null) {
-            s.slopePct
-        } else {
-            activeDirection.slopePct.roundToInt()
-        }
-
-        val bundleChanged = s.effectiveOatC != effOat || s.effectivePressureAltM != effPressureAlt ||
-            s.effectiveHeadwindKts != effHeadwind || s.effectiveSurfaceType != effSurface || s.effectiveSlopePct != effSlope
-        val stillConfirmed = s.flightConfirmed && !bundleChanged
 
         val result = PerformanceCalculator.calculateTakeoff(
             performanceNormal, corrections,
             oatC = effOat.toDouble(),
             pressureAltM = effPressureAlt.toDouble(),
-            headwindKts = effHeadwind.toDouble(),
-            surfaceFactor = surfaceFactorFor(effSurface),
-            slopePct = effSlope.toDouble(),
+            headwindKts = s.headwindKts.toDouble(),
+            surfaceFactor = surfaceFactorFor(s.surfaceType),
+            slopePct = s.slopePct.toDouble(),
             marginFactor = s.marginFactorPct / 100.0
         )
 
         _state.update {
             it.copy(
                 result = result,
-                runwayAdvice = advice,
+                runwayResults = runwayResults,
                 weatherDerivable = weatherDerivable,
                 pressureAltDerivable = pressureAltDerivable,
                 effectiveOatC = effOat,
-                effectivePressureAltM = effPressureAlt,
-                effectiveHeadwindKts = effHeadwind,
-                effectiveSurfaceType = effSurface,
-                effectiveSlopePct = effSlope,
-                flightConfirmed = stillConfirmed
+                effectivePressureAltM = effPressureAlt
             )
         }
 
@@ -360,7 +326,7 @@ class TakeoffViewModel(
                 repository.saveTakeoffInput(
                     TakeoffInputEntity(
                         profileId, s.oatC, s.pressureAltM, s.headwindKts,
-                        s.surfaceType.name, s.slopePct, s.marginFactorPct, s.chosenRunwayDesignator
+                        s.surfaceType.name, s.slopePct, s.marginFactorPct, chosenRunwayDesignator = null
                     )
                 )
             }

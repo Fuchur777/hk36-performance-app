@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.Color
 data class StatusColors(
     val success: Color,
     val onSuccess: Color,
+    val caution: Color,
+    val onCaution: Color,
     val warning: Color,
     val onWarning: Color,
     val error: Color,
@@ -27,6 +29,8 @@ private val LocalStatusColors = staticCompositionLocalOf {
     StatusColors(
         success = StatusSuccess,
         onSuccess = OnDark,
+        caution = StatusCaution,
+        onCaution = OnStatusCaution,
         warning = StatusWarning,
         onWarning = OnStatusWarning,
         error = StatusError,
@@ -73,6 +77,8 @@ private val LightColors = lightColorScheme(
 private val darkStatusColors = StatusColors(
     success = StatusSuccess,
     onSuccess = OnDark,
+    caution = StatusCaution,
+    onCaution = OnStatusCaution,
     warning = StatusWarning,
     onWarning = OnStatusWarning,
     error = StatusError,

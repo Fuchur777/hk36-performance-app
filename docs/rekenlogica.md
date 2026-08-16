@@ -221,65 +221,65 @@ controle van de interpolatie-methode zelf.
 
 ## 5. Locatie, weer, baanconfiguratie — workflow (niet-rekenkundig, maar verplicht vóór elke berekening)
 
-**Status (Fase 2c ronde 1, geïmplementeerd):** vliegveld/baanbeheer, METAR-parsing
-(handmatig geplakte tekst — online ophalen volgt in een latere ronde), baanadvies en
-de bevestigingsstap hieronder zijn gebouwd. GPS-locatiebepaling en automatisch METAR
-ophalen zijn bewust nog niet gebouwd — zie de stappen hieronder voor wat daarvan al
-staat en wat nog volgt.
+**Status (t/m Fase 2c ronde 3, geïmplementeerd):** vliegveld/baanbeheer en METAR-parsing
+(handmatig geplakte tekst — online ophalen volgt in een latere ronde) zijn gebouwd. GPS-
+locatiebepaling en automatisch METAR ophalen zijn bewust nog niet gebouwd.
 
-Dit is geen rekenlogica maar een verplichte UX-flow die aan elke performance-
-berekening (take-off/landing/sleepvlucht) voorafgaat:
+**Fase 2c ronde 3 — bevestiging en baankeuze vervallen, alles continu herberekend.**
+Ronde 1/2 hadden een expliciete "Bevestig weer en baan"-stap en een keuzelijst waaruit de
+piloot één aanbevolen baan koos. Op een echt toestel bleek dat te veel: de piloot wil geen
+losse bevestigingsstap en geen keuze uit één lijst, maar meteen alle banen met hun volledige
+resultaat naast elkaar zien, en de app moet gewoon live doorrekenen zodra iets verandert.
+Beide mechanismen zijn daarom volledig verwijderd:
 
-1. **Locatie bepalen**: gebruiker kiest GPS of handmatige invoer (beide
-   gelijkwaardig, geen default-voorkeur). **Nog niet geïmplementeerd** — voorlopig
-   kiest de piloot direct een opgeslagen vliegveld (stap 4).
-2. **METAR ophalen** (indien internet beschikbaar): via gratis publieke bron
-   (bijv. aviationweather.gov, geen API-key). Bij falen/geen dekking: duidelijke
-   melding, ga naar stap 3. **Nog niet geïmplementeerd** — de piloot plakt de METAR
-   voorlopig zelf in bij het vliegveldprofiel; §8b beschrijft hoe die tekst wordt
+- Geen bevestigingsknop meer, waar dan ook. Elk rekenscherm herberekent onmiddellijk zodra
+  vliegveld, METAR-modus, gras-conditie, sleepgewicht, of welke andere invoer dan ook
+  verandert — er is niets om vooraf te bevestigen.
+- Geen "kies één baan"-lijst meer. Zodra een vliegveld met een bruikbare METAR-windrichting
+  geselecteerd is, toont het scherm een resultaatkaartje **per baanrichting** tegelijk (zie
+  §8c) — de piloot leest af, kiest zelf welke baan hij gebruikt, en hoeft niets aan te
+  klikken om een berekening te krijgen.
+
+Wat overblijft is puur nog dataflow, geen goedkeuringsstap:
+
+1. **Locatie bepalen**: gebruiker kiest GPS of handmatige invoer (beide gelijkwaardig, geen
+   default-voorkeur). **Nog niet geïmplementeerd** — voorlopig kiest de piloot direct een
+   opgeslagen vliegveld.
+2. **METAR ophalen** (indien internet beschikbaar): via gratis publieke bron (bijv.
+   aviationweather.gov, geen API-key). **Nog niet geïmplementeerd** — de piloot plakt de
+   METAR voorlopig zelf in bij het vliegveldprofiel; §8b beschrijft hoe die tekst wordt
    uitgelezen.
-3. **Weer bevestigen**: toon opgehaalde METAR-waarden (windrichting, -sterkte,
-   gusts, temperatuur) of, bij ontbreken, lege invoervelden. **Piloot moet
-   expliciet bevestigen** voordat de app verdergaat — dit is een harde stap,
-   geen automatische doorgang, ook niet bij eerder al bevestigde locaties.
-   Geïmplementeerd als één gecombineerde bevestigingsknop met stap 5 (zie hieronder).
-4. **Vliegveldprofiel kiezen of invoeren**: gebruiker selecteert een
-   opgeslagen vliegveldprofiel (baanrichtingen/-typen/-lengtes) of voert dit
-   handmatig in voor een nieuwe locatie. AIP-prefill is nog niet
-   geïmplementeerd (fase 3+) — voorlopig alleen handmatig/opgeslagen profielen.
-5. **Baanconfiguratie bevestigen**: ook bij een opgeslagen profiel moet de
-   piloot de baangegevens voor déze specifieke berekening opnieuw bevestigen.
-   Geïmplementeerd als "Bevestig weer en baan"-knop die opnieuw ontgrendeld
-   moet worden zodra vliegveld, baan, gras-conditie of een van de afgeleide
-   waarden (OAT/drukhoogte/tegenwind/ondergrond/helling) verandert.
-6. Pas na stap 3 én 5 kan de eigenlijke performance-berekening (§2 hierboven)
-   starten. Geïmplementeerd: het resultaatkaartje blijft verborgen in
-   Vliegveldmodus totdat bevestigd is; in Handmatige modus (ongewijzigd
-   gedrag) is er niets te bevestigen.
+3. **Vliegveldprofiel kiezen of invoeren**: gebruiker selecteert een opgeslagen
+   vliegveldprofiel (baanrichtingen/-typen/-lengtes) of voert dit handmatig in voor een
+   nieuwe locatie. AIP-prefill is nog niet geïmplementeerd (fase 3+).
+4. Zodra vliegveld + bruikbare METAR-wind + minstens één baan aanwezig zijn, toont het
+   scherm automatisch de resultaten per baan (§8c) — geen verdere actie nodig. Ontbreekt een
+   van die drie, dan valt het scherm terug op de gewone handmatige invoervelden (ongewijzigd
+   gedrag van vóór Fase 2c).
 
-   **Uitzondering — Sleepvlucht (Fase 2c ronde 2)**: de baanrangschikking
-   hangt hier ook af van sleepvlieggewicht/instructievlucht, die pas verderop
-   in het scherm worden ingevuld. Het baanadvies staat daarom onderaan (na die
-   velden) en heeft geen aparte bevestigingsknop — tegen de tijd dat het
-   getoond wordt, staan alle andere invoergegevens al vast, dus is het alleen
-   nog een weergave van de uitkomst voor de huidige configuratie, geen stap
-   om vooraf te bevestigen zoals bij Take-off/Landing.
+**Uitzondering blijft bestaan voor de positie, niet voor het gedrag — Sleepvlucht**: de
+baanrangschikking hangt ook af van sleepvlieggewicht/instructievlucht, die pas verderop in
+het scherm worden ingevuld. Het resultaat-per-baan-blok staat daarom onderaan (na die
+velden) in plaats van direct onder de weersectie zoals bij Take-off/Landing — verder
+identiek gedrag, ook hier geen bevestiging, ook hier continu herberekend.
 
-Deze flow geldt als harde randvoorwaarde: de rekenmodule mag nooit draaien op
-ongeverifieerde/onbevestigde invoer.
+**Overschrijven, twee aparte toggles:**
 
-**Overschrijven, twee aparte toggles (Fase 2c ronde 2):**
-
-- **Weer (OAT/drukhoogte/tegenwind)**: één gezamenlijke "METAR/Handmatig"-schakelaar
+- **Weer (OAT/drukhoogte)**: één gezamenlijke "METAR/Handmatig"-schakelaar
   (`WeatherInputMode`, `ui/common/FlightContextCard.kt`) — bewust los van de
-  vliegveld/baankeuze zelf (rekenlogica.md §5 blijft ongewijzigd voor de baankeuze).
-  Overschakelen naar Handmatig vult de invoervelden eerst met de actuele
-  METAR-afgeleide waarden, zodat de piloot vanaf die waarden verder bijstelt in
-  plaats van vanaf een verouderd of leeg getal; terugschakelen naar METAR negeert
-  die handmatige waarden weer en leest gewoon opnieuw uit de METAR.
-- **Ondergrond+helling**: blijft een los per-veld overschrijf-mechanisme (potlood-
-  icoon, "terug naar advies"-knop) — een baanondergrond is een eigenschap van de
-  gekozen baan, geen METAR-gegeven, dus hoort niet bij dezelfde schakelaar.
+  vliegveld/baankeuze zelf. Overschakelen naar Handmatig vult de invoervelden eerst met de
+  actuele METAR-afgeleide waarden, zodat de piloot vanaf die waarden verder bijstelt in
+  plaats van vanaf een verouderd of leeg getal; terugschakelen naar METAR negeert die
+  handmatige waarden weer en leest gewoon opnieuw uit de METAR. In METAR-modus worden de
+  OAT/drukhoogte-invoervelden zelf niet getoond — de METAR-samenvatting (direct onder deze
+  schakelaar) is dan de enige weergave van die waarden, om dubbele informatie op het scherm
+  te vermijden.
+- **Tegenwind/ondergrond/helling**: horen niet bij deze schakelaar — sinds ronde 3 komen die
+  per baan uit het resultaatkaartje (§8c) in plaats van uit één "gekozen" baan, dus is er
+  geen enkele afgeleide waarde meer om te tonen of te overschrijven zolang de resultaten-per-
+  baan-lijst zichtbaar is. Zonder een bruikbare METAR/baanlijst (Handmatige modus, of een
+  vliegveld zonder banen) blijven tegenwind, ondergrond en helling gewoon losse handmatige
+  velden, zoals vóór Fase 2c.
 
 **Baanidentiteit — id vs. label (bugfix, Fase 2c ronde 2)**: een baanrichting had
 ooit maar één veld (`designator`) dat zowel als unieke sleutel (voor selectie/
@@ -375,8 +375,9 @@ crosswind_component = windsnelheid * sin(hoek)
 
 - `headwind_component` (indien positief) is direct de invoer voor de
   take-off/landing-interpolatie (§2.1) — dus geen aparte handmatige
-  windinvoer meer nodig zodra METAR bevestigd is; bij handmatige weersinvoer
-  (METAR niet beschikbaar) vult de gebruiker dit nog steeds zelf in.
+  windinvoer meer nodig zodra een bruikbare METAR-wind beschikbaar is; bij
+  handmatige weersinvoer (METAR niet beschikbaar) vult de gebruiker dit nog
+  steeds zelf in.
 - **Staartwind**: zoals eerder vastgelegd (§2.1) niet ondersteund door de
   AFM-tabellen **[AFM-beperking]** — bij negatieve headwind_component: harde
   waarschuwing/blokkade, geen berekening tonen. Voor landing (die geen
@@ -425,45 +426,54 @@ ISA-standaarddruk (1013,25 hPa) en de ~8,23 m/hPa-relatie zijn universele
 atmosferische constanten, geen AFM-instelbare waarden — vastgelegd als
 literals in de code, niet in `metar_config.json`.
 
-### 8c. Baanadvies **[APP]** — geïmplementeerd
+### 8c. Baanadvies — resultaten per baan **[APP]** — geïmplementeerd (herzien in Fase 2c ronde 3)
 
-`core/.../metar/RunwayAdvisor.kt`. Voor elke opgeslagen baanrichting van het
-gekozen vliegveld wordt bepaald: headwind/kruiswind-component (§8),
-benodigde afstand (via de rekenkern van het aanroepende scherm — take-off,
-landing of sleepvlucht — inclusief marge, dus s2/l2-met-marge, niet de kale
-grondloop), beschikbare baanlengte, en de status:
+`core/.../metar/RunwayAdvisor.kt`. Voor elke opgeslagen baanrichting van het gekozen
+vliegveld wordt bepaald: headwind/kruiswind-component (§8), benodigde afstand tot het 15m-
+obstakel zowel **met** als **zonder** de actuele veiligheidsmarge (s2/l2, via de rekenkern
+van het aanroepende scherm — take-off, landing of sleepvlucht), beschikbare baanlengte, en
+een status in vier niveaus (ronde 1/2 hadden er drie — de vierde, "past zonder marge", is
+nieuw in ronde 3 om expliciet te laten zien wanneer alleen de veiligheidsmarge het verschil
+maakt):
 
-- **Aanbevolen**: past, en heeft de meeste overgebleven meters van de banen
-  die passen.
-- **Past**: benodigde afstand ≤ beschikbare lengte.
-- **Past niet**: benodigde afstand > beschikbare lengte — banen worden dan
-  gesorteerd op minst-slechte tekort, niet zomaar in willekeurige volgorde.
-- **Rugwind — niet beschikbaar**: staartwindrichting, nooit aanbevolen,
-  ongeacht baanlengte (zie §8 hierboven voor de take-off/tow- vs.
-  landing-nuance).
+- **Aanbevolen** (groen): past met marge, en heeft de meeste overgebleven meters van de
+  banen die met marge passen.
+- **Past** (geel): past met marge, maar is niet de beste van de banen die dat doen.
+- **Past zonder veiligheidsmarge** (oranje): past NIET met de huidige marge-instelling, maar
+  de kale afstand (zonder marge) past nog wel.
+- **Past niet** (rood): past ook zonder marge niet.
+- **Rugwind — niet beschikbaar** (rood): staartwindrichting, nooit aanbevolen, ongeacht
+  baanlengte (zie §8 hierboven voor de take-off/tow- vs. landing-nuance) — de AFM-tabellen
+  hebben hier geen data voor, dus er is niets te berekenen.
 
-Bekende beperking: alleen baanlengte wordt vergeleken — TODA/stopway worden
-niet apart vastgelegd in het vliegveldprofiel (zie
-`docs/data/airfield_profile_schema.json`).
+**Fase 2c ronde 3**: er wordt niet langer één baan gekozen/bevestigd (zie §5) — elke
+richting krijgt een eigen resultaatkaartje met headwind, kruiswind, resterende baanlengte,
+grondloop (met én zonder marge), afstand tot 15m-obstakel (met én zonder marge), en de
+ondergrond die voor die specifieke richting gebruikt is (baan-eigenschap × vandaags'
+gras-conditie, §2.2). De piloot leest zelf af welke baan hij gebruikt; er is geen
+klikbare keuze en geen "actieve" baan meer in de rekenlogica.
 
-**Vereenvoudiging deze ronde**: als de METAR-windrichting onbruikbaar is
-(geen METAR, mislukt parsen, of variabele wind), valt de hele afgeleide
-bundel (OAT, drukhoogte, tegenwind, ondergrond, helling) terug op handmatige
-invoer — er wordt niet geprobeerd om alleen ondergrond/helling alsnog af te
-leiden van een handmatig gekozen baan zonder windgegevens. Zie
-`TakeoffViewModel.recalculate`'s KDoc voor de precieze afweging.
+Bekende beperking: alleen baanlengte wordt vergeleken — TODA/stopway worden niet apart
+vastgelegd in het vliegveldprofiel (zie `docs/data/airfield_profile_schema.json`).
+
+**Vereenvoudiging, nog steeds geldig**: als de METAR-windrichting onbruikbaar is (geen
+METAR, mislukt parsen, of variabele wind), valt de hele afgeleide bundel (OAT, drukhoogte)
+terug op handmatige invoer en verdwijnt de resultaten-per-baan-lijst — tegenwind/ondergrond/
+helling worden dan gewoon losse handmatige velden, niet gedeeltelijk afgeleid van een
+handmatig gekozen baan zonder windgegevens. Zie `TakeoffViewModel.recalculate`'s KDoc voor
+de precieze afweging.
 
 ## 9. METAR-versheid **[APP]** — geïmplementeerd
 
 `core/.../metar/MetarAge.kt` + `metar_config.json` (`stale_after_minutes`,
 standaard 60 — instelbaar, geen AFM-eis).
 
-- Toon de leeftijd van de opgehaalde METAR (tijd sinds observatie) expliciet
-  bij de bevestigingsstap (§5).
-- Waarschuwing (niet blokkerend) als de METAR ouder is dan de ingestelde
-  drempel. Piloot bevestigt of de gegevens nog representatief zijn, of vult
-  handmatig actuele waarden in — de bevestigingsstap zelf (§5) is altijd
-  verplicht, ongeacht de leeftijd.
+- Toon de leeftijd van de opgehaalde METAR (tijd sinds observatie) expliciet in de
+  METAR-samenvatting (§5).
+- Waarschuwing (niet blokkerend) als de METAR ouder is dan de ingestelde drempel — sinds
+  Fase 2c ronde 3 is er geen bevestigingsstap meer om dit aan te koppelen, dus de
+  waarschuwing staat gewoon zichtbaar in de samenvatting; de piloot schakelt zelf naar
+  Handmatig als de METAR te oud is om op te vertrouwen.
 - Een METAR bevat alleen dag-van-de-maand + tijd (geen maand/jaar) —
   `MetarAge` lost dit op tegen "nu", met een terugval naar de vorige maand
   als de dag-van-de-maand anders meer dan een uur in de toekomst zou vallen.

@@ -576,3 +576,38 @@ heeft verplaatst.
 vliegveld-/baangegevens uit de OurAirports CSV-bestanden
 (`davidmegginson.github.io/ourairports-data/{airports,runways}.csv`), inclusief een aparte,
 snellere filter-UI dan de zweeftype-lijst gebruikt (met in elk geval ICAO-code-zoeken).
+
+## 14. Fase 2c ronde 3 (2026-08-16): bevestiging en baankeuze vervallen, layout vereenvoudigd
+
+Direct na ronde 2 op een echt toestel getest — dezelfde dag nog een tweede feedbackronde,
+ditmaal een principiële herziening van de hele Vliegveld-flow in plaats van losse fixes.
+Kernklacht: te veel informatie/stappen op het scherm. Oplossing was niet meer polijsten
+maar twee mechanismen volledig weghalen:
+
+- **Geen bevestigingsstap meer, nergens.** `flightConfirmed`/`confirmFlightContext()` en de
+  "Bevestig weer en baan"-knop zijn uit alle drie de rekenschermen verwijderd. Elk scherm
+  herberekent nu gewoon continu zodra een invoerwaarde verandert — rekenlogica.md §5 legt uit
+  waarom dat voor deze app veilig genoeg is (geen destructieve actie, puur een read-only
+  advies).
+- **Geen "kies één baan"-lijst meer.** In plaats daarvan toont elk scherm een resultaatkaartje
+  per baanrichting tegelijk, kleurgecodeerd in vier niveaus: groen (aanbevolen), geel (past),
+  oranje (past alleen zonder veiligheidsmarge — nieuw deze ronde), rood (past niet / rugwind).
+  `RunwayAdvisor` (core) is hiervoor uitgebreid met een status per marge-scenario in plaats
+  van één status; zie rekenlogica.md §8c. `chosenRunwayDesignator` blijft als ongebruikte,
+  altijd-`null` kolom in de bestaande Room-tabellen staan — geen nieuwe migratie nodig, puur
+  laten leeglopen (zelfde patroon als eerdere bewuste niet-hernoemingen, zie §11 punt 2).
+- **Layout herschikt**: de METAR-samenvatting staat nu direct onder de METAR/Handmatig-
+  schakelaar (was: bovenin `FlightContextCard`, los van die schakelaar) en verdwijnt volledig
+  zodra Handmatig gekozen is. De losse read-only OAT/drukhoogte/tegenwind-kaartjes zijn
+  helemaal weg in METAR-modus — die informatie stond al in de METAR-samenvatting en de
+  resultaten-per-baan-lijst, dus was dubbel. Gras-conditie staat nu onder de marge-factor-
+  instelling, vlak boven de resultaten, in plaats van bovenin.
+- **`DerivedValueField`** is verwijderd (ongebruikt geworden nu er geen enkele afgeleide
+  waarde meer los overschreven hoeft te worden — ondergrond/helling/tegenwind komen sinds
+  deze ronde per baan uit de resultatenlijst, niet uit één "gekozen" baan).
+- **Sleepvlucht** behoudt zijn afwijkende positie (resultaten onderaan, na sleepgewicht/
+  instructievlucht/sleepvliegtuiggewicht) om dezelfde reden als ronde 2 — verder identiek
+  gedrag aan Take-off/Landing.
+
+Geen nieuwe Room-migratie deze ronde — puur een UI-/rekenlaag-herziening bovenop het
+bestaande v7-schema.

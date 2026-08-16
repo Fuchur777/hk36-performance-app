@@ -16,8 +16,8 @@ import kotlinx.coroutines.launch
 import nl.glcillustrious.hk36ttc.core.metar.MetarParseResult
 import nl.glcillustrious.hk36ttc.core.metar.MetarParser
 import nl.glcillustrious.hk36ttc.core.metar.PressureAltitude
+import nl.glcillustrious.hk36ttc.core.metar.RequiredDistances
 import nl.glcillustrious.hk36ttc.core.metar.RunwayAdvice
-import nl.glcillustrious.hk36ttc.core.metar.RunwayAdviceStatus
 import nl.glcillustrious.hk36ttc.core.metar.RunwayAdvisor
 import nl.glcillustrious.hk36ttc.core.metar.kmhToKts
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceCorrectionsData
@@ -54,8 +54,23 @@ import nl.glcillustrious.hk36ttc.ui.common.toCandidate
  */
 enum class SleepvluchtSurfaceType { ASFALT, DROOG_GRAS, NAT_GRAS, ZACHT }
 
+/** One runway direction's full tow take-off result — see [TakeoffRunwayResult] for why
+ * [fullResult] (carrying s1/s2) sits alongside [advice] (which only carries s2). */
+data class SleepvluchtRunwayResult(
+    val advice: RunwayAdvice,
+    val surfaceType: SleepvluchtSurfaceType,
+    val fullResult: TowTakeoffResult?
+)
+
 /** [slopePct] follows "positive = uphill" (AIC P173 §5.5, same convention and adverse
- * direction as normal take-off), default 0%. */
+ * direction as normal take-off), default 0%.
+ *
+ * Fase 2c ronde 3: see [TakeoffFormState] for the general shape — no single "chosen" runway or
+ * confirmation gate anymore, [runwayResults] holds every direction's own live result instead.
+ * Unlike Take-off/Landing, this list is still only meaningful once sailplane/towplane mass are
+ * known, so it's rendered at the bottom of [SleepvluchtScreen] rather than right after the
+ * weather section — see that screen for the ordering.
+ */
 data class SleepvluchtFormState(
     val registration: String? = null,
     val oatC: Int = 15,
@@ -83,19 +98,12 @@ data class SleepvluchtFormState(
     val selectedAirfield: AirfieldEntity? = null,
     val runwayStrips: List<RunwayStripEntity> = emptyList(),
     val grassCondition: GrassCondition = GrassCondition.DRY,
-    val chosenRunwayDesignator: String? = null,
-    val flightConfirmed: Boolean = false,
     val weatherMode: WeatherInputMode = WeatherInputMode.METAR,
-    val surfaceOverridden: Boolean = false,
-    val slopeOverridden: Boolean = false,
-    val runwayAdvice: List<RunwayAdvice> = emptyList(),
+    val runwayResults: List<SleepvluchtRunwayResult> = emptyList(),
     val weatherDerivable: Boolean = false,
     val pressureAltDerivable: Boolean = false,
     val effectiveOatC: Int = 15,
-    val effectivePressureAltM: Int = 0,
-    val effectiveHeadwindKts: Int = 0,
-    val effectiveSurfaceType: SleepvluchtSurfaceType = SleepvluchtSurfaceType.DROOG_GRAS,
-    val effectiveSlopePct: Int = 0
+    val effectivePressureAltM: Int = 0
 ) {
     /** The weight actually used for the calculation: the W&B value unless there isn't one
      * yet, or the user has explicitly chosen to override it. */
@@ -108,6 +116,10 @@ data class SleepvluchtFormState(
 
     val hasGrassRunway: Boolean
         get() = runwayStrips.any { RunwaySurfaceType.valueOf(it.surface) == RunwaySurfaceType.GRASS }
+
+    val showRunwayResults: Boolean
+        get() = flightContextMode == FlightContextMode.AIRFIELD && selectedAirfield != null &&
+            weatherDerivable && runwayResults.isNotEmpty()
 }
 
 class SleepvluchtViewModel(
@@ -166,8 +178,7 @@ class SleepvluchtViewModel(
                         selectedSailplaneTypeName = savedInput.selectedSailplaneTypeName,
                         selectedSailplaneTypeUsedFallback = savedInput.selectedSailplaneTypeUsedFallback,
                         towplaneMassManualOverride = savedInput.towplaneMassManualOverride,
-                        towplaneMassManualKg = savedInput.towplaneMassManualKg,
-                        chosenRunwayDesignator = savedInput.chosenRunwayDesignator
+                        towplaneMassManualKg = savedInput.towplaneMassManualKg
                     )
                 }
                 if (flightContext != null) {
@@ -199,9 +210,7 @@ class SleepvluchtViewModel(
     fun selectAirfield(airfield: AirfieldEntity) {
         viewModelScope.launch {
             val strips = repository.getRunwayStrips(airfield.id)
-            _state.update {
-                it.copy(selectedAirfield = airfield, runwayStrips = strips, chosenRunwayDesignator = null)
-            }
+            _state.update { it.copy(selectedAirfield = airfield, runwayStrips = strips) }
             recalculate()
             saveFlightContext()
         }
@@ -213,46 +222,15 @@ class SleepvluchtViewModel(
         saveFlightContext()
     }
 
-    fun chooseRunway(designator: String?) {
-        _state.update { it.copy(chosenRunwayDesignator = designator) }
-        recalculate()
-    }
-
-    fun confirmFlightContext() {
-        _state.update { it.copy(flightConfirmed = true) }
-    }
-
     /** See [TakeoffViewModel.setWeatherMode] — same seed-then-switch behavior. */
     fun setWeatherMode(mode: WeatherInputMode) {
         _state.update {
             if (mode == WeatherInputMode.MANUAL) {
-                it.copy(
-                    weatherMode = mode,
-                    oatC = it.effectiveOatC,
-                    pressureAltM = it.effectivePressureAltM,
-                    headwindKts = it.effectiveHeadwindKts
-                )
+                it.copy(weatherMode = mode, oatC = it.effectiveOatC, pressureAltM = it.effectivePressureAltM)
             } else {
                 it.copy(weatherMode = mode)
             }
         }
-        recalculate()
-    }
-
-    fun editSurfaceAndSlope() {
-        _state.update {
-            it.copy(
-                surfaceOverridden = true,
-                slopeOverridden = true,
-                surfaceType = it.effectiveSurfaceType,
-                slopePct = it.effectiveSlopePct
-            )
-        }
-        recalculate()
-    }
-
-    fun resetSurfaceAndSlope() {
-        _state.update { it.copy(surfaceOverridden = false, slopeOverridden = false) }
         recalculate()
     }
 
@@ -322,9 +300,9 @@ class SleepvluchtViewModel(
         SleepvluchtSurfaceType.ZACHT -> corrections.grassTakeoffFactors.softGroundFactor / dryGrassFactorFromNormalTakeoff
     }
 
-    /** Fase 2c derivation — see [TakeoffViewModel.recalculate] for the general pattern; the
-     * tow calculator's own headwind/surface/slope parameters mirror take-off's exactly, so the
-     * derivation logic is identical, just routed through [TowPerformanceCalculator]. */
+    /** Fase 2c ronde 3 derivation — see [TakeoffViewModel.recalculate] for the general pattern;
+     * the tow calculator's own headwind/surface/slope parameters mirror take-off's exactly, so
+     * the derivation logic is identical, just routed through [TowPerformanceCalculator]. */
     private fun recalculate() {
         val s = _state.value
 
@@ -345,16 +323,17 @@ class SleepvluchtViewModel(
         }
 
         val directions: List<RunwayDirectionOption> = s.runwayStrips.flatMap { it.directionOptions() }
-        val advice: List<RunwayAdvice> = if (weatherDerivable && directions.isNotEmpty()) {
-            RunwayAdvisor.advise(
+        val runwayResults: List<SleepvluchtRunwayResult> = if (weatherDerivable && directions.isNotEmpty()) {
+            val fullResultsByDesignator = mutableMapOf<String, TowTakeoffResult>()
+            val advice = RunwayAdvisor.advise(
                 candidates = directions.map { it.toCandidate() },
                 windDirectionDeg = windDirection,
                 windSpeedKts = parsedMetar.windSpeedKts,
                 demonstratedCrosswindKts = kmhToKts(performanceTow.limits.demonstratedCrosswindKmh),
-                requiredDistanceM = { headwindKts, candidate ->
-                    val direction = directions.first { it.designator == candidate.designator }
+                requiredDistances = { headwindKts, candidate ->
+                    val direction = directions.first { it.id == candidate.designator }
                     val surfaceType = deriveSurfaceType(direction.strip, s.grassCondition)
-                    TowPerformanceCalculator.calculateTowTakeoff(
+                    val distance = TowPerformanceCalculator.calculateTowTakeoff(
                         performanceTow, corrections,
                         sailplaneMassKg = s.sailplaneMassKg.toDouble(),
                         ldRatio = if (s.ldRatioKnown) s.ldRatio.toDouble() else null,
@@ -366,36 +345,22 @@ class SleepvluchtViewModel(
                         slopePct = candidate.slopePct,
                         marginFactor = s.marginFactorPct / 100.0,
                         surfaceCorrectionFactor = surfaceFactorFor(surfaceType)
-                    ).s2WithMarginM
+                    )
+                    fullResultsByDesignator[candidate.designator] = distance
+                    RequiredDistances(withMarginM = distance.s2WithMarginM, withoutMarginM = distance.s2M)
                 }
             )
+            advice.map { item ->
+                val direction = directions.first { it.id == item.candidate.designator }
+                SleepvluchtRunwayResult(
+                    advice = item,
+                    surfaceType = deriveSurfaceType(direction.strip, s.grassCondition),
+                    fullResult = fullResultsByDesignator[item.candidate.designator]
+                )
+            }
         } else {
             emptyList()
         }
-
-        val activeDirection = directions.find { it.designator == s.chosenRunwayDesignator }
-            ?: directions.find { d -> advice.any { it.candidate.designator == d.designator && it.status == RunwayAdviceStatus.PREFERRED } }
-        val activeAdvice = advice.find { it.candidate.designator == activeDirection?.designator }
-
-        val effHeadwind = if (!weatherDerivable || manualWeather || activeAdvice == null) {
-            s.headwindKts
-        } else {
-            activeAdvice.headwindKts.roundToInt()
-        }
-        val effSurface = if (!weatherDerivable || s.surfaceOverridden || activeDirection == null) {
-            s.surfaceType
-        } else {
-            deriveSurfaceType(activeDirection.strip, s.grassCondition)
-        }
-        val effSlope = if (!weatherDerivable || s.slopeOverridden || activeDirection == null) {
-            s.slopePct
-        } else {
-            activeDirection.slopePct.roundToInt()
-        }
-
-        val bundleChanged = s.effectiveOatC != effOat || s.effectivePressureAltM != effPressureAlt ||
-            s.effectiveHeadwindKts != effHeadwind || s.effectiveSurfaceType != effSurface || s.effectiveSlopePct != effSlope
-        val stillConfirmed = s.flightConfirmed && !bundleChanged
 
         val result = TowPerformanceCalculator.calculateTowTakeoff(
             performanceTow,
@@ -406,24 +371,20 @@ class SleepvluchtViewModel(
             towplaneMassKg = s.effectiveTowplaneMassKg.toDouble(),
             oatC = effOat.toDouble(),
             pressureAltM = effPressureAlt.toDouble(),
-            headwindKts = effHeadwind.toDouble(),
-            slopePct = effSlope.toDouble(),
+            headwindKts = s.headwindKts.toDouble(),
+            slopePct = s.slopePct.toDouble(),
             marginFactor = s.marginFactorPct / 100.0,
-            surfaceCorrectionFactor = surfaceFactorFor(effSurface)
+            surfaceCorrectionFactor = surfaceFactorFor(s.surfaceType)
         )
 
         _state.update {
             it.copy(
                 result = result,
-                runwayAdvice = advice,
+                runwayResults = runwayResults,
                 weatherDerivable = weatherDerivable,
                 pressureAltDerivable = pressureAltDerivable,
                 effectiveOatC = effOat,
-                effectivePressureAltM = effPressureAlt,
-                effectiveHeadwindKts = effHeadwind,
-                effectiveSurfaceType = effSurface,
-                effectiveSlopePct = effSlope,
-                flightConfirmed = stillConfirmed
+                effectivePressureAltM = effPressureAlt
             )
         }
 
@@ -446,7 +407,7 @@ class SleepvluchtViewModel(
                         selectedSailplaneTypeUsedFallback = s.selectedSailplaneTypeUsedFallback,
                         towplaneMassManualOverride = s.towplaneMassManualOverride,
                         towplaneMassManualKg = s.towplaneMassManualKg,
-                        chosenRunwayDesignator = s.chosenRunwayDesignator
+                        chosenRunwayDesignator = null
                     )
                 )
             }
