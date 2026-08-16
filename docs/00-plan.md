@@ -85,8 +85,8 @@ verband met Fase 2c zelf, maar wel opgepakt vóór die fase van start gaat)**
    regel omslaat, moeten alle knoppen in die rij naar dezelfde 2-regelige
    hoogte gaan, zodat de rij optisch gelijk blijft in plaats van ongelijke
    knophoogtes te tonen.
-   **Status (2026-08-16)**: geïmplementeerd, nog niet visueel getest door
-   Frank.
+   **Status (2026-08-16)**: geïmplementeerd — **bevestigd werkend door Frank**
+   (visueel getest).
 3. **Menu-volgorde op het startscherm aanpassen**: het overflow-menu (rechts-
    boven op het registratie-overzicht) moet van boven naar beneden deze
    volgorde krijgen: Instellingen, Zweeftypes, Brondocumenten, Over deze app
@@ -102,9 +102,31 @@ verband met Fase 2c zelf, maar wel opgepakt vóór die fase van start gaat)**
    verwijdering van alle bijbehorende opgeslagen rekeninvoer (W&B, Take-off,
    Landing, Sleepvlucht, laatste W&B-resultaat) — **bevestigd werkend door
    Frank**.
+5. **Versienummer en builddatum in "Over deze app"** (nieuw, 2026-08-16): het
+   bestaande "Over deze app"-scherm (met databronnen/licenties, zie §10) moet
+   ook het app-versienummer en de builddatum tonen, zodat Frank bij
+   bugreports/vergelijkingen kan zien welke versie op zijn toestel staat.
+   Versienummer kan gekoppeld worden aan `versionName`/`versionCode` uit
+   `build.gradle.kts`; builddatum via een build-time-gegenereerde constante
+   (bijv. BuildConfig-veld), niet handmatig bijgehouden.
+6. **Uitleg van de rekenlogica, in begrijpelijke taal, bereikbaar vanaf het
+   hoofdmenu** (nieuw, 2026-08-16): een apart scherm (menu-item op het
+   startscherm, naast Instellingen/Zweeftypes/Brondocumenten/Over deze app)
+   dat in gewone taal uitlegt wat de app berekent en hoe — geen doorslag van
+   het volledige AFM, maar een korte, leesbare samenvatting per module
+   (W&B, Take-off/Landing, Sleepvlucht, Bereik zodra dat er is), zodat een
+   piloot zonder het handboek te lezen begrijpt wat de app doet en welke
+   aannames/correcties (AIC P173, marge-factoren) worden toegepast.
+   - Inhoud is een vereenvoudigde, gebruikersgerichte versie van
+     `docs/rekenlogica.md` — geen kopie van de technische specificatie.
+   - Bronlabels ([AFM]/[AFM Sup 1]/[AFM Sup 11]/[AIC P173]) mogen wel terugkomen
+     zodat de gebruiker ziet wat gecertificeerd is en wat een externe
+     vuistregel is, net als in de rekenschermen zelf.
+   - Content in beide talen (NL/EN), zelfde lokalisatiepatroon als de rest van
+     de app (`values/strings.xml` + `values-en/strings.xml`).
 
-Alle vier punten in deze lijst zijn hiermee afgerond, op punt 2 na (nog niet
-visueel bevestigd — implementatie staat er wel).
+Punten 1 t/m 4 zijn afgerond en door Frank bevestigd. Punten 5 en 6 staan nog
+open.
 
 **Fase 2c — Locatie, weer, baanconfiguratie (nieuw, toegevoegd na overleg)**
 
@@ -276,14 +298,55 @@ Code wordt beheerd op GitHub, in lijn met de bestaande werkwijze voor
   buiten releases)
 
 **Commit-/branchstrategie:**
-- Eén commit (of korte reeks commits) per fase uit §6 Ontwikkelfasen:
-  fase 0 (data, al klaar) → fase 1 (W&B) → fase 2 (take-off/landing) →
-  fase 2b (sleepvlucht) → fase 3 (optioneel)
+- **Commit- en push-gedrag (aangescherpt, 2026-08-16):**
+  - Werk lokaal door tijdens een sessie (meerdere kleine wijzigingen,
+    iteraties, fixes) zonder tussentijds te committen/pushen — dat kost
+    onnodig tijd en credits en is niet nodig voor elke losse stap.
+  - **Commit + push alleen** wanneer:
+    1. een feature of fix volledig is afgerond ÉN de bijbehorende tests
+       slagen (unit tests in `core`, en waar van toepassing een
+       geverifieerde build/emulator-check), of
+    2. Frank er expliciet om vraagt, ongeacht de teststatus.
+  - Bij twijfel: niet automatisch committen — eerst vragen.
 - `main` blijft altijd bouwbaar; gebruik een kortlevende branch per fase als
   er meerdere sessies voor nodig zijn, met een merge naar `main` zodra de
   validatietests (zie `rekenlogica.md` §4) slagen
 - Commit-berichten verwijzen naar de faseletter/paragraaf, bijv.
   `"fase 1: W&B calculator + aircraft profile scherm"`
+
+**Verificatie-efficiëntie (2026-08-16), om onnodig credit-/tijdverbruik tijdens
+het bouwen te voorkomen:**
+- **Batchen i.p.v. fix→verify→fix→verify**: een reeks kleine, gerelateerde
+  fixes in één sessie doorvoeren en pas aan het eind één keer breed
+  verifiëren (build/emulator), in plaats van na elke losse wijziging apart
+  te verifiëren.
+- **Bestaande golden test-cases hergebruiken**: `docs/rekenlogica.md` §4 bevat
+  al hand-geverifieerde testcases (onafhankelijk berekend vóór de code
+  geschreven werd). Nieuwe tests moeten deze bestaande fixtures/waarden
+  hergebruiken in plaats van AFM-tabelwaarden opnieuw met de hand te
+  interpoleren/verifiëren — dat laatste is foutgevoelig én dubbel werk.
+- **Unit-tests (`core`, pure JVM) als standaard check tijdens itereren**:
+  `./gradlew :core:test` is seconden werk zonder emulator en dekt alles in
+  `calculationEngine` (interpolatie, klasse-selectie, W&B). De duurdere
+  emulator/uiautomator-route bewaren voor waar dat niet volstaat: UI-
+  integratie, Room-persistentie, navigatie, localisatie-switch.
+  (Compose Preview i.p.v. emulator voor pure layout-checks is bewust *niet*
+  als vaste regel opgenomen — Frank beoordeelt dit per geval zelf, of geeft
+  die feedback handmatig.)
+
+**Taakverdeling testen:**
+- **Visuele/UI-verificatie (emulator, uiautomator, screenshots) is Frank's
+  taak**, niet die van Claude Code — dit kostte veel tijd/credits en is eruit
+  gehaald.
+- **Automatische unit tests (`core`-module, `./gradlew :core:test`) blijven
+  wél Claude Code's eigen verantwoordelijkheid** en moeten op een geschikt
+  moment gedraaid worden (bijv. na het afronden van een feature/fix, vóór een
+  commit) — dit zijn seconden werk zonder emulator en dus geen
+  credit-probleem.
+- Consequentie voor de commit-/pushregel hierboven: "de bijbehorende tests
+  slagen" betekent concreet **de automatische unit tests**, niet een
+  visuele/emulator-controle — die laatste doet Frank apart, buiten Claude
+  Code's commit-beslissing om.
 
 **Workflow:**
 1. Repo aanmaken op github.com
