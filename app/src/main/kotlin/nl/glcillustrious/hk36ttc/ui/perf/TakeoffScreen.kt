@@ -2,11 +2,9 @@ package nl.glcillustrious.hk36ttc.ui.perf
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -41,6 +39,7 @@ import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.ResettableIntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.ResultRow
+import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
 import nl.glcillustrious.hk36ttc.ui.theme.status
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -137,7 +136,7 @@ fun TakeoffScreen(
 private fun TakeoffSurfaceSelector(surfaceType: TakeoffSurfaceType, onSelected: (TakeoffSurfaceType) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(R.string.perf_surface_label), style = MaterialTheme.typography.labelLarge)
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().uniformSegmentedRowHeight()) {
             SegmentedButton(
                 selected = surfaceType == TakeoffSurfaceType.ASFALT,
                 onClick = { onSelected(TakeoffSurfaceType.ASFALT) },

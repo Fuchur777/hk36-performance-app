@@ -15,6 +15,7 @@ import nl.glcillustrious.hk36ttc.core.perf.PerformanceCorrectionsData
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceNormalData
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 import nl.glcillustrious.hk36ttc.data.local.LandingInputEntity
+import nl.glcillustrious.hk36ttc.ui.common.LoadGuard
 
 /** Supplement 11 publishes no landing correction for anything but a paved runway — the grass
  * factors come from AIC P173 instead, and "Aangepast" lets the pilot enter their own estimate
@@ -48,9 +49,7 @@ class LandingViewModel(
     private val _state = MutableStateFlow(LandingFormState(marginFactorPct = marginFactorDefaultPct))
     val state: StateFlow<LandingFormState> = _state
 
-    /** Guards the persistence write in [recalculate] against firing with the still-default
-     * [_state] before the saved input has actually loaded — see [TakeoffViewModel.loaded]. */
-    private var loaded = false
+    private val loadGuard = LoadGuard()
 
     init {
         viewModelScope.launch {
@@ -71,7 +70,7 @@ class LandingViewModel(
                     )
                 }
             }
-            loaded = true
+            loadGuard.markLoaded()
             recalculate()
         }
     }
@@ -100,7 +99,7 @@ class LandingViewModel(
         )
         _state.update { it.copy(result = result) }
 
-        if (loaded) {
+        loadGuard.runIfLoaded {
             viewModelScope.launch {
                 repository.saveLandingInput(
                     LandingInputEntity(

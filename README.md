@@ -9,13 +9,21 @@ voor de rekenformules, en [`docs/data/`](docs/data) voor de gedigitaliseerde AFM
 
 ## Status
 
-- ✅ Fase 1 (MVP): aircraft profile (meerdere registraties) + W&B-calculator
-- ✅ Fase 2: take-off/landing performance-module (incl. helling- en ondergrondcorrecties per AIC P173/2024)
-- ✅ Fase 2b: sleepvlucht (incl. zweeftype-referentielijst met favorieten)
+- ✅ Fase 1 (MVP): aircraft profile (meerdere registraties, verwijderbaar met cascade-cleanup) + W&B-calculator
+- ✅ Fase 2/2b: take-off/landing/sleepvlucht performance-module (incl. helling- en ondergrondcorrecties per AIC P173/2024)
+- ✅ Zweeftype-referentielijst met favorieten (auto-vult sleepgewicht + L/D in bij sleepvlucht)
+- ✅ Per-registratie inputpersistentie op elk rekenscherm (W&B, take-off, landing, sleepvlucht)
 - ✅ Volledige NL/EN-localisatie (auto-detect + handmatige override)
+- ✅ "Documenten"-, "Over deze app"- en "Hoe de app rekent"-schermen
 - ⬜ Fase 2c: locatie/METAR/vliegveldprofielen
-- ⬜ Fase 2d: bereik/wind/kaart
+- ❌ Fase 2d (bereik/wind/kaart) — **komt niet**, andere apps dekken dit al goed af (besluit 2026-08-16)
 - ⬜ Fase 3 (optioneel): historie, PDF-export
+
+> **Let op — pre-release (`versionCode = 1`):** `AppDatabase` gebruikt nog
+> `fallbackToDestructiveMigration(dropAllTables = true)`. Elke toekomstige schemaversie-bump
+> wist daarmee stilzwijgend alle lokaal opgeslagen profielen/instellingen. Dat is prima zolang
+> alleen ontwikkelaars testen, maar **moet vervangen worden door échte Room `Migration`-objecten
+> vóórdat een echt clublid de app met productiedata gebruikt.** Zie `docs/00-plan.md` §11.
 
 ## Bouwen
 
@@ -25,20 +33,27 @@ Vereist: Android Studio (bundelt de JDK en Android SDK Manager).
 2. Laat Gradle syncen (downloadt automatisch de gepinde dependency-versies).
 3. Run de `app`-configuratie op een emulator of toestel (min. Android 8.0 / API 26).
 
-Command line (met JDK 17+ op PATH):
+Command line (Gradle 9.5 wrapper; provisioneert zelf de gepinde JDK 25-toolchain via
+`gradle/gradle-daemon-jvm.properties`, een systeem-JDK is alleen nodig om de wrapper zelf te
+starten):
 
 ```bash
-./gradlew :core:test        # unit tests calculationEngine (W&B, later performance)
+./gradlew :core:test        # unit tests calculationEngine (W&B + performance)
 ./gradlew :app:assembleDebug
 ```
+
+CI (`.github/workflows/ci.yml`) draait beide commando's op elke push/PR naar `main`.
 
 ## Module-indeling
 
 ```
-core/   pure-Kotlin calculationEngine (WBCalculator, later PerformanceCalculator) — geen
-        Android-afhankelijkheden, apart testbaar
-app/    Compose UI, Room-database (aircraft profiles), navigatie
-docs/   overdrachtspakket: plan, rekenlogica, look-and-feel, brondata (JSON)
+core/     pure-Kotlin calculationEngine (WBCalculator, PerformanceCalculator, TowPerformanceCalculator)
+          — geen Android-afhankelijkheden, apart testbaar, 55+ unit tests
+app/      Compose UI, Room-database (aircraft profiles + per-registratie inputpersistentie), navigatie
+docs/     overdrachtspakket: plan, rekenlogica, look-and-feel, brondata (JSON)
+scripts/  PowerShell-hulpscripts, bv. verify-persistence-and-ui-fixes.ps1 (build+install+
+          handmatige verificatiechecklist — visuele/emulator-verificatie is Frank's eigen taak,
+          zie docs/00-plan.md §9)
 ```
 
 ## Rekenconstanten: geen hardcoded waarden
@@ -64,3 +79,12 @@ bijwerken (en de test in `WbConstantsDataTest.kt` bevestigt dat ze niet uit elka
 `core/src/test/kotlin/.../WBCalculatorTest.kt` bevat hand-geverifieerde testcases
 (zie `docs/rekenlogica.md` §4). De verwachte waarden zijn onafhankelijk berekend
 (niet met dezelfde code) voordat de test geschreven werd.
+
+## Taalkeuze in de code: Nederlands + Engels door elkaar
+
+Dit is bewust, geen inconsistentie. Nederlandse domein-/UI-termen (`Sleepvlucht`,
+`SleepvluchtSurfaceType`, `Ondergrond`, `Zweeftype`, resource-keys als `sleepvlucht_*`) worden
+letterlijk gebruikt als Kotlin-identifiers en string-resource-namen, omdat ze de eigen
+terminologie van de club volgen en direct corresponderen met de Nederlandstalige UI-teksten
+(de standaardtaal van de app, zie `values/strings.xml`). Code-commentaar en KDoc zijn altijd
+Engels, ook in bestanden vol Nederlandse identifiers — dat is de enige harde regel hier.

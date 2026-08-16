@@ -396,7 +396,68 @@ het bouwen te voorkomen:**
     geval naar een `stringResource()`. Dit patroon hergebruiken voor elke toekomstige
     core-gegenereerde gebruikersboodschap.
 
-**Nog open / bewust uitgesteld:** Fase 2c (locatie/METAR/vliegveldprofielen), Fase 2d
-(bereik/wind/kaart), Fase 3 (historie/PDF-export) — zie §2 hierboven, ongewijzigd t.o.v. de
-oorspronkelijke scope-afspraak. Project staat nog niet in een git-repo (§9 hierboven is dus nog
-niet uitgevoerd).
+**Nog open / bewust uitgesteld:** Fase 2c (locatie/METAR/vliegveldprofielen), Fase 3
+(historie/PDF-export) — zie §2 hierboven. **Fase 2d (bereik/wind/kaart) wordt niet meer
+gebouwd**: andere apps dekken dat al goed af (besluit 2026-08-16), dus de codereview-punten die
+eerder "pas bij Fase 2d" waren uitgesteld zijn met dat besluit vervallen en gewoon nu opgepakt
+(zie §11).
+
+## 11. Codereview 2026-08-16: bevindingen en opvolging
+
+Frank heeft gevraagd om een eigen codereview: "in hoeverre is de huidige code goed door een
+mens te begrijpen en zonder Claude Code te beheren in GitHub?" Bevindingen en opvolging:
+
+1. **Room schema-exports niet in git** — `app/schemas/*.json` stond in `.gitignore` terwijl dit
+   gegenereerde bestand het enige audit-spoor is van elke `AppDatabase`-versiestap. Opgelost:
+   exclusie verwijderd, bestanden toegevoegd aan git. **Voortaan: elke toekomstige
+   `AppDatabase`-versieverhoging moet zijn schema-export meecommitten.**
+2. **Risico: destructieve migratie = dataverlies.** `AppDatabase.kt` gebruikt
+   `fallbackToDestructiveMigration(dropAllTables = true)`. Dat is prima zolang alleen wij zelf
+   testen, maar zodra een echt clublid de app met echte registraties/profielen gebruikt, wist
+   *elke volgende schemaversie-bump* (nieuwe kolom, nieuwe tabel, etc.) stilzwijgend alle
+   opgeslagen data. **Vereiste vóór een release aan echte gebruikers: vervang dit door échte
+   Room `Migration`-objecten per versiestap**, of leg op zijn minst een export/import-functie
+   aan als vangnet. Dit is de belangrijkste bevinding uit de hele review — nog niet opgelost.
+3. **Geen CI.** Er was geen geautomatiseerde controle dat de code nog compileert/test na een
+   wijziging. Opgelost: `.github/workflows/ci.yml` met twee jobs — `:core:test` (snel, pure
+   JVM, geen Android-SDK nodig) en `:app:assembleDebug` (compileert de hele app, vangt
+   cross-module regressies op die `:core:test` niet ziet).
+4. **Geen tests in de `app`-module.** Alle 55 unit tests zaten in `:core` (pure Kotlin); geen
+   enkele ViewModel werd automatisch getest. Opgelost zonder Robolectric (extra
+   dependency-versierisico): `app/src/test/kotlin/.../data/local/FakeDaos.kt` bevat
+   handgeschreven in-memory fakes van elke Room-DAO-interface, gecombineerd met
+   `kotlinx-coroutines-test` (`Dispatchers.setMain`) zodat `viewModelScope` in een kale
+   JVM-test werkt. `LoadGuardTest.kt` test het mechanisme uit punt 5 direct; het
+   `normalJson`-fixture-literal in het nieuwe `TakeoffViewModelTest.kt` is bewust een letterlijke
+   kopie van hetzelfde literal in `core`'s `PerformanceCalculatorTest.kt` (niet cross-module
+   gedeeld, `core`'s testbron is niet zichtbaar voor `app`'s testbron) en bevestigt de
+   save/reload-rondgang per registratie die de bug uit §10 veroorzaakte.
+5. **`LoadGuard`** — de `Take-off`/`Landing`/`Sleepvlucht`-ViewModels hadden elk hun eigen losse
+   `private var loaded = false`-vlag (copy-paste, precies de bug uit §10's persistentie-fix).
+   Opgelost: gedeelde `ui/common/LoadGuard.kt`-klasse, alle drie ViewModels hergebruiken hem nu.
+   `WbViewModel` heeft bewust zijn eigen, andere guard behouden (`profile == null`-check dient
+   daar ook om de profielgegevens zelf op te halen, dus een aparte `LoadGuard` zou overbodig zijn).
+6. **`SleepvluchtScreen.kt` was het grootste UI-bestand** (~545 regels, veruit het langste
+   scherm). Opgelost: de losstaande sub-composables (`SailplaneTypeField`,
+   `FavoriteSailplaneTypeDropdown`, `TowplaneMassField`, `LabeledCheckbox`,
+   `SleepvluchtResultCard`, `towBlockReasonText`, `BlockedReasonsCard`,
+   `SleepClimbReferenceCard`) zijn verplaatst naar `SleepvluchtComponents.kt` in hetzelfde
+   package; `SleepvluchtScreen()` zelf en `SleepSurfaceSelector` blijven in het hoofdbestand.
+7. **Segmented-button-rij "gelijke hoogte"-truc was 4x gedupliceerd** (Take-off/Landing/
+   Sleepvlucht ondergrond-selectors + het brandstoftank-formaat in Profiel bewerken), telkens
+   als rauwe `Modifier.height(IntrinsicSize.Max)` + `Modifier.fillMaxHeight()` zonder uitleg
+   waarom. Opgelost: `Modifier.uniformSegmentedRowHeight()`-extensie in
+   `ui/common/UniformHeightRow.kt` met KDoc die de intrinsic-height-measuring-truc uitlegt, nu
+   op alle 4 plekken hergebruikt.
+8. **Taalmix Nederlands/Engels niet gedocumenteerd.** Nederlandse domeintermen (`Sleepvlucht`,
+   `Ondergrond`, `Zweeftype`, ...) worden bewust gebruikt als Kotlin-identifiers en
+   resource-key-fragmenten, om aan te sluiten bij de eigen terminologie van de club en bij de
+   Nederlandstalige UI-teksten. Code-commentaar en KDoc blijven altijd Engels. Vastgelegd in
+   `README.md`.
+9. **`README.md` liep achter** op de werkelijke featureset. Bijgewerkt met i18n, favorieten,
+   About/Uitleg/Documenten-schermen, registratie verwijderen, per-registratie persistentie,
+   `scripts/`, CI, en de dataverlies-caveat uit punt 2 hierboven.
+
+Alle punten hierboven zijn nu opgepakt, behalve punt 2 (destructieve migratie) — die blijft
+bewust openstaan als expliciet risico totdat er een concreet migratieplan is, zie de
+waarschuwing daar.

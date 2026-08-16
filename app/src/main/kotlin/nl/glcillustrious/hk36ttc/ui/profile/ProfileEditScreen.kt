@@ -2,11 +2,9 @@ package nl.glcillustrious.hk36ttc.ui.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -39,6 +37,7 @@ import nl.glcillustrious.hk36ttc.core.wb.FuelTankType
 import nl.glcillustrious.hk36ttc.core.wb.WbConstantsData
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
+import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
 
 private fun ProfileFieldError.toStringRes(): Int = when (this) {
     ProfileFieldError.REQUIRED -> R.string.profile_edit_error_required
@@ -190,7 +189,7 @@ private fun FuelTankSelector(selected: FuelTankType, onSelected: (FuelTankType) 
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(R.string.profile_edit_fuel_tank_label), style = MaterialTheme.typography.labelLarge)
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().uniformSegmentedRowHeight()) {
             options.forEachIndexed { index, type ->
                 SegmentedButton(
                     selected = type == selected,

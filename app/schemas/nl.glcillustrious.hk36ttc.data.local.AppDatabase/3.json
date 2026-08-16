@@ -1,0 +1,103 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "7437360ad17f7e15bbcb50dacd378f0b",
+    "entities": [
+      {
+        "tableName": "aircraft_profiles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `registration` TEXT NOT NULL, `emptyMassKg` REAL NOT NULL, `emptyMassCgPositionMm` REAL NOT NULL, `mtowKg` REAL NOT NULL, `cgEnvelopeForwardLimitMm` REAL NOT NULL, `cgEnvelopeAftLimitMm` REAL NOT NULL, `fuelTankType` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "registration",
+            "columnName": "registration",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "emptyMassKg",
+            "columnName": "emptyMassKg",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "emptyMassCgPositionMm",
+            "columnName": "emptyMassCgPositionMm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mtowKg",
+            "columnName": "mtowKg",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cgEnvelopeForwardLimitMm",
+            "columnName": "cgEnvelopeForwardLimitMm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cgEnvelopeAftLimitMm",
+            "columnName": "cgEnvelopeAftLimitMm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fuelTankType",
+            "columnName": "fuelTankType",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "last_wb_results",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `totalMassKg` REAL NOT NULL, `computedAtEpochMs` INTEGER NOT NULL, PRIMARY KEY(`profileId`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalMassKg",
+            "columnName": "totalMassKg",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "computedAtEpochMs",
+            "columnName": "computedAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7437360ad17f7e15bbcb50dacd378f0b')"
+    ]
+  }
+}

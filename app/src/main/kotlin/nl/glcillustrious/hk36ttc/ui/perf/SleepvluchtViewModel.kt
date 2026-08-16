@@ -21,6 +21,7 @@ import nl.glcillustrious.hk36ttc.core.perf.TowPerformanceCalculator
 import nl.glcillustrious.hk36ttc.core.perf.TowTakeoffResult
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 import nl.glcillustrious.hk36ttc.data.local.SleepvluchtInputEntity
+import nl.glcillustrious.hk36ttc.ui.common.LoadGuard
 
 /**
  * The AFM Sup 1 tow table is itself baselined on dry grass ("level short dry grass runway",
@@ -90,9 +91,7 @@ class SleepvluchtViewModel(
             .map { names -> val nameSet = names.toSet(); sailplaneTypes.types.filter { it.name in nameSet } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    /** Guards the persistence write in [recalculate] against firing with the still-default
-     * [_state] before the saved input has actually loaded — see [TakeoffViewModel.loaded]. */
-    private var loaded = false
+    private val loadGuard = LoadGuard()
 
     init {
         viewModelScope.launch {
@@ -126,7 +125,7 @@ class SleepvluchtViewModel(
                     )
                 }
             }
-            loaded = true
+            loadGuard.markLoaded()
             recalculate()
         }
     }
@@ -196,7 +195,7 @@ class SleepvluchtViewModel(
         )
         _state.update { it.copy(result = result) }
 
-        if (loaded) {
+        loadGuard.runIfLoaded {
             viewModelScope.launch {
                 repository.saveSleepvluchtInput(
                     SleepvluchtInputEntity(

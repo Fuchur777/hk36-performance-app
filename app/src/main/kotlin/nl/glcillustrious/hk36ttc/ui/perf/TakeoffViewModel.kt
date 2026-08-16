@@ -15,6 +15,7 @@ import nl.glcillustrious.hk36ttc.core.perf.PerformanceNormalData
 import nl.glcillustrious.hk36ttc.core.perf.TakeoffResult
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 import nl.glcillustrious.hk36ttc.data.local.TakeoffInputEntity
+import nl.glcillustrious.hk36ttc.ui.common.LoadGuard
 
 /**
  * Dry grass keeps the AFM's own minimum penalty (§5.3.3, confirmed by AIC P173 §5) — wet
@@ -53,12 +54,7 @@ class TakeoffViewModel(
     private val _state = MutableStateFlow(TakeoffFormState(marginFactorPct = marginFactorDefaultPct))
     val state: StateFlow<TakeoffFormState> = _state
 
-    /** Guards the persistence write in [recalculate] against firing with the still-default
-     * [_state] before the saved input has actually loaded — without this, a `recalculate()`
-     * called before [init]'s load completes (or from a stray extra instance) would overwrite
-     * previously-saved values with defaults. Same rationale as [WbViewModel]'s
-     * `profile == null` early-return, generalized since this state has no such sentinel. */
-    private var loaded = false
+    private val loadGuard = LoadGuard()
 
     init {
         viewModelScope.launch {
@@ -79,7 +75,7 @@ class TakeoffViewModel(
                     )
                 }
             }
-            loaded = true
+            loadGuard.markLoaded()
             recalculate()
         }
     }
@@ -109,7 +105,7 @@ class TakeoffViewModel(
         )
         _state.update { it.copy(result = result) }
 
-        if (loaded) {
+        loadGuard.runIfLoaded {
             viewModelScope.launch {
                 repository.saveTakeoffInput(
                     TakeoffInputEntity(

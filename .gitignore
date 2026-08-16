@@ -21,9 +21,6 @@ local.properties
 /persist-log.txt
 /*.db
 
-# Room schema exports (generated, regenerate via ksp)
-app/schemas/
-
 # APK / AAB outputs outside releases/
 *.apk
 *.aab
