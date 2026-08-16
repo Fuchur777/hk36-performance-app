@@ -36,12 +36,11 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "hk36ttc.db"
                 )
-                    // v1 -> v2 dropped serialNumber, v2 -> v3 added last_wb_results,
-                    // v3 -> v4 added favorite_sailplane_types, v4 -> v5 added
-                    // wb_inputs/takeoff_inputs/landing_inputs/sleepvlucht_inputs.
-                    // Pre-release app, no real user data to preserve yet — revisit with a
-                    // real Migration once the app ships.
-                    .fallbackToDestructiveMigration(dropAllTables = true)
+                    // Real migrations for every version bump so far — see Migrations.kt.
+                    // No fallbackToDestructiveMigration: a schema bump must never silently wipe
+                    // a real user's profiles/inputs. Add the next Migration to ALL_MIGRATIONS
+                    // whenever AppDatabase.version is bumped again.
+                    .addMigrations(*ALL_MIGRATIONS)
                     .build()
                     .also { instance = it }
             }

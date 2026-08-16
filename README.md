@@ -15,15 +15,11 @@ voor de rekenformules, en [`docs/data/`](docs/data) voor de gedigitaliseerde AFM
 - ✅ Per-registratie inputpersistentie op elk rekenscherm (W&B, take-off, landing, sleepvlucht)
 - ✅ Volledige NL/EN-localisatie (auto-detect + handmatige override)
 - ✅ "Documenten"-, "Over deze app"- en "Hoe de app rekent"-schermen
+- ✅ Echte Room `Migration`-objecten voor elke schemaversie (geen destructieve fallback meer,
+  geen dataverlies bij een toekomstige update) — zie `Migrations.kt` hieronder
 - ⬜ Fase 2c: locatie/METAR/vliegveldprofielen
 - ❌ Fase 2d (bereik/wind/kaart) — **komt niet**, andere apps dekken dit al goed af (besluit 2026-08-16)
 - ⬜ Fase 3 (optioneel): historie, PDF-export
-
-> **Let op — pre-release (nog geen Play Store/APK-distributie):** `AppDatabase` gebruikt nog
-> `fallbackToDestructiveMigration(dropAllTables = true)`. Elke toekomstige schemaversie-bump
-> wist daarmee stilzwijgend alle lokaal opgeslagen profielen/instellingen. Dat is prima zolang
-> alleen ontwikkelaars testen, maar **moet vervangen worden door échte Room `Migration`-objecten
-> vóórdat een echt clublid de app met productiedata gebruikt.** Zie `docs/00-plan.md` §11.
 
 ## Bouwen
 
@@ -73,6 +69,16 @@ gebruiken (veiligheidsrelevante data).
 en een noodval als het bestand ooit onleesbaar is. Bij een AFM-wijziging moet je zowel
 `docs/data/weight_balance_constants.json` als de asset-kopie in `app/src/main/assets/data/`
 bijwerken (en de test in `WbConstantsDataTest.kt` bevestigt dat ze niet uit elkaar lopen).
+
+## Room-migraties: nooit meer destructief
+
+`AppDatabase.kt` gebruikt `.addMigrations(*ALL_MIGRATIONS)`
+(`app/.../data/local/Migrations.kt`) — geen `fallbackToDestructiveMigration` meer. **Bij elke
+toekomstige `AppDatabase.version`-bump moet er een nieuwe `Migration` aan `ALL_MIGRATIONS`
+worden toegevoegd**, anders faalt de app-start voor iedereen die nog op een oudere versie zit.
+`MigrationTest.kt` (instrumented, `./gradlew :app:connectedAndroidTest`) doorloopt elke
+migratiestap en de volledige keten met een geseede rij om dataverlies te detecteren — dit is
+een emulator/toestel-test, geen pure JVM-test.
 
 ## Rekenkern valideren
 

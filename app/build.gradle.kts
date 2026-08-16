@@ -15,8 +15,8 @@ android {
         applicationId = "nl.glcillustrious.hk36ttc"
         minSdk = 26
         targetSdk = 37
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 3
+        versionName = "0.1.2"
 
         // Generated fresh at build configuration time - shown alongside versionName/versionCode
         // in the About screen so a specific build can still be pinned down within a day even
@@ -51,6 +51,14 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
+    sourceSets {
+        // Lets MigrationTest (androidTest) load the tracked schema exports to build historic
+        // versions of the database via MigrationTestHelper.
+        getByName("androidTest") {
+            assets.srcDirs("$projectDir/schemas")
         }
     }
 }
@@ -91,6 +99,7 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation(platform("androidx.compose:compose-bom:2026.08.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.room:room-testing:2.8.4")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

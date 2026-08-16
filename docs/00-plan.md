@@ -422,13 +422,25 @@ mens te begrijpen en zonder Claude Code te beheren in GitHub?" Bevindingen en op
    gegenereerde bestand het enige audit-spoor is van elke `AppDatabase`-versiestap. Opgelost:
    exclusie verwijderd, bestanden toegevoegd aan git. **Voortaan: elke toekomstige
    `AppDatabase`-versieverhoging moet zijn schema-export meecommitten.**
-2. **Risico: destructieve migratie = dataverlies.** `AppDatabase.kt` gebruikt
-   `fallbackToDestructiveMigration(dropAllTables = true)`. Dat is prima zolang alleen wij zelf
-   testen, maar zodra een echt clublid de app met echte registraties/profielen gebruikt, wist
-   *elke volgende schemaversie-bump* (nieuwe kolom, nieuwe tabel, etc.) stilzwijgend alle
-   opgeslagen data. **Vereiste vóór een release aan echte gebruikers: vervang dit door échte
-   Room `Migration`-objecten per versiestap**, of leg op zijn minst een export/import-functie
-   aan als vangnet. Dit is de belangrijkste bevinding uit de hele review — nog niet opgelost.
+2. **Risico: destructieve migratie = dataverlies.** `AppDatabase.kt` gebruikte
+   `fallbackToDestructiveMigration(dropAllTables = true)`, wat bij elke schemaversie-bump
+   stilzwijgend alle opgeslagen registraties/profielen zou wissen zodra een echt clublid de app
+   gebruikt. **Opgelost (2026-08-16)**: `app/src/main/kotlin/.../data/local/Migrations.kt`
+   bevat nu echte Room `Migration`-objecten voor elke bestaande versiestap
+   (`MIGRATION_1_2`...`MIGRATION_4_5`, gebundeld als `ALL_MIGRATIONS`), met de exacte SQL
+   overgenomen uit de getrackte schema-exports in `app/schemas/`. `AppDatabase.kt` gebruikt nu
+   `.addMigrations(*ALL_MIGRATIONS)` in plaats van de destructieve fallback. `v1 -> v2` (het
+   verwijderen van `serialNumber`) gebruikt het standaard "nieuwe tabel aanmaken, data
+   overkopiëren, oude tabel droppen, hernoemen"-patroon (SQLite's `DROP COLUMN` is pas vanaf
+   3.35 beschikbaar, niet gegarandeerd op minSdk 26); de overige stappen zijn puur additief
+   (`CREATE TABLE IF NOT EXISTS`). Geverifieerd met een instrumented `MigrationTest.kt`
+   (`androidx.room:room-testing`, `MigrationTestHelper`) die elke stap + de volledige keten
+   1→5 met een geseede rij doorloopt en bevestigt dat de data overleeft — **deze test draait
+   op een emulator/toestel** (`./gradlew :app:connectedAndroidTest`), niet als pure JVM-test,
+   dus dat is Frank's eigen verificatie-taak zoals de rest van instrumented/emulator-werk.
+   **Belangrijk voor de toekomst:** bij elke volgende `AppDatabase.version`-bump moet er een
+   nieuwe `Migration` aan `ALL_MIGRATIONS` worden toegevoegd — nooit meer terugvallen op
+   destructieve migratie.
 3. **Geen CI.** Er was geen geautomatiseerde controle dat de code nog compileert/test na een
    wijziging. Opgelost: `.github/workflows/ci.yml` met twee jobs — `:core:test` (snel, pure
    JVM, geen Android-SDK nodig) en `:app:assembleDebug` (compileert de hele app, vangt
