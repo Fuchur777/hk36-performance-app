@@ -109,6 +109,10 @@ verband met Fase 2c zelf, maar wel opgepakt vóór die fase van start gaat)**
    Versienummer kan gekoppeld worden aan `versionName`/`versionCode` uit
    `build.gradle.kts`; builddatum via een build-time-gegenereerde constante
    (bijv. BuildConfig-veld), niet handmatig bijgehouden.
+   **Status (2026-08-16)**: geïmplementeerd — `BuildConfig.BUILD_DATE` wordt
+   bij elke build vers gegenereerd (`LocalDate.now()` in `app/build.gradle.kts`,
+   ISO-datumformaat) en samen met `VERSION_NAME`/`VERSION_CODE` getoond op het
+   Over-deze-app-scherm — nog te bevestigen door Frank.
 6. **Uitleg van de rekenlogica, in begrijpelijke taal, bereikbaar vanaf het
    hoofdmenu** (nieuw, 2026-08-16): een apart scherm (menu-item op het
    startscherm, naast Instellingen/Zweeftypes/Brondocumenten/Over deze app)
@@ -124,9 +128,15 @@ verband met Fase 2c zelf, maar wel opgepakt vóór die fase van start gaat)**
      vuistregel is, net als in de rekenschermen zelf.
    - Content in beide talen (NL/EN), zelfde lokalisatiepatroon als de rest van
      de app (`values/strings.xml` + `values-en/strings.xml`).
+   **Status (2026-08-16)**: geïmplementeerd — nieuw scherm
+   `ExplainerScreen.kt` ("Hoe de app rekent"), menu-item tussen
+   Brondocumenten en Over deze app, met een korte NL/EN-samenvatting per
+   module (W&B, Take-off/Landing, Sleepvlucht) inclusief bronlabels en een
+   legenda die uitlegt wat [AFM] vs. [AIC P173] betekent — nog te bevestigen
+   door Frank. Bereik-module volgt pas in Fase 2d, dus nog niet opgenomen.
 
-Punten 1 t/m 4 zijn afgerond en door Frank bevestigd. Punten 5 en 6 staan nog
-open.
+Punten 1 t/m 6 zijn hiermee allemaal geïmplementeerd; punten 5 en 6 wachten
+nog op bevestiging door Frank. Zodra dat rond is, kan Fase 2c van start.
 
 **Fase 2c — Locatie, weer, baanconfiguratie (nieuw, toegevoegd na overleg)**
 

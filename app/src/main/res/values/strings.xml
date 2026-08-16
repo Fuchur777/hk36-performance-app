@@ -24,6 +24,7 @@
     <!-- Over deze app -->
     <string name="about_title">Over deze app</string>
     <string name="about_version_format">Versie %1$s</string>
+    <string name="about_build_info_format">Build %1$d — %2$s</string>
     <string name="about_app_description">Preflight W&amp;B- en prestatieberekeningen voor de HK36 TTC Super Dimona. Geen gecertificeerd EFB — het vlieghandboek blijft altijd leidend.</string>
     <string name="about_data_sources_heading">Rekengegevens en bronnen</string>
     <string name="about_libraries_heading">Gebruikte open-source software</string>
@@ -183,4 +184,17 @@
     <string name="startup_load_failed_title">Rekengegevens konden niet worden geladen</string>
     <string name="startup_load_failed_folder_format">Map: %1$s</string>
     <string name="startup_reset_to_defaults">Standaardwaarden herstellen</string>
+
+    <!-- Hoe de app rekent (uitlegscherm) -->
+    <string name="explainer_title">Hoe de app rekent</string>
+    <string name="explainer_intro">Dit scherm legt in gewone taal uit wat de app berekent en op basis waarvan — geen kopie van het vlieghandboek, wel dezelfde bronlabels als in de rekenschermen zelf, zodat je ziet wat een gecertificeerd cijfer is en wat een externe vuistregel.</string>
+    <string name="explainer_labels_legend_heading">Wat de bronlabels betekenen</string>
+    <string name="explainer_labels_legend_body">[AFM] en [AFM Sup 1]/[AFM Sup 11] komen rechtstreeks uit het gecertificeerde vlieghandboek en de bijbehorende supplementen — dit zijn harde, gecertificeerde cijfers. [AIC P173] is een externe, niet-verplichte richtlijn van de Britse UK CAA, alleen gebruikt waar het vlieghandboek zelf niets voorschrijft.</string>
+    <string name="explainer_wb_heading">Weight &amp; Balance</string>
+    <string name="explainer_wb_body">De app berekent het totaalgewicht en het zwaartepunt (CG) uit het leeggewicht van de kist plus piloot, copiloot, brandstof en bagage. [AFM] Dit wordt getoetst aan de maximale startmassa (MTOW) en aan de CG-envelope uit je eigen weeg- en zwaartepuntsrapport. Bij overschrijding verschijnt een duidelijke waarschuwing; bij een te lichte solo-vlucht een melding dat trimgewicht nodig kan zijn.</string>
+    <string name="explainer_takeoff_landing_heading">Take-off en Landing</string>
+    <string name="explainer_takeoff_landing_body">Voor take-off en landing interpoleert de app de officiële prestatietabellen uit het vlieghandboek op basis van buitentemperatuur, drukhoogte en (bij take-off) tegenwind. [AFM] Voor ondergrond (gras, zachte grond) en hellingscorrecties gebruikt de app AFM-cijfers waar die er zijn, en anders erkende vuistregels uit de Britse AIC P173-circulaire. [AIC P173] Als laatste stap wordt een aanbevolen veiligheidsmarge toegepast (standaard 1,33× voor take-off, 1,43× voor landing) — dit is geen wettelijke eis, maar een gangbare praktijkconventie die je zelf kunt aanpassen. [AIC P173]</string>
+    <string name="explainer_sleepvlucht_heading">Sleepvlucht</string>
+    <string name="explainer_sleepvlucht_body">Voor het slepen van een zweefvliegtuig gebruikt de app een aparte prestatietabel uit AFM Supplement 1, die het toestel indeelt in gewichtsklassen op basis van het gewicht en glijgetal van het zweefvliegtuig. [AFM Sup 1] Ondergrond-, helling- en margecorrecties werken op dezelfde manier als bij een normale take-off. Omdat de sleeptabel zelf alleen voor droog gras is gepubliceerd, worden asfalt, nat gras en zachte grond wiskundig afgeleid uit de bekende grasbaan-toeslag van de normale take-off-tabel — geen apart AFM-cijfer, wel een transparante afleiding.</string>
+    <string name="explainer_disclaimer">Deze app is een praktisch hulpmiddel, geen gecertificeerd EFB. Het vlieghandboek (AFM) en de supplementen blijven altijd leidend — zie \'Brondocumenten\' voor de originele bronnen.</string>
 </resources>

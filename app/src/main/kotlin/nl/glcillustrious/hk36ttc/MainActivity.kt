@@ -40,6 +40,7 @@ import nl.glcillustrious.hk36ttc.data.local.CalculationDataStore
 import nl.glcillustrious.hk36ttc.data.local.LanguagePreference
 import nl.glcillustrious.hk36ttc.ui.about.AboutScreen
 import nl.glcillustrious.hk36ttc.ui.documents.DocumentsScreen
+import nl.glcillustrious.hk36ttc.ui.explainer.ExplainerScreen
 import nl.glcillustrious.hk36ttc.ui.hub.RegistrationHubScreen
 import nl.glcillustrious.hk36ttc.ui.perf.LandingScreen
 import nl.glcillustrious.hk36ttc.ui.perf.SleepvluchtScreen
@@ -62,6 +63,7 @@ private object Routes {
     const val LANDING = "landing/{profileId}"
     const val DOCUMENTS = "documents"
     const val SAILPLANE_TYPES = "sailplane_types"
+    const val EXPLAINER = "explainer"
     const val ABOUT = "about"
     const val SETTINGS = "settings"
 
@@ -181,6 +183,7 @@ private fun Hk36NavHost(
                 onEditProfile = { profile -> navController.navigate(Routes.profileEdit(profile.id)) },
                 onOpenDocuments = { navController.navigate(Routes.DOCUMENTS) },
                 onOpenSailplaneTypes = { navController.navigate(Routes.SAILPLANE_TYPES) },
+                onOpenExplainer = { navController.navigate(Routes.EXPLAINER) },
                 onOpenAbout = { navController.navigate(Routes.ABOUT) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) }
             )
@@ -190,6 +193,9 @@ private fun Hk36NavHost(
         }
         composable(Routes.DOCUMENTS) {
             DocumentsScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.EXPLAINER) {
+            ExplainerScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.ABOUT) {
             AboutScreen(onBack = { navController.popBackStack() })

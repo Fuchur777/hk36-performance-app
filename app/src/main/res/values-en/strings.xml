@@ -24,6 +24,7 @@
     <!-- About -->
     <string name="about_title">About this app</string>
     <string name="about_version_format">Version %1$s</string>
+    <string name="about_build_info_format">Build %1$d — %2$s</string>
     <string name="about_app_description">Preflight W&amp;B and performance calculations for the HK36 TTC Super Dimona. Not a certified EFB — the flight manual always remains authoritative.</string>
     <string name="about_data_sources_heading">Calculation data and sources</string>
     <string name="about_libraries_heading">Open-source software used</string>
@@ -183,4 +184,17 @@
     <string name="startup_load_failed_title">Could not load calculation data</string>
     <string name="startup_load_failed_folder_format">Folder: %1$s</string>
     <string name="startup_reset_to_defaults">Restore default values</string>
+
+    <!-- How the app calculates (explainer screen) -->
+    <string name="explainer_title">How the app calculates</string>
+    <string name="explainer_intro">This screen explains in plain language what the app calculates and on what basis — not a copy of the flight manual, but using the same source labels as the calculation screens themselves, so you can see what\'s a certified figure and what\'s an external rule of thumb.</string>
+    <string name="explainer_labels_legend_heading">What the source labels mean</string>
+    <string name="explainer_labels_legend_body">[AFM] and [AFM Sup 1]/[AFM Sup 11] come directly from the certified flight manual and its supplements — these are hard, certified figures. [AIC P173] is an external, non-mandatory UK CAA guideline, used only where the flight manual itself specifies nothing.</string>
+    <string name="explainer_wb_heading">Weight &amp; Balance</string>
+    <string name="explainer_wb_body">The app calculates total weight and center of gravity (CG) from the aircraft\'s empty mass plus pilot, copilot, fuel and baggage. [AFM] This is checked against the maximum take-off mass (MTOW) and the CG envelope from your own weighing report. Exceedances show as a clear warning; an underweight solo flight shows a note that trim weight may be needed.</string>
+    <string name="explainer_takeoff_landing_heading">Take-off and Landing</string>
+    <string name="explainer_takeoff_landing_body">For take-off and landing, the app interpolates the official flight-manual performance tables based on outside air temperature, pressure altitude and (for take-off) headwind. [AFM] For surface (grass, soft ground) and slope corrections, the app uses AFM figures where they exist, and otherwise recognised rules of thumb from the UK AIC P173 circular. [AIC P173] As a final step, a recommended safety margin is applied (default 1.33x for take-off, 1.43x for landing) — not a legal requirement, but a common practical convention you can adjust yourself. [AIC P173]</string>
+    <string name="explainer_sleepvlucht_heading">Glider tow</string>
+    <string name="explainer_sleepvlucht_body">For towing a glider, the app uses a separate performance table from AFM Supplement 1, which classes the aircraft into weight bands based on the sailplane\'s weight and L/D ratio. [AFM Sup 1] Surface, slope and margin corrections work the same way as for a normal take-off. Since the tow table itself is only published for dry grass, asphalt, wet grass and soft ground are mathematically derived from the normal take-off table\'s own grass-runway surcharge — not a separate AFM figure, but a transparent derivation.</string>
+    <string name="explainer_disclaimer">This app is a practical aid, not a certified EFB. The flight manual (AFM) and its supplements always remain authoritative — see \'Source documents\' for the originals.</string>
 </resources>

@@ -55,6 +55,7 @@ fun ProfileListScreen(
     onEditProfile: (AircraftProfileEntity) -> Unit,
     onOpenDocuments: () -> Unit,
     onOpenSailplaneTypes: () -> Unit,
+    onOpenExplainer: () -> Unit,
     onOpenAbout: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
@@ -95,6 +96,13 @@ fun ProfileListScreen(
                             onClick = {
                                 menuExpanded = false
                                 onOpenDocuments()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.explainer_title)) },
+                            onClick = {
+                                menuExpanded = false
+                                onOpenExplainer()
                             }
                         )
                         DropdownMenuItem(

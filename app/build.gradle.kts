@@ -1,3 +1,6 @@
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -14,6 +17,14 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+
+        // Generated fresh at build configuration time (not tracked by hand) - shown in the
+        // About screen so Frank can tell which build is on a device without a manual bump.
+        buildConfigField(
+            "String",
+            "BUILD_DATE",
+            "\"${LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}\""
+        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
