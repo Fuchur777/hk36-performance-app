@@ -40,7 +40,12 @@ data class TakeoffInputEntity(
     val headwindKts: Int,
     val surfaceType: String,
     val slopePct: Int,
-    val marginFactorPct: Int
+    val marginFactorPct: Int,
+    /** Runway direction the pilot explicitly locked in (e.g. "03"). `null` means "follow the
+     * live [nl.glcillustrious.hk36ttc.core.metar.RunwayAdvisor] recommendation" rather than a
+     * fixed choice — only meaningful when [nl.glcillustrious.hk36ttc.data.local.FlightContextEntity]
+     * for this registration is in `AIRFIELD` mode. */
+    val chosenRunwayDesignator: String? = null
 )
 
 @Dao
@@ -63,7 +68,10 @@ data class LandingInputEntity(
     val surfaceType: String,
     val customSurfaceFactorPct: Int,
     val slopePct: Int,
-    val marginFactorPct: Int
+    val marginFactorPct: Int,
+    /** See [TakeoffInputEntity.chosenRunwayDesignator] — same meaning, tracked separately per
+     * screen because the ranking (landing distance vs. take-off distance) differs. */
+    val chosenRunwayDesignator: String? = null
 )
 
 @Dao
@@ -94,7 +102,9 @@ data class SleepvluchtInputEntity(
     val selectedSailplaneTypeName: String?,
     val selectedSailplaneTypeUsedFallback: Boolean,
     val towplaneMassManualOverride: Boolean,
-    val towplaneMassManualKg: Int
+    val towplaneMassManualKg: Int,
+    /** See [TakeoffInputEntity.chosenRunwayDesignator] — ranked on tow take-off distance here. */
+    val chosenRunwayDesignator: String? = null
 )
 
 @Dao

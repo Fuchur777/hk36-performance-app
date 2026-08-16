@@ -481,6 +481,54 @@ mens te begrijpen en zonder Claude Code te beheren in GitHub?" Bevindingen en op
    About/Uitleg/Documenten-schermen, registratie verwijderen, per-registratie persistentie,
    `scripts/`, CI, en de dataverlies-caveat uit punt 2 hierboven.
 
-Alle punten hierboven zijn nu opgepakt, behalve punt 2 (destructieve migratie) — die blijft
-bewust openstaan als expliciet risico totdat er een concreet migratieplan is, zie de
-waarschuwing daar.
+Alle 9 punten zijn inmiddels opgepakt, inclusief punt 2 (destructieve migratie) — zie
+`Migrations.kt` en de bijbehorende `MigrationTest.kt`, kort na dit codereview-moment alsnog
+gebouwd (Frank heeft op een echt toestel bevestigd dat data nu tussen builds bewaard blijft).
+
+## 12. Fase 2c ronde 1 (2026-08-16): vliegvelden, banen, baanadvies en METAR-logica
+
+Fase 2c gaat van start met een door Frank aangescherpte, kleinere eerste snee dan oorspronkelijk
+in §2 geschetst: eerst vliegveld-/baanbeheer en baanadvies, met METAR als handmatig geplakte
+tekst — GPS-locatiebepaling en automatisch METAR ophalen volgen in een latere ronde. Zie
+`rekenlogica.md` §5/§8/§8a/§8b/§8c/§9 voor de volledige rekenlogica-uitwerking.
+
+**Gebouwd en geverifieerd** (`./gradlew :core:test :app:testDebugUnitTest :app:assembleDebug`
+groen; visuele/emulator-verificatie is zoals gebruikelijk Frank's eigen taak):
+
+- **Vliegveldbeheer**: nieuw "Vliegvelden"-menu-item, `AirfieldListScreen` +
+  `AirfieldEditScreen` (`ui/airfield/`). Een vliegveld heeft naam, optionele ICAO, optioneel los
+  METAR-station-ICAO (de meeste Nederlandse zweefvelden hebben geen eigen METAR-station —
+  bijv. Terlet → EHDL), veldhoogte, en de laatst geplakte METAR-tekst met een live-geparste
+  samenvatting (wind, temperatuur, QNH, afgeleide drukhoogte, leeftijd).
+- **Baanstroken**: één rij per fysieke baan (`RunwayStripEntity`), niet per richting — richting
+  B's koers en helling worden afgeleid (+180°, teken omgekeerd), dus de twee richtingen kunnen
+  structureel niet uit elkaar lopen. Toevoegen/bewerken/verwijderen via een dialoog in
+  `AirfieldEditScreen`.
+- **METAR-logica** (`core/.../metar/`): `MetarParser` (windgroep incl. `VRB`/windstil/vlagen/
+  m-per-seconde, temperatuur/dauwpunt incl. negatieve waarden, QNH incl. inHg-formaat, met
+  typed foutredenen voor onleesbare invoer — zelfde patroon als `TowBlockReason`),
+  `WindComponents` (headwind/kruiswind, rekenlogica.md §8), `PressureAltitude`
+  (veldhoogte+QNH → drukhoogte, nieuwe **[APP]**-logica), `MetarAge` (versheid tegen
+  `metar_config.json`'s `stale_after_minutes`), en `RunwayAdvisor` (rangschikt elke
+  baanrichting op overgebleven meters, met status Aanbevolen/Past/Past niet/Rugwind — nooit een
+  staartwindrichting aanbevolen).
+- **Vliegveld-vs-Handmatig toggle** in Take-off, Landing én Sleepvlucht (`FlightContextCard`,
+  gedeeld): vliegveldkeuze, gras-conditie (droog/nat/zacht — een eigenschap van de vlucht, niet
+  van de baan zelf), gerangschikte baankeuze, METAR-samenvatting, en een verplichte
+  "Bevestig weer en baan"-stap (rekenlogica.md §5) die opnieuw ontgrendelt zodra onderliggende
+  waarden veranderen. Elke afgeleide waarde (OAT, drukhoogte, tegenwind, ondergrond+helling) is
+  individueel overschrijfbaar via `DerivedValueField` (nieuwe, herbruikbare generalisatie van
+  het bestaande `TowplaneMassField`/`SailplaneTypeField`-patroon) met een terug-naar-advies-knop.
+- **Room v6**: `airfields`/`runway_strips`/`flight_contexts`-tabellen plus een
+  `chosenRunwayDesignator`-kolom op elk van de drie bestaande invoertabellen — allemaal via een
+  echte `MIGRATION_5_6` (geen destructieve fallback, zie §11 punt 2), met bijbehorende
+  `MigrationTest.kt`-dekking.
+
+**Bewuste vereenvoudiging deze ronde**: als de METAR-windrichting onbruikbaar is (geen METAR,
+mislukt parsen, of variabele wind), valt de hele afgeleide bundel terug op handmatige invoer in
+plaats van gedeeltelijk ondergrond/helling af te leiden van een handmatig gekozen baan zonder
+wind — zie `TakeoffViewModel.recalculate`'s KDoc.
+
+**Nog open voor een volgende ronde**: GPS-locatiebepaling, automatisch METAR ophalen (vult
+straks dezelfde `metarRaw`/`metarEnteredAtEpochMs`-velden die nu handmatig gevuld worden),
+AIP-baangegevens-prefill (fase 3+, buiten scope).

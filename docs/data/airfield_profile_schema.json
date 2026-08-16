@@ -1,40 +1,35 @@
 {
-  "description": "Schema en voorbeeld voor opgeslagen vliegveldprofielen. Dit bestand is een TEMPLATE — de app moet dit per gebruiker aanmaken/uitbreiden op het toestel, niet als vaste dataset gebruiken.",
-  "schema_version": 1,
+  "description": "Documentatie-referentie voor het opgeslagen-vliegveld datamodel (Fase 2c ronde 1). Dit bestand is GEEN runtime-input meer — vliegvelden/banen leven uitsluitend in de Room-database (AirfieldEntity/RunwayStripEntity, app/src/main/kotlin/.../data/local/), aangemaakt/beheerd via het 'Vliegvelden'-scherm in de app zelf. Dit JSON-bestand blijft alleen bestaan als leesbare referentie voor het veldmodel en de aannames erachter.",
+  "schema_version": 2,
   "airfields": [
     {
-      "id": "EHGR",
+      "id": "(auto-generated Room row id, niet gebruikt in deze referentie)",
       "name": "Vliegbasis Gilze-Rijen",
       "icao": "EHGR",
+      "metar_station_icao": null,
       "elevation_m": 15,
-      "source": "user_manual_entry",
-      "last_confirmed": null,
-      "runways": [
+      "metar_raw": "EHGR 161350Z 24012G20KT 9999 SCT025 18/12 Q1013 NOSIG",
+      "metar_entered_at_epoch_ms": null,
+      "runway_strips": [
         {
-          "id": "03",
-          "heading_deg_true": 30,
+          "id": "(auto-generated Room row id)",
+          "designator_a": "03",
+          "designator_b": "21",
+          "heading_deg_true_a": 30,
           "length_m": 1730,
-          "surface": "asphalt",
-          "slope_pct": 0,
-          "slope_direction_note": "positief = omhoog in richting 03, negatief = omlaag in richting 03 (dus omhoog in richting 21)",
-          "notes": ""
-        },
-        {
-          "id": "21",
-          "heading_deg_true": 210,
-          "length_m": 1730,
-          "surface": "asphalt",
-          "slope_pct": 0,
-          "slope_direction_note": "spiegelbeeld van baan 03: teken omgekeerd",
-          "notes": "omgekeerde richting van baan 03"
+          "surface": "ASPHALT",
+          "slope_pct_a": 0
         }
       ]
     }
   ],
   "notes": [
-    "source kan zijn: 'user_manual_entry' (handmatig ingevoerd) of later 'aip_prefill' (fase 3+, nog niet geimplementeerd).",
-    "last_confirmed wordt NIET gebruikt om de bevestigingsstap over te slaan bij een volgende berekening - de piloot moet dit ALTIJD opnieuw bevestigen per rekenmoment (zie rekenlogica.md sectie 5). Dit veld is puur informatief/audit-trail.",
-    "surface: vrije tekst suggestie-waarden: 'asphalt', 'grass', 'gravel' - AFM-grasbaan-toeslag (sectie takeoff.grass_runway_penalty_min_pct in performance_normal.json) is alleen van toepassing bij 'grass'.",
-    "slope_pct: hellingspercentage van DEZE baanrichting (dus baan 03 en 21 hebben tegengesteld teken, want het is dezelfde fysieke strook grond in twee richtingen bekeken). Bron voor de correctieformule: UK CAA AIC P 173/2024, zie rekenlogica.md sectie 2.2 - GEEN AFM-data, standaard 0 (vlak) tenzij gebruiker anders invoert."
+    "Eén rij per fysieke baanstrook (runway_strips), niet één rij per richting — richting B's ware koers is heading_deg_true_a + 180, en slope_pct_a wordt met omgekeerd teken toegepast voor richting B. Dit maakt het structureel onmogelijk dat de twee richtingen van dezelfde baan uit elkaar lopen.",
+    "metar_station_icao is los van icao omdat de meeste Nederlandse zweefvelden geen eigen METAR-station hebben (bijv. Terlet -> EHDL). Leeg/null = val terug op icao zelf.",
+    "surface is ASPHALT of GRASS (RunwaySurfaceType) - AFM-grasbaan-toeslag (performance_normal.json, takeoff.grass_runway_penalty_min_pct) is alleen van toepassing bij GRASS. Of het gras vandaag droog/nat/zacht is, is GEEN eigenschap van de baan zelf maar een per-vlucht keuze (GrassCondition in FlightContextEntity) - hetzelfde grasveld is de ene dag droog en de andere dag nat.",
+    "slope_pct_a: hellingspercentage van richting A (dus richting A en B hebben tegengesteld teken, want het is dezelfde fysieke strook grond in twee richtingen bekeken). Bron voor de correctieformule: UK CAA AIC P 173/2024, zie rekenlogica.md sectie 2.2 - GEEN AFM-data, standaard 0 (vlak) tenzij gebruiker anders invoert.",
+    "metar_raw/metar_entered_at_epoch_ms: de laatst door de piloot geplakte METAR-tekst en het tijdstip waarop dat gebeurde - zie rekenlogica.md sectie 8a voor het parsen en sectie 9 voor de versheidscontrole. Het online automatisch ophalen van een METAR (in plaats van handmatig plakken) is een latere ronde; die vult straks dezelfde twee velden.",
+    "De piloot moet vliegveld- en baankeuze ALTIJD opnieuw bevestigen per berekening (rekenlogica.md sectie 5) - er is bewust geen 'last_confirmed'-veld dat een latere bevestiging zou kunnen overslaan.",
+    "AIP-koppeling (automatisch baangegevens ophalen als suggestie/prefill) is nog niet geimplementeerd - fase 3+, buiten de huidige scope. Nu alleen handmatige invoer via het 'Vliegvelden'-scherm."
   ]
 }

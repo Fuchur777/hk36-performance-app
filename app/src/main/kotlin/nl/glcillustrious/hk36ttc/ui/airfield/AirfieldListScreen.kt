@@ -1,0 +1,162 @@
+package nl.glcillustrious.hk36ttc.ui.airfield
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import nl.glcillustrious.hk36ttc.R
+import nl.glcillustrious.hk36ttc.data.local.AirfieldEntity
+import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AirfieldListScreen(
+    repository: AircraftProfileRepository,
+    onBack: () -> Unit,
+    onAddAirfield: () -> Unit,
+    onEditAirfield: (AirfieldEntity) -> Unit
+) {
+    val viewModel: AirfieldListViewModel = viewModel(factory = AirfieldListViewModel.factory(repository))
+    val airfields by viewModel.airfields.collectAsState()
+    var airfieldPendingDelete by remember { mutableStateOf<AirfieldEntity?>(null) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.airfield_list_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAddAirfield,
+                containerColor = MaterialTheme.colorScheme.secondary,
+                contentColor = MaterialTheme.colorScheme.onSecondary
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.airfield_list_add_content_description))
+            }
+        }
+    ) { padding ->
+        if (airfields.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(stringResource(R.string.airfield_list_empty_title), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(R.string.airfield_list_empty_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize().padding(padding)
+            ) {
+                items(airfields, key = { it.id }) { airfield ->
+                    Card(
+                        onClick = { onEditAirfield(airfield) },
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        ListItem(
+                            headlineContent = { Text(airfield.name) },
+                            supportingContent = {
+                                Text(
+                                    stringResource(R.string.airfield_list_elevation_format, airfield.elevationM.toInt()),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            trailingContent = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(onClick = { onEditAirfield(airfield) }) {
+                                        Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.airfield_list_edit_content_description))
+                                    }
+                                    IconButton(onClick = { airfieldPendingDelete = airfield }) {
+                                        Icon(
+                                            Icons.Filled.Delete,
+                                            contentDescription = stringResource(R.string.airfield_list_delete_content_description),
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                    Icon(Icons.Filled.ChevronRight, contentDescription = null)
+                                }
+                            },
+                            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    airfieldPendingDelete?.let { airfield ->
+        AlertDialog(
+            onDismissRequest = { airfieldPendingDelete = null },
+            title = { Text(stringResource(R.string.airfield_list_delete_confirm_title)) },
+            text = { Text(stringResource(R.string.airfield_list_delete_confirm_body_format, airfield.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteAirfield(airfield)
+                    airfieldPendingDelete = null
+                }) {
+                    Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { airfieldPendingDelete = null }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+}

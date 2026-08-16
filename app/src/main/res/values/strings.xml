@@ -6,6 +6,7 @@
     <string name="common_back">Terug</string>
     <string name="common_cancel">Annuleren</string>
     <string name="common_delete">Verwijderen</string>
+    <string name="common_save">Opslaan</string>
 
     <!-- Instellingen -->
     <string name="settings_title">Instellingen</string>
@@ -197,4 +198,91 @@
     <string name="explainer_sleepvlucht_heading">Sleepvlucht</string>
     <string name="explainer_sleepvlucht_body">Voor het slepen van een zweefvliegtuig gebruikt de app een aparte prestatietabel uit AFM Supplement 1, die het toestel indeelt in gewichtsklassen op basis van het gewicht en glijgetal van het zweefvliegtuig. [AFM Sup 1] Ondergrond-, helling- en margecorrecties werken op dezelfde manier als bij een normale take-off. Omdat de sleeptabel zelf alleen voor droog gras is gepubliceerd, worden asfalt, nat gras en zachte grond wiskundig afgeleid uit de bekende grasbaan-toeslag van de normale take-off-tabel — geen apart AFM-cijfer, wel een transparante afleiding.</string>
     <string name="explainer_disclaimer">Deze app is een praktisch hulpmiddel, geen gecertificeerd EFB. Het vlieghandboek (AFM) en de supplementen blijven altijd leidend — zie \'Brondocumenten\' voor de originele bronnen.</string>
+
+    <!-- Vliegvelden (lijst) -->
+    <string name="airfield_list_title">Vliegvelden</string>
+    <string name="airfield_list_add_content_description">Vliegveld toevoegen</string>
+    <string name="airfield_list_edit_content_description">Vliegveld bewerken</string>
+    <string name="airfield_list_delete_content_description">Vliegveld verwijderen</string>
+    <string name="airfield_list_empty_title">Nog geen vliegvelden toegevoegd.</string>
+    <string name="airfield_list_empty_body">Voeg een vliegveld toe om baangegevens op te slaan en te hergebruiken bij take-off, landing en sleepvlucht.</string>
+    <string name="airfield_list_elevation_format">%1$d m boven zeeniveau</string>
+    <string name="airfield_list_delete_confirm_title">Vliegveld verwijderen?</string>
+    <string name="airfield_list_delete_confirm_body_format">Weet je zeker dat je %1$s wilt verwijderen? Alle opgeslagen banen van dit vliegveld gaan ook verloren.</string>
+
+    <!-- Vliegveld bewerken -->
+    <string name="airfield_edit_title_new">Nieuw vliegveld</string>
+    <string name="airfield_edit_title_existing">Vliegveld bewerken</string>
+    <string name="airfield_edit_name_label">Naam</string>
+    <string name="airfield_edit_icao_label">ICAO-code (optioneel)</string>
+    <string name="airfield_edit_metar_station_label">METAR-station (optioneel, standaard = ICAO-code)</string>
+    <string name="airfield_edit_elevation_label">Veldhoogte</string>
+    <string name="airfield_edit_save">Vliegveld opslaan</string>
+    <string name="airfield_edit_metar_section_title">METAR</string>
+    <string name="airfield_edit_metar_label">METAR-tekst</string>
+    <string name="airfield_edit_metar_placeholder">Bijv. EHDL 161350Z 24012G20KT 9999 SCT025 18/12 Q1013 NOSIG</string>
+    <string name="airfield_edit_metar_empty_hint">Plak hier de laatste METAR om wind, temperatuur en luchtdruk automatisch uit te laten lezen.</string>
+    <string name="airfield_edit_metar_error_empty">METAR-tekst is leeg.</string>
+    <string name="airfield_edit_metar_error_missing_station">Herkende geen stationscode aan het begin van de METAR.</string>
+    <string name="airfield_edit_metar_error_missing_time">Herkende geen observatietijd (bijv. 161350Z) in de METAR.</string>
+    <string name="airfield_edit_metar_error_missing_wind">Herkende geen windgroep (bijv. 24012KT) in de METAR.</string>
+    <string name="airfield_edit_metar_error_missing_temperature">Herkende geen temperatuur/dauwpunt (bijv. 18/12) in de METAR.</string>
+    <string name="airfield_edit_metar_summary_wind_format">Wind %1$d° / %2$d kt</string>
+    <string name="airfield_edit_metar_summary_wind_gust_format">Wind %1$d° / %2$d kt, vlagen tot %3$d kt</string>
+    <string name="airfield_edit_metar_summary_wind_variable">Wind variabel, %1$d kt — richting onbekend, vul deze handmatig in bij de berekening</string>
+    <string name="airfield_edit_metar_summary_temperature_format">Temperatuur %1$d°C</string>
+    <string name="airfield_edit_metar_summary_qnh_format">QNH %1$d hPa</string>
+    <string name="airfield_edit_metar_summary_no_qnh">Geen QNH in deze METAR — drukhoogte moet handmatig ingevuld worden.</string>
+    <string name="airfield_edit_metar_summary_pressure_altitude_format">Drukhoogte ≈ %1$d m</string>
+    <string name="airfield_edit_metar_summary_age_format">%1$d minuten oud</string>
+    <string name="airfield_edit_metar_summary_age_stale_format">%1$d minuten oud — mogelijk verouderd</string>
+    <string name="airfield_edit_runways_section_title">Banen</string>
+    <string name="airfield_edit_runways_empty">Nog geen banen toegevoegd.</string>
+    <string name="airfield_edit_runways_save_first_hint">Sla eerst het vliegveld op voordat je banen toevoegt.</string>
+    <string name="airfield_edit_add_runway">Baan toevoegen</string>
+    <string name="airfield_edit_runway_item_format">%1$s / %2$s</string>
+    <string name="airfield_edit_runway_item_detail_format">%1$d m · %2$s</string>
+    <string name="airfield_edit_runway_edit_content_description">Baan bewerken</string>
+    <string name="airfield_edit_runway_delete_content_description">Baan verwijderen</string>
+    <string name="airfield_edit_runway_delete_confirm_title">Baan verwijderen?</string>
+    <string name="airfield_edit_runway_delete_confirm_body_format">Weet je zeker dat je baan %1$s / %2$s wilt verwijderen?</string>
+    <string name="airfield_edit_runway_dialog_title_new">Nieuwe baan</string>
+    <string name="airfield_edit_runway_dialog_title_existing">Baan bewerken</string>
+    <string name="airfield_edit_runway_designator_a_label">Aanduiding richting A (bijv. 03)</string>
+    <string name="airfield_edit_runway_designator_b_label">Aanduiding richting B (bijv. 21)</string>
+    <string name="airfield_edit_runway_heading_label">Ware koers richting A</string>
+    <string name="airfield_edit_runway_heading_hint">Ware koers (niet magnetisch) — zelfde referentie als de METAR-windrichting.</string>
+    <string name="airfield_edit_runway_length_label">Baanlengte</string>
+    <string name="airfield_edit_runway_surface_label">Ondergrond</string>
+    <string name="airfield_edit_runway_surface_asphalt">Asfalt</string>
+    <string name="airfield_edit_runway_surface_grass">Gras</string>
+    <string name="airfield_edit_runway_slope_label">Helling richting A</string>
+
+    <!-- Gedeelde afgeleide-waarde-kaart -->
+    <string name="derived_value_edit_content_description">Handmatig wijzigen</string>
+    <string name="derived_value_reset">Terug naar advies</string>
+    <string name="derived_value_overridden_note">Handmatig aangepast</string>
+
+    <!-- Vlucht-context (Vliegveld/Handmatig toggle, gedeeld door Take-off/Landing/Sleepvlucht) -->
+    <string name="flight_context_mode_label">Weer &amp; baan</string>
+    <string name="flight_context_mode_airfield">Vliegveld</string>
+    <string name="flight_context_mode_manual">Handmatig</string>
+    <string name="flight_context_no_airfields_hint">Nog geen vliegvelden opgeslagen. Voeg er een toe via het menu \'Vliegvelden\'.</string>
+    <string name="flight_context_choose_airfield_label">Vliegveld</string>
+    <string name="flight_context_choose_airfield_hint">Kies een vliegveld om verder te gaan.</string>
+    <string name="flight_context_grass_condition_label">Gras vandaag</string>
+    <string name="flight_context_grass_dry">Droog</string>
+    <string name="flight_context_grass_wet">Nat</string>
+    <string name="flight_context_grass_soft">Zacht</string>
+    <string name="flight_context_runway_section_title">Baankeuze</string>
+    <string name="flight_context_runway_status_preferred">Aanbevolen</string>
+    <string name="flight_context_runway_status_fits">Past</string>
+    <string name="flight_context_runway_status_does_not_fit">Past niet</string>
+    <string name="flight_context_runway_status_tailwind">Rugwind — niet beschikbaar</string>
+    <string name="flight_context_runway_detail_format">Tegenwind %1$d kt · Kruiswind %2$d kt</string>
+    <string name="flight_context_runway_remaining_format">%1$+d m marge</string>
+    <string name="flight_context_runway_reset_to_auto">Terug naar automatisch advies</string>
+    <string name="flight_context_crosswind_exceeded_warning">Kruiswind boven de gedemonstreerde limiet</string>
+    <string name="flight_context_confirm_button">Bevestig weer en baan</string>
+    <string name="flight_context_confirmed_label">Bevestigd</string>
 </resources>

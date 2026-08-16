@@ -23,6 +23,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -32,10 +33,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import nl.glcillustrious.hk36ttc.R
+import nl.glcillustrious.hk36ttc.core.metar.MetarConfigData
+import nl.glcillustrious.hk36ttc.core.metar.MetarParser
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceCorrectionsData
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceNormalData
 import nl.glcillustrious.hk36ttc.core.perf.TakeoffResult
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
+import nl.glcillustrious.hk36ttc.data.local.FlightContextMode
+import nl.glcillustrious.hk36ttc.ui.common.DerivedValueField
+import nl.glcillustrious.hk36ttc.ui.common.FlightContextCard
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.ResettableIntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.ResultRow
@@ -48,6 +54,7 @@ fun TakeoffScreen(
     repository: AircraftProfileRepository,
     performanceNormal: PerformanceNormalData,
     performanceCorrections: PerformanceCorrectionsData,
+    metarConfig: MetarConfigData,
     profileId: Long,
     onBack: () -> Unit
 ) {
@@ -55,6 +62,7 @@ fun TakeoffScreen(
         factory = TakeoffViewModel.factory(repository, profileId, performanceNormal, performanceCorrections)
     )
     val state by viewModel.state.collectAsState()
+    val airfields by viewModel.airfields.collectAsState()
 
     Scaffold(
         topBar = {
@@ -86,32 +94,103 @@ fun TakeoffScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            IntStepperField(
-                label = stringResource(R.string.perf_oat_label), value = state.oatC,
-                onValueChange = { v -> viewModel.update { it.copy(oatC = v) } },
-                min = -20, max = 45, suffix = "°C"
-            )
-            IntStepperField(
-                label = stringResource(R.string.perf_pressure_alt_label), value = state.pressureAltM,
-                onValueChange = { v -> viewModel.update { it.copy(pressureAltM = v) } },
-                min = 0, max = 1500, suffix = "m"
-            )
-            IntStepperField(
-                label = stringResource(R.string.perf_headwind_label), value = state.headwindKts,
-                onValueChange = { v -> viewModel.update { it.copy(headwindKts = v) } },
-                min = -10, max = 20, suffix = "kts"
-            )
-
-            TakeoffSurfaceSelector(
-                surfaceType = state.surfaceType,
-                onSelected = { type -> viewModel.update { it.copy(surfaceType = type) } }
+            FlightContextCard(
+                mode = state.flightContextMode,
+                onModeChange = { viewModel.setFlightContextMode(it) },
+                airfields = airfields,
+                selectedAirfield = state.selectedAirfield,
+                onSelectAirfield = { viewModel.selectAirfield(it) },
+                hasGrassRunway = state.hasGrassRunway,
+                grassCondition = state.grassCondition,
+                onGrassConditionChange = { viewModel.setGrassCondition(it) },
+                runwayAdvice = state.runwayAdvice,
+                chosenDesignator = state.chosenRunwayDesignator,
+                onChooseRunway = { viewModel.chooseRunway(it) },
+                metarParsed = state.selectedAirfield?.metarRaw?.let { MetarParser.parse(it) },
+                metarConfig = metarConfig,
+                confirmed = state.flightConfirmed,
+                onConfirm = { viewModel.confirmFlightContext() }
             )
 
-            IntStepperField(
-                label = stringResource(R.string.perf_slope_label), value = state.slopePct,
-                onValueChange = { v -> viewModel.update { it.copy(slopePct = v) } },
-                min = -10, max = 10, suffix = "%"
-            )
+            if (state.weatherDerivable && !state.oatOverridden) {
+                DerivedValueField(
+                    label = stringResource(R.string.perf_oat_label),
+                    valueText = "${state.effectiveOatC}°C",
+                    isOverridden = false,
+                    onEdit = { viewModel.editOat() },
+                    onResetToDerived = {}
+                )
+            } else {
+                IntStepperField(
+                    label = stringResource(R.string.perf_oat_label), value = state.oatC,
+                    onValueChange = { v -> viewModel.update { it.copy(oatC = v) } },
+                    min = -20, max = 45, suffix = "°C"
+                )
+                if (state.weatherDerivable && state.oatOverridden) {
+                    TextButton(onClick = { viewModel.resetOat() }) { Text(stringResource(R.string.derived_value_reset)) }
+                }
+            }
+
+            if (state.pressureAltDerivable && !state.pressureAltOverridden) {
+                DerivedValueField(
+                    label = stringResource(R.string.perf_pressure_alt_label),
+                    valueText = "${state.effectivePressureAltM}m",
+                    isOverridden = false,
+                    onEdit = { viewModel.editPressureAlt() },
+                    onResetToDerived = {}
+                )
+            } else {
+                IntStepperField(
+                    label = stringResource(R.string.perf_pressure_alt_label), value = state.pressureAltM,
+                    onValueChange = { v -> viewModel.update { it.copy(pressureAltM = v) } },
+                    min = 0, max = 1500, suffix = "m"
+                )
+                if (state.pressureAltDerivable && state.pressureAltOverridden) {
+                    TextButton(onClick = { viewModel.resetPressureAlt() }) { Text(stringResource(R.string.derived_value_reset)) }
+                }
+            }
+
+            if (state.weatherDerivable && !state.headwindOverridden) {
+                DerivedValueField(
+                    label = stringResource(R.string.perf_headwind_label),
+                    valueText = "${state.effectiveHeadwindKts}kts",
+                    isOverridden = false,
+                    onEdit = { viewModel.editHeadwind() },
+                    onResetToDerived = {}
+                )
+            } else {
+                IntStepperField(
+                    label = stringResource(R.string.perf_headwind_label), value = state.headwindKts,
+                    onValueChange = { v -> viewModel.update { it.copy(headwindKts = v) } },
+                    min = -10, max = 20, suffix = "kts"
+                )
+                if (state.weatherDerivable && state.headwindOverridden) {
+                    TextButton(onClick = { viewModel.resetHeadwind() }) { Text(stringResource(R.string.derived_value_reset)) }
+                }
+            }
+
+            if (state.weatherDerivable && !state.surfaceOverridden) {
+                DerivedValueField(
+                    label = stringResource(R.string.perf_surface_label),
+                    valueText = takeoffSurfaceLabel(state.effectiveSurfaceType),
+                    isOverridden = false,
+                    onEdit = { viewModel.editSurfaceAndSlope() },
+                    onResetToDerived = {}
+                )
+            } else {
+                TakeoffSurfaceSelector(
+                    surfaceType = state.surfaceType,
+                    onSelected = { type -> viewModel.update { it.copy(surfaceType = type) } }
+                )
+                IntStepperField(
+                    label = stringResource(R.string.perf_slope_label), value = state.slopePct,
+                    onValueChange = { v -> viewModel.update { it.copy(slopePct = v) } },
+                    min = -10, max = 10, suffix = "%"
+                )
+                if (state.weatherDerivable && state.surfaceOverridden) {
+                    TextButton(onClick = { viewModel.resetSurfaceAndSlope() }) { Text(stringResource(R.string.derived_value_reset)) }
+                }
+            }
 
             ResettableIntStepperField(
                 label = stringResource(R.string.perf_margin_factor_label), value = state.marginFactorPct,
@@ -120,7 +199,9 @@ fun TakeoffScreen(
                 min = 100, max = 200, suffix = "%"
             )
 
-            state.result?.let { TakeoffResultCard(it, state.surfaceType) }
+            if (state.flightContextMode == FlightContextMode.MANUAL || state.flightConfirmed) {
+                state.result?.let { TakeoffResultCard(it, state.effectiveSurfaceType) }
+            }
 
             ClimbReferenceCard(
                 vyKmh = performanceNormal.climb.vyKmh,
@@ -129,6 +210,14 @@ fun TakeoffScreen(
             )
         }
     }
+}
+
+@Composable
+private fun takeoffSurfaceLabel(type: TakeoffSurfaceType): String = when (type) {
+    TakeoffSurfaceType.ASFALT -> stringResource(R.string.perf_surface_asfalt)
+    TakeoffSurfaceType.DROOG_GRAS -> stringResource(R.string.perf_surface_droog_gras)
+    TakeoffSurfaceType.NAT_GRAS -> stringResource(R.string.perf_surface_nat_gras)
+    TakeoffSurfaceType.ZACHTE_GROND -> stringResource(R.string.perf_surface_zacht)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

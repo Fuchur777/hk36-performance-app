@@ -75,7 +75,36 @@ class MigrationTest {
     }
 
     @Test
-    fun migrateAllTheWayFrom1To5_succeedsAndKeepsSeededProfile() {
+    fun migrate5To6_addsAirfieldTablesAndRunwayColumnWithoutTouchingExistingInputs() {
+        helper.createDatabase(testDbName, 5).apply {
+            execSQL(
+                "INSERT INTO aircraft_profiles (id, registration, emptyMassKg, emptyMassCgPositionMm, " +
+                    "mtowKg, cgEnvelopeForwardLimitMm, cgEnvelopeAftLimitMm, fuelTankType) " +
+                    "VALUES (1, 'PH-XYZ', 560.0, 2350.0, 770.0, 2300.0, 2450.0, 'STANDARD_55L')"
+            )
+            execSQL(
+                "INSERT INTO takeoff_inputs (profileId, oatC, pressureAltM, headwindKts, surfaceType, " +
+                    "slopePct, marginFactorPct) VALUES (1, 15, 0, 0, 'ASFALT', 0, 133)"
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(testDbName, 6, true, MIGRATION_5_6)
+
+        val takeoffCursor = db.query("SELECT oatC, chosenRunwayDesignator FROM takeoff_inputs WHERE profileId = 1")
+        assertTrue(takeoffCursor.moveToFirst())
+        assertEquals(15, takeoffCursor.getInt(0))
+        assertTrue(takeoffCursor.isNull(1))
+        takeoffCursor.close()
+
+        val airfieldCountCursor = db.query("SELECT COUNT(*) FROM airfields")
+        assertTrue(airfieldCountCursor.moveToFirst())
+        assertEquals(0, airfieldCountCursor.getInt(0))
+        airfieldCountCursor.close()
+    }
+
+    @Test
+    fun migrateAllTheWayFrom1To6_succeedsAndKeepsSeededProfile() {
         helper.createDatabase(testDbName, 1).apply {
             execSQL(
                 "INSERT INTO aircraft_profiles (id, registration, serialNumber, emptyMassKg, " +
@@ -85,7 +114,7 @@ class MigrationTest {
             close()
         }
 
-        val db = helper.runMigrationsAndValidate(testDbName, 5, true, *ALL_MIGRATIONS)
+        val db = helper.runMigrationsAndValidate(testDbName, 6, true, *ALL_MIGRATIONS)
 
         val cursor = db.query("SELECT registration FROM aircraft_profiles WHERE id = 1")
         assertTrue(cursor.moveToFirst())

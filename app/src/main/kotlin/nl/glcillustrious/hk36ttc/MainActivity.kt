@@ -39,6 +39,8 @@ import nl.glcillustrious.hk36ttc.data.local.CalculationDataResult
 import nl.glcillustrious.hk36ttc.data.local.CalculationDataStore
 import nl.glcillustrious.hk36ttc.data.local.LanguagePreference
 import nl.glcillustrious.hk36ttc.ui.about.AboutScreen
+import nl.glcillustrious.hk36ttc.ui.airfield.AirfieldEditScreen
+import nl.glcillustrious.hk36ttc.ui.airfield.AirfieldListScreen
 import nl.glcillustrious.hk36ttc.ui.documents.DocumentsScreen
 import nl.glcillustrious.hk36ttc.ui.explainer.ExplainerScreen
 import nl.glcillustrious.hk36ttc.ui.hub.RegistrationHubScreen
@@ -63,6 +65,8 @@ private object Routes {
     const val LANDING = "landing/{profileId}"
     const val DOCUMENTS = "documents"
     const val SAILPLANE_TYPES = "sailplane_types"
+    const val AIRFIELDS = "airfields"
+    const val AIRFIELD_EDIT = "airfield_edit/{airfieldId}"
     const val EXPLAINER = "explainer"
     const val ABOUT = "about"
     const val SETTINGS = "settings"
@@ -73,6 +77,7 @@ private object Routes {
     fun takeoff(id: Long) = "takeoff/$id"
     fun sleepvlucht(id: Long) = "sleepvlucht/$id"
     fun landing(id: Long) = "landing/$id"
+    fun airfieldEdit(id: Long) = "airfield_edit/$id"
 }
 
 class MainActivity : ComponentActivity() {
@@ -183,6 +188,7 @@ private fun Hk36NavHost(
                 onEditProfile = { profile -> navController.navigate(Routes.profileEdit(profile.id)) },
                 onOpenDocuments = { navController.navigate(Routes.DOCUMENTS) },
                 onOpenSailplaneTypes = { navController.navigate(Routes.SAILPLANE_TYPES) },
+                onOpenAirfields = { navController.navigate(Routes.AIRFIELDS) },
                 onOpenExplainer = { navController.navigate(Routes.EXPLAINER) },
                 onOpenAbout = { navController.navigate(Routes.ABOUT) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) }
@@ -204,6 +210,23 @@ private fun Hk36NavHost(
             SailplaneTypesScreen(
                 repository = repository,
                 sailplaneTypes = appData.sailplaneTypes,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.AIRFIELDS) {
+            AirfieldListScreen(
+                repository = repository,
+                onBack = { navController.popBackStack() },
+                onAddAirfield = { navController.navigate(Routes.airfieldEdit(0)) },
+                onEditAirfield = { airfield -> navController.navigate(Routes.airfieldEdit(airfield.id)) }
+            )
+        }
+        composable(Routes.AIRFIELD_EDIT) { backStackEntry ->
+            val airfieldId = backStackEntry.arguments?.getString("airfieldId")?.toLongOrNull() ?: 0L
+            AirfieldEditScreen(
+                repository = repository,
+                metarConfig = appData.metarConfig,
+                airfieldId = airfieldId,
                 onBack = { navController.popBackStack() }
             )
         }
@@ -245,6 +268,7 @@ private fun Hk36NavHost(
                 repository = repository,
                 performanceNormal = appData.performanceNormal,
                 performanceCorrections = appData.performanceCorrections,
+                metarConfig = appData.metarConfig,
                 profileId = profileId,
                 onBack = { navController.popBackStack() }
             )
@@ -257,6 +281,7 @@ private fun Hk36NavHost(
                 performanceNormal = appData.performanceNormal,
                 performanceCorrections = appData.performanceCorrections,
                 sailplaneTypes = appData.sailplaneTypes,
+                metarConfig = appData.metarConfig,
                 profileId = profileId,
                 onBack = { navController.popBackStack() }
             )
@@ -267,6 +292,7 @@ private fun Hk36NavHost(
                 repository = repository,
                 performanceNormal = appData.performanceNormal,
                 performanceCorrections = appData.performanceCorrections,
+                metarConfig = appData.metarConfig,
                 profileId = profileId,
                 onBack = { navController.popBackStack() }
             )

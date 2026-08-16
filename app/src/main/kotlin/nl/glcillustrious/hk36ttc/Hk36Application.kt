@@ -23,7 +23,10 @@ class Hk36Application : Application() {
             database.wbInputDao(),
             database.takeoffInputDao(),
             database.landingInputDao(),
-            database.sleepvluchtInputDao()
+            database.sleepvluchtInputDao(),
+            database.airfieldDao(),
+            database.runwayStripDao(),
+            database.flightContextDao()
         )
         calculationDataStore = CalculationDataStore(this)
     }

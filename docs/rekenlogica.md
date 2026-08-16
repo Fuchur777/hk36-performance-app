@@ -221,29 +221,50 @@ controle van de interpolatie-methode zelf.
 
 ## 5. Locatie, weer, baanconfiguratie — workflow (niet-rekenkundig, maar verplicht vóór elke berekening)
 
+**Status (Fase 2c ronde 1, geïmplementeerd):** vliegveld/baanbeheer, METAR-parsing
+(handmatig geplakte tekst — online ophalen volgt in een latere ronde), baanadvies en
+de bevestigingsstap hieronder zijn gebouwd. GPS-locatiebepaling en automatisch METAR
+ophalen zijn bewust nog niet gebouwd — zie de stappen hieronder voor wat daarvan al
+staat en wat nog volgt.
+
 Dit is geen rekenlogica maar een verplichte UX-flow die aan elke performance-
-berekening (take-off/landing) voorafgaat:
+berekening (take-off/landing/sleepvlucht) voorafgaat:
 
 1. **Locatie bepalen**: gebruiker kiest GPS of handmatige invoer (beide
-   gelijkwaardig, geen default-voorkeur).
+   gelijkwaardig, geen default-voorkeur). **Nog niet geïmplementeerd** — voorlopig
+   kiest de piloot direct een opgeslagen vliegveld (stap 4).
 2. **METAR ophalen** (indien internet beschikbaar): via gratis publieke bron
    (bijv. aviationweather.gov, geen API-key). Bij falen/geen dekking: duidelijke
-   melding, ga naar stap 3.
+   melding, ga naar stap 3. **Nog niet geïmplementeerd** — de piloot plakt de METAR
+   voorlopig zelf in bij het vliegveldprofiel; §8b beschrijft hoe die tekst wordt
+   uitgelezen.
 3. **Weer bevestigen**: toon opgehaalde METAR-waarden (windrichting, -sterkte,
    gusts, temperatuur) of, bij ontbreken, lege invoervelden. **Piloot moet
    expliciet bevestigen** voordat de app verdergaat — dit is een harde stap,
    geen automatische doorgang, ook niet bij eerder al bevestigde locaties.
+   Geïmplementeerd als één gecombineerde bevestigingsknop met stap 5 (zie hieronder).
 4. **Vliegveldprofiel kiezen of invoeren**: gebruiker selecteert een
    opgeslagen vliegveldprofiel (baanrichtingen/-typen/-lengtes) of voert dit
    handmatig in voor een nieuwe locatie. AIP-prefill is nog niet
    geïmplementeerd (fase 3+) — voorlopig alleen handmatig/opgeslagen profielen.
 5. **Baanconfiguratie bevestigen**: ook bij een opgeslagen profiel moet de
    piloot de baangegevens voor déze specifieke berekening opnieuw bevestigen.
+   Geïmplementeerd als "Bevestig weer en baan"-knop die opnieuw ontgrendeld
+   moet worden zodra vliegveld, baan, gras-conditie of een van de afgeleide
+   waarden (OAT/drukhoogte/tegenwind/ondergrond/helling) verandert.
 6. Pas na stap 3 én 5 kan de eigenlijke performance-berekening (§2 hierboven)
-   starten.
+   starten. Geïmplementeerd: het resultaatkaartje blijft verborgen in
+   Vliegveldmodus totdat bevestigd is; in Handmatige modus (ongewijzigd
+   gedrag) is er niets te bevestigen.
 
 Deze flow geldt als harde randvoorwaarde: de rekenmodule mag nooit draaien op
 ongeverifieerde/onbevestigde invoer.
+
+**Per-veld overschrijven**: elke afgeleide waarde (OAT, drukhoogte, tegenwind,
+ondergrond+helling) kan afzonderlijk handmatig overschreven worden zonder de rest
+van de afleiding te verliezen — bijv. alleen de temperatuur bijstellen terwijl
+drukhoogte en baankeuze uit de METAR blijven komen. Een overschreven waarde kan
+altijd teruggezet worden naar de afgeleide waarde.
 
 ## 6. JSON-configuratie op het toestel
 
@@ -308,10 +329,10 @@ volstaat en is eenvoudiger te implementeren en te debuggen.
 - Net als de rest van de app: dit is een planningshulpmiddel, geen
   navigatie-instrument — geen route-planning, geen realtime tracking.
 
-## 8. Windcomponent en kruiswind **[APP-berekening, AFM-limiet]**
+## 8. Windcomponent en kruiswind **[APP-berekening, AFM-limiet]** — geïmplementeerd
 
-Automatische berekening op basis van METAR-wind (of handmatig ingevoerde
-wind) en de gekozen baanrichting uit het vliegveldprofiel:
+`core/.../metar/WindComponents.kt`. Automatische berekening op basis van METAR-wind
+(of handmatig ingevoerde wind) en de gekozen baanrichting uit het vliegveldprofiel:
 
 ```
 hoek = |windrichting - baanrichting|  (genormaliseerd naar 0-180°)
@@ -325,7 +346,11 @@ crosswind_component = windsnelheid * sin(hoek)
   (METAR niet beschikbaar) vult de gebruiker dit nog steeds zelf in.
 - **Staartwind**: zoals eerder vastgelegd (§2.1) niet ondersteund door de
   AFM-tabellen **[AFM-beperking]** — bij negatieve headwind_component: harde
-  waarschuwing/blokkade, geen berekening tonen.
+  waarschuwing/blokkade, geen berekening tonen. Voor landing (die geen
+  headwind-parameter heeft, zie §2 — de AFM-landingstabel is niet
+  windgeïndexeerd) is uitsluiting van een staartwindbaan uit het baanadvies
+  (§8d) een bewuste luchtvaart-conventie, geen AFM-beperking: zie
+  `LandingViewModel.recalculate` voor de precieze afweging.
 - **Kruiswindtoets**: vergelijk `crosswind_component` met
   `demonstrated_crosswind_kmh` (15 km/h, **[AFM]**, uit `performance_normal.json` /
   `performance_tow.json`). Bij overschrijding: duidelijke waarschuwing
@@ -334,14 +359,81 @@ crosswind_component = windsnelheid * sin(hoek)
 - Gebruiker kan de automatische windcomponent altijd handmatig overschrijven
   (bijv. bij twijfel over de METAR-representativiteit voor de exacte locatie).
 
-## 9. METAR-versheid **[APP]**
+### 8a. METAR-parsing **[APP]** — geïmplementeerd
+
+`core/.../metar/MetarParser.kt`. Leest alleen de groepen die de app nodig heeft
+(station, observatietijd, wind, temperatuur/dauwpunt, QNH) — geen volledige
+METAR-decoder (wolken, zicht, weersverschijnselen worden genegeerd).
+
+- Windgroep: `dddffKT`/`dddffMPS`, optionele vlagen (`Gff`), `VRB` (variabele
+  richting) en `00000KT` (windstil). Bij `VRB` is er geen bruikbare
+  headwind-richting — de app valt dan terug op handmatige windinvoer in plaats
+  van te gokken (zelfde "nooit stilzwijgend aannames doen"-principe als §5).
+  Windsnelheid in m/s wordt omgerekend naar knopen (1 kt = 1,852 km/h exact).
+- Temperatuur/dauwpunt: `TT/DD`, met een `M`-prefix voor negatieve waarden
+  (bijv. `M03` = -3°C).
+- QNH: `Qnnnn` (hPa) of `Annnn` (inHg, omgerekend via 1 inHg = 33,8639 hPa).
+  Ontbreekt de QNH-groep, dan slaagt het parsen alsnog — drukhoogte moet dan
+  handmatig ingevuld worden (zie §8b).
+- Onleesbare invoer (geen stationscode, geen windgroep, geen
+  temperatuur/dauwpunt-groep, geen observatietijd) faalt met een specifieke,
+  typed reden — nooit een stille verkeerde waarde.
+
+### 8b. Drukhoogte uit veldhoogte + QNH **[APP]** — geïmplementeerd
+
+`core/.../metar/PressureAltitude.kt`. Vervangt een handmatige berekening die de
+piloot voorheen buiten de app om moest doen:
+
+```
+drukhoogte = veldhoogte + (1013,25 − QNH) × 8,23 m/hPa
+```
+
+ISA-standaarddruk (1013,25 hPa) en de ~8,23 m/hPa-relatie zijn universele
+atmosferische constanten, geen AFM-instelbare waarden — vastgelegd als
+literals in de code, niet in `metar_config.json`.
+
+### 8c. Baanadvies **[APP]** — geïmplementeerd
+
+`core/.../metar/RunwayAdvisor.kt`. Voor elke opgeslagen baanrichting van het
+gekozen vliegveld wordt bepaald: headwind/kruiswind-component (§8),
+benodigde afstand (via de rekenkern van het aanroepende scherm — take-off,
+landing of sleepvlucht — inclusief marge, dus s2/l2-met-marge, niet de kale
+grondloop), beschikbare baanlengte, en de status:
+
+- **Aanbevolen**: past, en heeft de meeste overgebleven meters van de banen
+  die passen.
+- **Past**: benodigde afstand ≤ beschikbare lengte.
+- **Past niet**: benodigde afstand > beschikbare lengte — banen worden dan
+  gesorteerd op minst-slechte tekort, niet zomaar in willekeurige volgorde.
+- **Rugwind — niet beschikbaar**: staartwindrichting, nooit aanbevolen,
+  ongeacht baanlengte (zie §8 hierboven voor de take-off/tow- vs.
+  landing-nuance).
+
+Bekende beperking: alleen baanlengte wordt vergeleken — TODA/stopway worden
+niet apart vastgelegd in het vliegveldprofiel (zie
+`docs/data/airfield_profile_schema.json`).
+
+**Vereenvoudiging deze ronde**: als de METAR-windrichting onbruikbaar is
+(geen METAR, mislukt parsen, of variabele wind), valt de hele afgeleide
+bundel (OAT, drukhoogte, tegenwind, ondergrond, helling) terug op handmatige
+invoer — er wordt niet geprobeerd om alleen ondergrond/helling alsnog af te
+leiden van een handmatig gekozen baan zonder windgegevens. Zie
+`TakeoffViewModel.recalculate`'s KDoc voor de precieze afweging.
+
+## 9. METAR-versheid **[APP]** — geïmplementeerd
+
+`core/.../metar/MetarAge.kt` + `metar_config.json` (`stale_after_minutes`,
+standaard 60 — instelbaar, geen AFM-eis).
 
 - Toon de leeftijd van de opgehaalde METAR (tijd sinds observatie) expliciet
   bij de bevestigingsstap (§5).
-- Waarschuwing (niet blokkerend) als de METAR ouder is dan 30-60 minuten
-  (instelbare drempel, geen AFM-eis — praktische vliegveiligheidsgrens).
-  Piloot bevestigt of de gegevens nog representatief zijn, of vult handmatig
-  actuele waarden in.
+- Waarschuwing (niet blokkerend) als de METAR ouder is dan de ingestelde
+  drempel. Piloot bevestigt of de gegevens nog representatief zijn, of vult
+  handmatig actuele waarden in — de bevestigingsstap zelf (§5) is altijd
+  verplicht, ongeacht de leeftijd.
+- Een METAR bevat alleen dag-van-de-maand + tijd (geen maand/jaar) —
+  `MetarAge` lost dit op tegen "nu", met een terugval naar de vorige maand
+  als de dag-van-de-maand anders meer dan een uur in de toekomst zou vallen.
 
 
 

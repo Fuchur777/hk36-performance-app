@@ -90,6 +90,74 @@ class FakeSleepvluchtInputDao : SleepvluchtInputDao {
     override suspend fun deleteByProfileId(profileId: Long) { inputs.remove(profileId) }
 }
 
+class FakeAirfieldDao : AirfieldDao {
+    private val airfields = MutableStateFlow<List<AirfieldEntity>>(emptyList())
+    private var nextId = 1L
+
+    override fun observeAll(): Flow<List<AirfieldEntity>> = airfields
+    override suspend fun getById(id: Long): AirfieldEntity? = airfields.value.find { it.id == id }
+
+    override suspend fun insert(airfield: AirfieldEntity): Long {
+        val id = nextId++
+        airfields.value = airfields.value + airfield.copy(id = id)
+        return id
+    }
+
+    override suspend fun update(airfield: AirfieldEntity) {
+        airfields.value = airfields.value.map { if (it.id == airfield.id) airfield else it }
+    }
+
+    override suspend fun delete(airfield: AirfieldEntity) {
+        airfields.value = airfields.value.filterNot { it.id == airfield.id }
+    }
+
+    fun seed(airfield: AirfieldEntity) {
+        airfields.value = airfields.value + airfield
+        nextId = maxOf(nextId, airfield.id + 1)
+    }
+}
+
+class FakeRunwayStripDao : RunwayStripDao {
+    private val strips = MutableStateFlow<List<RunwayStripEntity>>(emptyList())
+    private var nextId = 1L
+
+    override fun observeByAirfield(airfieldId: Long): Flow<List<RunwayStripEntity>> =
+        MutableStateFlow(strips.value.filter { it.airfieldId == airfieldId })
+
+    override suspend fun getByAirfield(airfieldId: Long): List<RunwayStripEntity> =
+        strips.value.filter { it.airfieldId == airfieldId }
+
+    override suspend fun insert(strip: RunwayStripEntity): Long {
+        val id = nextId++
+        strips.value = strips.value + strip.copy(id = id)
+        return id
+    }
+
+    override suspend fun update(strip: RunwayStripEntity) {
+        strips.value = strips.value.map { if (it.id == strip.id) strip else it }
+    }
+
+    override suspend fun delete(strip: RunwayStripEntity) {
+        strips.value = strips.value.filterNot { it.id == strip.id }
+    }
+
+    override suspend fun deleteByAirfieldId(airfieldId: Long) {
+        strips.value = strips.value.filterNot { it.airfieldId == airfieldId }
+    }
+
+    fun seed(strip: RunwayStripEntity) {
+        strips.value = strips.value + strip
+        nextId = maxOf(nextId, strip.id + 1)
+    }
+}
+
+class FakeFlightContextDao : FlightContextDao {
+    private val contexts = mutableMapOf<Long, FlightContextEntity>()
+    override suspend fun get(profileId: Long): FlightContextEntity? = contexts[profileId]
+    override suspend fun upsert(entity: FlightContextEntity) { contexts[entity.profileId] = entity }
+    override suspend fun deleteByProfileId(profileId: Long) { contexts.remove(profileId) }
+}
+
 /** Builds a real [AircraftProfileRepository] backed entirely by the fakes above. */
 fun fakeAircraftProfileRepository(
     profileDao: FakeAircraftProfileDao = FakeAircraftProfileDao(),
@@ -98,8 +166,12 @@ fun fakeAircraftProfileRepository(
     wbInputDao: FakeWbInputDao = FakeWbInputDao(),
     takeoffInputDao: FakeTakeoffInputDao = FakeTakeoffInputDao(),
     landingInputDao: FakeLandingInputDao = FakeLandingInputDao(),
-    sleepvluchtInputDao: FakeSleepvluchtInputDao = FakeSleepvluchtInputDao()
+    sleepvluchtInputDao: FakeSleepvluchtInputDao = FakeSleepvluchtInputDao(),
+    airfieldDao: FakeAirfieldDao = FakeAirfieldDao(),
+    runwayStripDao: FakeRunwayStripDao = FakeRunwayStripDao(),
+    flightContextDao: FakeFlightContextDao = FakeFlightContextDao()
 ): AircraftProfileRepository = AircraftProfileRepository(
     profileDao, lastWbResultDao, favoriteSailplaneTypeDao,
-    wbInputDao, takeoffInputDao, landingInputDao, sleepvluchtInputDao
+    wbInputDao, takeoffInputDao, landingInputDao, sleepvluchtInputDao,
+    airfieldDao, runwayStripDao, flightContextDao
 )

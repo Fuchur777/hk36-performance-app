@@ -11,7 +11,10 @@ class AircraftProfileRepository(
     private val wbInputDao: WbInputDao,
     private val takeoffInputDao: TakeoffInputDao,
     private val landingInputDao: LandingInputDao,
-    private val sleepvluchtInputDao: SleepvluchtInputDao
+    private val sleepvluchtInputDao: SleepvluchtInputDao,
+    private val airfieldDao: AirfieldDao,
+    private val runwayStripDao: RunwayStripDao,
+    private val flightContextDao: FlightContextDao
 ) {
 
     fun observeAll(): Flow<List<AircraftProfileEntity>> = dao.observeAll()
@@ -30,8 +33,10 @@ class AircraftProfileRepository(
     suspend fun delete(profile: AircraftProfileEntity) = dao.delete(profile)
 
     /** Deletes a registration and every per-registration calculation input tied to it (W&B,
-     * Take-off, Landing, Sleepvlucht, last W&B result), so removing a registration doesn't
-     * leave orphaned rows behind under a profileId that will never be reused. */
+     * Take-off, Landing, Sleepvlucht, last W&B result, flight context), so removing a
+     * registration doesn't leave orphaned rows behind under a profileId that will never be
+     * reused. Saved airfields themselves are NOT touched — they belong to no single
+     * registration. */
     suspend fun deleteProfileCascade(profile: AircraftProfileEntity) {
         dao.delete(profile)
         lastWbResultDao.deleteByProfileId(profile.id)
@@ -39,6 +44,7 @@ class AircraftProfileRepository(
         takeoffInputDao.deleteByProfileId(profile.id)
         landingInputDao.deleteByProfileId(profile.id)
         sleepvluchtInputDao.deleteByProfileId(profile.id)
+        flightContextDao.deleteByProfileId(profile.id)
     }
 
     /** Called after every W&B recalculation so other modules can read "what this aircraft
@@ -69,4 +75,42 @@ class AircraftProfileRepository(
 
     suspend fun getSleepvluchtInput(profileId: Long): SleepvluchtInputEntity? = sleepvluchtInputDao.get(profileId)
     suspend fun saveSleepvluchtInput(entity: SleepvluchtInputEntity) = sleepvluchtInputDao.upsert(entity)
+
+    // --- Airfields / runway strips (Fase 2c) ---
+
+    fun observeAirfields(): Flow<List<AirfieldEntity>> = airfieldDao.observeAll()
+
+    suspend fun getAirfield(id: Long): AirfieldEntity? = airfieldDao.getById(id)
+
+    suspend fun saveAirfield(airfield: AirfieldEntity): Long =
+        if (airfield.id == 0L) airfieldDao.insert(airfield) else {
+            airfieldDao.update(airfield)
+            airfield.id
+        }
+
+    /** Deletes an airfield and every runway strip that belongs to it — a strip has no meaning
+     * without its airfield. Registrations whose [FlightContextEntity] pointed at this airfield
+     * are left as-is (their `airfieldId` becomes dangling); the calculation screens fall back
+     * to Handmatig when the referenced airfield can no longer be found. */
+    suspend fun deleteAirfieldCascade(airfield: AirfieldEntity) {
+        runwayStripDao.deleteByAirfieldId(airfield.id)
+        airfieldDao.delete(airfield)
+    }
+
+    fun observeRunwayStrips(airfieldId: Long): Flow<List<RunwayStripEntity>> = runwayStripDao.observeByAirfield(airfieldId)
+
+    suspend fun getRunwayStrips(airfieldId: Long): List<RunwayStripEntity> = runwayStripDao.getByAirfield(airfieldId)
+
+    suspend fun saveRunwayStrip(strip: RunwayStripEntity): Long =
+        if (strip.id == 0L) runwayStripDao.insert(strip) else {
+            runwayStripDao.update(strip)
+            strip.id
+        }
+
+    suspend fun deleteRunwayStrip(strip: RunwayStripEntity) = runwayStripDao.delete(strip)
+
+    // --- Flight context (Fase 2c): Vliegveld/Handmatig choice shared by take-off/landing/sleepvlucht ---
+
+    suspend fun getFlightContext(profileId: Long): FlightContextEntity? = flightContextDao.get(profileId)
+    suspend fun saveFlightContext(entity: FlightContextEntity) = flightContextDao.upsert(entity)
 }

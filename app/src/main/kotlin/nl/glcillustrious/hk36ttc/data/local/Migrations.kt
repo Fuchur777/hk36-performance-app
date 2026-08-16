@@ -8,7 +8,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * `fallbackToDestructiveMigration` (which used to silently wipe every locally stored profile
  * and calculation input on any schema change — see docs/00-plan.md §11 point 2). The exact
  * `CREATE TABLE` SQL for each version is copied from the tracked schema exports in
- * `app/schemas/nl.glcillustrious.hk36ttc.data.local.AppDatabase/` (1.json through 5.json) —
+ * `app/schemas/nl.glcillustrious.hk36ttc.data.local.AppDatabase/` (1.json through 6.json) —
  * Room validates the post-migration schema against that export on the next app start, so any
  * drift here fails loudly instead of silently.
  */
@@ -84,6 +84,34 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+/** v5 -> v6 (Fase 2c round 1): airfields/runway strips/flight context, plus which runway
+ * direction the pilot locked in on each calculation screen. All purely additive — three new
+ * tables and one nullable column added to each of the three existing per-screen input tables,
+ * so every previously-saved row keeps working unchanged (`chosenRunwayDesignator` reads back
+ * as `null`, meaning "follow the live advisor recommendation"). */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `airfields` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`name` TEXT NOT NULL, `icao` TEXT, `metarStationIcao` TEXT, `elevationM` REAL NOT NULL, " +
+                "`metarRaw` TEXT, `metarEnteredAtEpochMs` INTEGER)"
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `runway_strips` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`airfieldId` INTEGER NOT NULL, `designatorA` TEXT NOT NULL, `designatorB` TEXT NOT NULL, " +
+                "`headingDegTrueA` REAL NOT NULL, `lengthM` REAL NOT NULL, `surface` TEXT NOT NULL, " +
+                "`slopePctA` REAL NOT NULL)"
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `flight_contexts` (`profileId` INTEGER NOT NULL, `mode` TEXT NOT NULL, " +
+                "`airfieldId` INTEGER, `grassCondition` TEXT NOT NULL, PRIMARY KEY(`profileId`))"
+        )
+        db.execSQL("ALTER TABLE `takeoff_inputs` ADD COLUMN `chosenRunwayDesignator` TEXT")
+        db.execSQL("ALTER TABLE `landing_inputs` ADD COLUMN `chosenRunwayDesignator` TEXT")
+        db.execSQL("ALTER TABLE `sleepvlucht_inputs` ADD COLUMN `chosenRunwayDesignator` TEXT")
+    }
+}
+
 /** Every migration `AppDatabase` currently ships, in order. Add the next one here (and never
  * remove an old one) whenever `AppDatabase.version` is bumped again. */
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)

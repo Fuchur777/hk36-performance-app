@@ -1,0 +1,7 @@
+{
+  "source": {
+    "note": "Not AFM/AIC data - a practical flight-safety threshold (rekenlogica.md section 9), not a certification requirement. Always user-adjustable, never hardcoded in Kotlin."
+  },
+  "stale_after_minutes": 60,
+  "stale_after_minutes_note": "Warning (non-blocking) shown at the confirmation step once a pasted/fetched METAR is older than this. The pilot always confirms or re-enters the weather regardless of age (rekenlogica.md section 5) - this only controls whether an extra staleness warning is shown alongside that confirmation."
+}

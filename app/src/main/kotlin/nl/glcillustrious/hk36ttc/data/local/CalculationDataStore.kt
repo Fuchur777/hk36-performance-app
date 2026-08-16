@@ -3,6 +3,8 @@ package nl.glcillustrious.hk36ttc.data.local
 import android.content.Context
 import java.io.File
 import java.io.IOException
+import nl.glcillustrious.hk36ttc.core.metar.MetarConfigData
+import nl.glcillustrious.hk36ttc.core.metar.parseMetarConfigData
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceCorrectionsData
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceNormalData
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceTowData
@@ -21,7 +23,8 @@ data class AppCalculationData(
     val performanceNormal: PerformanceNormalData,
     val performanceTow: PerformanceTowData,
     val performanceCorrections: PerformanceCorrectionsData,
-    val sailplaneTypes: SailplaneTypesData
+    val sailplaneTypes: SailplaneTypesData,
+    val metarConfig: MetarConfigData
 )
 
 /**
@@ -55,7 +58,8 @@ class CalculationDataStore(private val context: Context) {
                 performanceNormal = loadJson(FILENAME_PERF_NORMAL, ASSET_PERF_NORMAL, ::parsePerformanceNormalData),
                 performanceTow = loadJson(FILENAME_PERF_TOW, ASSET_PERF_TOW, ::parsePerformanceTowData),
                 performanceCorrections = loadJson(FILENAME_PERF_CORRECTIONS, ASSET_PERF_CORRECTIONS, ::parsePerformanceCorrectionsData),
-                sailplaneTypes = loadJson(FILENAME_SAILPLANE_TYPES, ASSET_SAILPLANE_TYPES, ::parseSailplaneTypesData)
+                sailplaneTypes = loadJson(FILENAME_SAILPLANE_TYPES, ASSET_SAILPLANE_TYPES, ::parseSailplaneTypesData),
+                metarConfig = loadJson(FILENAME_METAR_CONFIG, ASSET_METAR_CONFIG, ::parseMetarConfigData)
             )
         )
     } catch (e: Exception) {
@@ -69,6 +73,7 @@ class CalculationDataStore(private val context: Context) {
         copyAsset(ASSET_PERF_TOW, File(dataDir(), FILENAME_PERF_TOW))
         copyAsset(ASSET_PERF_CORRECTIONS, File(dataDir(), FILENAME_PERF_CORRECTIONS))
         copyAsset(ASSET_SAILPLANE_TYPES, File(dataDir(), FILENAME_SAILPLANE_TYPES))
+        copyAsset(ASSET_METAR_CONFIG, File(dataDir(), FILENAME_METAR_CONFIG))
         loadAll()
     } catch (e: Exception) {
         CalculationDataResult.Failure(readableError(e))
@@ -111,5 +116,7 @@ class CalculationDataStore(private val context: Context) {
         const val FILENAME_PERF_CORRECTIONS = "performance_corrections.json"
         const val ASSET_SAILPLANE_TYPES = "data/sailplane_types.json"
         const val FILENAME_SAILPLANE_TYPES = "sailplane_types.json"
+        const val ASSET_METAR_CONFIG = "data/metar_config.json"
+        const val FILENAME_METAR_CONFIG = "metar_config.json"
     }
 }

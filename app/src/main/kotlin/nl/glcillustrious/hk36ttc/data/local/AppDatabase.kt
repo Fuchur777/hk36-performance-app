@@ -9,9 +9,10 @@ import androidx.room.TypeConverters
 @Database(
     entities = [
         AircraftProfileEntity::class, LastWbResultEntity::class, FavoriteSailplaneTypeEntity::class,
-        WbInputEntity::class, TakeoffInputEntity::class, LandingInputEntity::class, SleepvluchtInputEntity::class
+        WbInputEntity::class, TakeoffInputEntity::class, LandingInputEntity::class, SleepvluchtInputEntity::class,
+        AirfieldEntity::class, RunwayStripEntity::class, FlightContextEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -24,6 +25,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun takeoffInputDao(): TakeoffInputDao
     abstract fun landingInputDao(): LandingInputDao
     abstract fun sleepvluchtInputDao(): SleepvluchtInputDao
+    abstract fun airfieldDao(): AirfieldDao
+    abstract fun runwayStripDao(): RunwayStripDao
+    abstract fun flightContextDao(): FlightContextDao
 
     companion object {
         @Volatile
