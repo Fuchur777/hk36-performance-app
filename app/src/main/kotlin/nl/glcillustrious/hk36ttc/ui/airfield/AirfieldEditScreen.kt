@@ -1,5 +1,6 @@
 package nl.glcillustrious.hk36ttc.ui.airfield
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -173,7 +176,10 @@ fun AirfieldEditScreen(
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                         ListItem(
                             headlineContent = {
-                                Text(stringResource(R.string.airfield_edit_runway_item_format, strip.designatorA, strip.designatorB))
+                                Text(
+                                    if (strip.oneWay) strip.designatorA
+                                    else stringResource(R.string.airfield_edit_runway_item_format, strip.designatorA, strip.designatorB)
+                                )
                             },
                             supportingContent = {
                                 val surfaceLabel = when (RunwaySurfaceType.valueOf(strip.surface)) {
@@ -238,7 +244,12 @@ fun AirfieldEditScreen(
         AlertDialog(
             onDismissRequest = { runwayPendingDelete = null },
             title = { Text(stringResource(R.string.airfield_edit_runway_delete_confirm_title)) },
-            text = { Text(stringResource(R.string.airfield_edit_runway_delete_confirm_body_format, strip.designatorA, strip.designatorB)) },
+            text = {
+                Text(
+                    if (strip.oneWay) stringResource(R.string.airfield_edit_runway_delete_confirm_body_one_way_format, strip.designatorA)
+                    else stringResource(R.string.airfield_edit_runway_delete_confirm_body_format, strip.designatorA, strip.designatorB)
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteRunway(strip)
@@ -275,21 +286,43 @@ private fun RunwayEditDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { form = form.copy(oneWay = !form.oneWay) }
+                ) {
+                    Checkbox(checked = form.oneWay, onCheckedChange = { form = form.copy(oneWay = it) })
+                    Text(stringResource(R.string.airfield_edit_runway_one_way_label))
+                }
+                Text(
+                    stringResource(R.string.airfield_edit_runway_naming_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (form.oneWay) {
                     OutlinedTextField(
                         value = form.designatorA,
                         onValueChange = { form = form.copy(designatorA = it) },
-                        label = { Text(stringResource(R.string.airfield_edit_runway_designator_a_label)) },
+                        label = { Text(stringResource(R.string.airfield_edit_runway_designator_one_way_label)) },
                         singleLine = true,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    OutlinedTextField(
-                        value = form.designatorB,
-                        onValueChange = { form = form.copy(designatorB = it) },
-                        label = { Text(stringResource(R.string.airfield_edit_runway_designator_b_label)) },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = form.designatorA,
+                            onValueChange = { form = form.copy(designatorA = it) },
+                            label = { Text(stringResource(R.string.airfield_edit_runway_designator_a_label)) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = form.designatorB,
+                            onValueChange = { form = form.copy(designatorB = it) },
+                            label = { Text(stringResource(R.string.airfield_edit_runway_designator_b_label)) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
                 IntStepperField(
                     label = stringResource(R.string.airfield_edit_runway_heading_label),
@@ -342,7 +375,7 @@ private fun RunwayEditDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(form) },
-                enabled = form.designatorA.isNotBlank() && form.designatorB.isNotBlank()
+                enabled = form.designatorA.isNotBlank() && (form.oneWay || form.designatorB.isNotBlank())
             ) {
                 Text(stringResource(R.string.common_save))
             }

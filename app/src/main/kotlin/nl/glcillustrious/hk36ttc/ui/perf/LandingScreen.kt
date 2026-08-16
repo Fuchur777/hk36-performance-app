@@ -44,6 +44,9 @@ import nl.glcillustrious.hk36ttc.ui.common.FlightContextCard
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.ResettableIntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.ResultRow
+import nl.glcillustrious.hk36ttc.ui.common.RunwayAdviceCard
+import nl.glcillustrious.hk36ttc.ui.common.WeatherInputMode
+import nl.glcillustrious.hk36ttc.ui.common.WeatherModeSelector
 import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
 import nl.glcillustrious.hk36ttc.ui.theme.status
 
@@ -102,21 +105,30 @@ fun LandingScreen(
                 hasGrassRunway = state.hasGrassRunway,
                 grassCondition = state.grassCondition,
                 onGrassConditionChange = { viewModel.setGrassCondition(it) },
-                runwayAdvice = state.runwayAdvice,
-                chosenDesignator = state.chosenRunwayDesignator,
-                onChooseRunway = { viewModel.chooseRunway(it) },
                 metarParsed = state.selectedAirfield?.metarRaw?.let { MetarParser.parse(it) },
-                metarConfig = metarConfig,
-                confirmed = state.flightConfirmed,
-                onConfirm = { viewModel.confirmFlightContext() }
+                metarConfig = metarConfig
             )
+            if (state.flightContextMode == FlightContextMode.AIRFIELD && state.selectedAirfield != null) {
+                RunwayAdviceCard(
+                    runwayAdvice = state.runwayAdvice,
+                    chosenDesignator = state.chosenRunwayDesignator,
+                    onChooseRunway = { viewModel.chooseRunway(it) },
+                    confirmed = state.flightConfirmed,
+                    onConfirm = { viewModel.confirmFlightContext() }
+                )
+            }
 
-            if (state.weatherDerivable && !state.oatOverridden) {
+            if (state.weatherDerivable) {
+                WeatherModeSelector(mode = state.weatherMode, onModeChange = { viewModel.setWeatherMode(it) })
+            }
+            val metarWeather = state.weatherDerivable && state.weatherMode == WeatherInputMode.METAR
+
+            if (metarWeather) {
                 DerivedValueField(
                     label = stringResource(R.string.perf_oat_label),
                     valueText = "${state.effectiveOatC}°C",
                     isOverridden = false,
-                    onEdit = { viewModel.editOat() },
+                    onEdit = { viewModel.setWeatherMode(WeatherInputMode.MANUAL) },
                     onResetToDerived = {}
                 )
             } else {
@@ -125,17 +137,14 @@ fun LandingScreen(
                     onValueChange = { v -> viewModel.update { it.copy(oatC = v) } },
                     min = -20, max = 45, suffix = "°C"
                 )
-                if (state.weatherDerivable && state.oatOverridden) {
-                    TextButton(onClick = { viewModel.resetOat() }) { Text(stringResource(R.string.derived_value_reset)) }
-                }
             }
 
-            if (state.pressureAltDerivable && !state.pressureAltOverridden) {
+            if (metarWeather && state.pressureAltDerivable) {
                 DerivedValueField(
                     label = stringResource(R.string.perf_pressure_alt_label),
                     valueText = "${state.effectivePressureAltM}m",
                     isOverridden = false,
-                    onEdit = { viewModel.editPressureAlt() },
+                    onEdit = { viewModel.setWeatherMode(WeatherInputMode.MANUAL) },
                     onResetToDerived = {}
                 )
             } else {
@@ -144,9 +153,6 @@ fun LandingScreen(
                     onValueChange = { v -> viewModel.update { it.copy(pressureAltM = v) } },
                     min = 0, max = 1500, suffix = "m"
                 )
-                if (state.pressureAltDerivable && state.pressureAltOverridden) {
-                    TextButton(onClick = { viewModel.resetPressureAlt() }) { Text(stringResource(R.string.derived_value_reset)) }
-                }
             }
 
             if (state.weatherDerivable && !state.surfaceOverridden) {
@@ -197,7 +203,7 @@ fun LandingScreen(
             )
 
             if (state.flightContextMode == FlightContextMode.MANUAL || state.flightConfirmed) {
-                state.result?.let { LandingResultCard(it) }
+                state.result?.let { LandingResultCard(it, state.effectiveSurfaceType) }
             }
 
             Text(
@@ -259,7 +265,7 @@ private fun LandingSurfaceSelector(surfaceType: LandingSurfaceType, onSelected: 
 }
 
 @Composable
-private fun LandingResultCard(result: LandingResult) {
+private fun LandingResultCard(result: LandingResult, surfaceType: LandingSurfaceType) {
     val statusColors = MaterialTheme.status
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -271,8 +277,14 @@ private fun LandingResultCard(result: LandingResult) {
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Text(
+                stringResource(R.string.perf_result_surface_format, landingSurfaceLabel(surfaceType)),
+                style = MaterialTheme.typography.bodyMedium
+            )
             ResultRow(stringResource(R.string.perf_ground_run_label), fmt(result.l1WithMarginM), "m")
             ResultRow(stringResource(R.string.perf_obstacle_15m_label), fmt(result.l2WithMarginM), "m")
+            ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmt(result.l1M), "m")
+            ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmt(result.l2M), "m")
             if (result.surfaceFactorApplied) {
                 Text(
                     stringResource(R.string.landing_surface_correction_format, fmt(result.surfaceFactor * 100)),

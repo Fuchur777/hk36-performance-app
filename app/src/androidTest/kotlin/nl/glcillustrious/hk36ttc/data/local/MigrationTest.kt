@@ -104,7 +104,35 @@ class MigrationTest {
     }
 
     @Test
-    fun migrateAllTheWayFrom1To6_succeedsAndKeepsSeededProfile() {
+    fun migrate6To7_addsOneWayColumnAndFavoriteAirfieldsWithoutTouchingExistingStrips() {
+        helper.createDatabase(testDbName, 6).apply {
+            execSQL(
+                "INSERT INTO airfields (id, name, icao, metarStationIcao, elevationM, metarRaw, metarEnteredAtEpochMs) " +
+                    "VALUES (1, 'Vliegbasis Gilze-Rijen', 'EHGR', NULL, 15.0, NULL, NULL)"
+            )
+            execSQL(
+                "INSERT INTO runway_strips (id, airfieldId, designatorA, designatorB, headingDegTrueA, lengthM, surface, slopePctA) " +
+                    "VALUES (1, 1, '03', '21', 30.0, 1730.0, 'ASPHALT', 0.0)"
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(testDbName, 7, true, MIGRATION_6_7)
+
+        val stripCursor = db.query("SELECT designatorA, oneWay FROM runway_strips WHERE id = 1")
+        assertTrue(stripCursor.moveToFirst())
+        assertEquals("03", stripCursor.getString(0))
+        assertEquals(0, stripCursor.getInt(1))
+        stripCursor.close()
+
+        val favoriteCountCursor = db.query("SELECT COUNT(*) FROM favorite_airfields")
+        assertTrue(favoriteCountCursor.moveToFirst())
+        assertEquals(0, favoriteCountCursor.getInt(0))
+        favoriteCountCursor.close()
+    }
+
+    @Test
+    fun migrateAllTheWayFrom1To7_succeedsAndKeepsSeededProfile() {
         helper.createDatabase(testDbName, 1).apply {
             execSQL(
                 "INSERT INTO aircraft_profiles (id, registration, serialNumber, emptyMassKg, " +
@@ -114,7 +142,7 @@ class MigrationTest {
             close()
         }
 
-        val db = helper.runMigrationsAndValidate(testDbName, 6, true, *ALL_MIGRATIONS)
+        val db = helper.runMigrationsAndValidate(testDbName, 7, true, *ALL_MIGRATIONS)
 
         val cursor = db.query("SELECT registration FROM aircraft_profiles WHERE id = 1")
         assertTrue(cursor.moveToFirst())

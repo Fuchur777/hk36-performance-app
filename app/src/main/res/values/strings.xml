@@ -118,6 +118,9 @@
     <string name="perf_margin_factor_label">[AIC P173] Marge-factor (aanbevolen)</string>
     <string name="perf_ground_run_label">Grondloop</string>
     <string name="perf_obstacle_15m_label">Over 15m obstakel</string>
+    <string name="perf_ground_run_raw_label">Grondloop (zonder marge)</string>
+    <string name="perf_obstacle_15m_raw_label">Over 15m obstakel (zonder marge)</string>
+    <string name="perf_result_surface_format">Ondergrond: %1$s</string>
     <string name="perf_margin_included_format">Incl. marge %1$sx</string>
     <string name="perf_out_of_range_warning">Let op: invoer buiten gepubliceerd bereik — resultaat is een benadering, niet gebruiken zonder marge.</string>
     <string name="perf_no_correction_table_note">Geen correctietabel voor andere gewichten/hoogtes/temperaturen beschikbaar.</string>
@@ -209,6 +212,9 @@
     <string name="airfield_list_elevation_format">%1$d m boven zeeniveau</string>
     <string name="airfield_list_delete_confirm_title">Vliegveld verwijderen?</string>
     <string name="airfield_list_delete_confirm_body_format">Weet je zeker dat je %1$s wilt verwijderen? Alle opgeslagen banen van dit vliegveld gaan ook verloren.</string>
+    <string name="airfield_list_favorite_add">Favoriet maken</string>
+    <string name="airfield_list_favorite_remove">Favoriet verwijderen</string>
+    <string name="airfield_list_favorite_hint">Favoriete vliegvelden staan in de keuzelijst bij take-off, landing en sleepvlucht.</string>
 
     <!-- Vliegveld bewerken -->
     <string name="airfield_edit_title_new">Nieuw vliegveld</string>
@@ -246,8 +252,12 @@
     <string name="airfield_edit_runway_delete_content_description">Baan verwijderen</string>
     <string name="airfield_edit_runway_delete_confirm_title">Baan verwijderen?</string>
     <string name="airfield_edit_runway_delete_confirm_body_format">Weet je zeker dat je baan %1$s / %2$s wilt verwijderen?</string>
+    <string name="airfield_edit_runway_delete_confirm_body_one_way_format">Weet je zeker dat je baan %1$s wilt verwijderen?</string>
     <string name="airfield_edit_runway_dialog_title_new">Nieuwe baan</string>
     <string name="airfield_edit_runway_dialog_title_existing">Baan bewerken</string>
+    <string name="airfield_edit_runway_one_way_label">Eenrichtingsbaan</string>
+    <string name="airfield_edit_runway_naming_hint">Heeft dit veld een gras- en een asfaltbaan met hetzelfde nummer? Gebruik dan bijv. "02 gras" en "02 beton" om ze uit elkaar te houden.</string>
+    <string name="airfield_edit_runway_designator_one_way_label">Aanduiding (bijv. 03 of 02 gras)</string>
     <string name="airfield_edit_runway_designator_a_label">Aanduiding richting A (bijv. 03)</string>
     <string name="airfield_edit_runway_designator_b_label">Aanduiding richting B (bijv. 21)</string>
     <string name="airfield_edit_runway_heading_label">Ware koers richting A</string>
@@ -274,6 +284,9 @@
     <string name="flight_context_grass_dry">Droog</string>
     <string name="flight_context_grass_wet">Nat</string>
     <string name="flight_context_grass_soft">Zacht</string>
+    <string name="weather_mode_label">Weergegevens</string>
+    <string name="weather_mode_metar">METAR</string>
+    <string name="weather_mode_manual">Handmatig</string>
     <string name="flight_context_runway_section_title">Baankeuze</string>
     <string name="flight_context_runway_status_preferred">Aanbevolen</string>
     <string name="flight_context_runway_status_fits">Past</string>

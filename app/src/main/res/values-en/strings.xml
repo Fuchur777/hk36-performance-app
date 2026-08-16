@@ -118,6 +118,9 @@
     <string name="perf_margin_factor_label">[AIC P173] Margin factor (recommended)</string>
     <string name="perf_ground_run_label">Ground run</string>
     <string name="perf_obstacle_15m_label">Over 15m obstacle</string>
+    <string name="perf_ground_run_raw_label">Ground run (no margin)</string>
+    <string name="perf_obstacle_15m_raw_label">Over 15m obstacle (no margin)</string>
+    <string name="perf_result_surface_format">Surface: %1$s</string>
     <string name="perf_margin_included_format">Incl. margin %1$sx</string>
     <string name="perf_out_of_range_warning">Note: input outside the published range — the result is an approximation, do not use without margin.</string>
     <string name="perf_no_correction_table_note">No correction table available for other weights/altitudes/temperatures.</string>
@@ -209,6 +212,9 @@
     <string name="airfield_list_elevation_format">%1$d m above sea level</string>
     <string name="airfield_list_delete_confirm_title">Delete airfield?</string>
     <string name="airfield_list_delete_confirm_body_format">Are you sure you want to delete %1$s? Every saved runway for this airfield will be lost too.</string>
+    <string name="airfield_list_favorite_add">Add to favorites</string>
+    <string name="airfield_list_favorite_remove">Remove from favorites</string>
+    <string name="airfield_list_favorite_hint">Favorite airfields show up in the picker on take-off, landing and glider tow.</string>
 
     <!-- Edit airfield -->
     <string name="airfield_edit_title_new">New airfield</string>
@@ -246,8 +252,12 @@
     <string name="airfield_edit_runway_delete_content_description">Delete runway</string>
     <string name="airfield_edit_runway_delete_confirm_title">Delete runway?</string>
     <string name="airfield_edit_runway_delete_confirm_body_format">Are you sure you want to delete runway %1$s / %2$s?</string>
+    <string name="airfield_edit_runway_delete_confirm_body_one_way_format">Are you sure you want to delete runway %1$s?</string>
     <string name="airfield_edit_runway_dialog_title_new">New runway</string>
     <string name="airfield_edit_runway_dialog_title_existing">Edit runway</string>
+    <string name="airfield_edit_runway_one_way_label">One-way runway</string>
+    <string name="airfield_edit_runway_naming_hint">Does this field have a grass and an asphalt runway with the same number? Use e.g. "02 grass" and "02 asphalt" to tell them apart.</string>
+    <string name="airfield_edit_runway_designator_one_way_label">Designator (e.g. 03 or 02 grass)</string>
     <string name="airfield_edit_runway_designator_a_label">Designator direction A (e.g. 03)</string>
     <string name="airfield_edit_runway_designator_b_label">Designator direction B (e.g. 21)</string>
     <string name="airfield_edit_runway_heading_label">True heading direction A</string>
@@ -274,6 +284,9 @@
     <string name="flight_context_grass_dry">Dry</string>
     <string name="flight_context_grass_wet">Wet</string>
     <string name="flight_context_grass_soft">Soft</string>
+    <string name="weather_mode_label">Weather data</string>
+    <string name="weather_mode_metar">METAR</string>
+    <string name="weather_mode_manual">Manual</string>
     <string name="flight_context_runway_section_title">Runway choice</string>
     <string name="flight_context_runway_status_preferred">Recommended</string>
     <string name="flight_context_runway_status_fits">Fits</string>

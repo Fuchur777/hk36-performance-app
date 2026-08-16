@@ -1,6 +1,6 @@
 {
-  "description": "Documentatie-referentie voor het opgeslagen-vliegveld datamodel (Fase 2c ronde 1). Dit bestand is GEEN runtime-input meer — vliegvelden/banen leven uitsluitend in de Room-database (AirfieldEntity/RunwayStripEntity, app/src/main/kotlin/.../data/local/), aangemaakt/beheerd via het 'Vliegvelden'-scherm in de app zelf. Dit JSON-bestand blijft alleen bestaan als leesbare referentie voor het veldmodel en de aannames erachter.",
-  "schema_version": 2,
+  "description": "Documentatie-referentie voor het opgeslagen-vliegveld datamodel (Fase 2c, t/m ronde 2). Dit bestand is GEEN runtime-input meer — vliegvelden/banen leven uitsluitend in de Room-database (AirfieldEntity/RunwayStripEntity, app/src/main/kotlin/.../data/local/), aangemaakt/beheerd via het 'Vliegvelden'-scherm in de app zelf. Dit JSON-bestand blijft alleen bestaan als leesbare referentie voor het veldmodel en de aannames erachter.",
+  "schema_version": 3,
   "airfields": [
     {
       "id": "(auto-generated Room row id, niet gebruikt in deze referentie)",
@@ -18,18 +18,23 @@
           "heading_deg_true_a": 30,
           "length_m": 1730,
           "surface": "ASPHALT",
-          "slope_pct_a": 0
+          "slope_pct_a": 0,
+          "one_way": false
         }
-      ]
+      ],
+      "is_favorite": "(niet een kolom op AirfieldEntity zelf — losse favorite_airfields-tabel, zie notes)"
     }
   ],
   "notes": [
-    "Eén rij per fysieke baanstrook (runway_strips), niet één rij per richting — richting B's ware koers is heading_deg_true_a + 180, en slope_pct_a wordt met omgekeerd teken toegepast voor richting B. Dit maakt het structureel onmogelijk dat de twee richtingen van dezelfde baan uit elkaar lopen.",
+    "Eén rij per fysieke baanstrook (runway_strips), niet één rij per richting — richting B's ware koers is heading_deg_true_a + 180, en slope_pct_a wordt met omgekeerd teken toegepast voor richting B. Dit maakt het structureel onmogelijk dat de twee richtingen van dezelfde baan uit elkaar lopen, tenzij one_way=true (zie hieronder).",
+    "one_way (Fase 2c ronde 2): als true, levert deze strook maar één bruikbare richting op (richting A) in plaats van twee — designator_b bevat dan willekeurige/lege placeholder-tekst en wordt genegeerd. Toegevoegd zodat een eenrichtingsbaan geen nutteloze tweede richting hoeft te krijgen.",
+    "designator_a/designator_b zijn ALLEEN weergavetekst, geen unieke sleutel — de app leidt de sleutel voor selectie/matching af van de Room-rij-id zelf (zie RunwayDirectionOption.id/RunwayCandidate.designator in de app-/core-code). Dit is bewust gescheiden na een bug waarbij twee richtingen met hetzelfde weergavenummer (bijv. een grasbaan '02' en een asfaltbaan '02' op hetzelfde veld) door elkaar liepen. Frank's eigen advies — gelijk-genummerde banen van verschillende ondergrond een onderscheidende naam geven, bijv. '02 gras'/'02 beton' — helpt de piloot ze uit elkaar te houden, maar de berekening zelf loopt nooit meer risico op verwarring, ongeacht de gekozen namen.",
     "metar_station_icao is los van icao omdat de meeste Nederlandse zweefvelden geen eigen METAR-station hebben (bijv. Terlet -> EHDL). Leeg/null = val terug op icao zelf.",
     "surface is ASPHALT of GRASS (RunwaySurfaceType) - AFM-grasbaan-toeslag (performance_normal.json, takeoff.grass_runway_penalty_min_pct) is alleen van toepassing bij GRASS. Of het gras vandaag droog/nat/zacht is, is GEEN eigenschap van de baan zelf maar een per-vlucht keuze (GrassCondition in FlightContextEntity) - hetzelfde grasveld is de ene dag droog en de andere dag nat.",
     "slope_pct_a: hellingspercentage van richting A (dus richting A en B hebben tegengesteld teken, want het is dezelfde fysieke strook grond in twee richtingen bekeken). Bron voor de correctieformule: UK CAA AIC P 173/2024, zie rekenlogica.md sectie 2.2 - GEEN AFM-data, standaard 0 (vlak) tenzij gebruiker anders invoert.",
     "metar_raw/metar_entered_at_epoch_ms: de laatst door de piloot geplakte METAR-tekst en het tijdstip waarop dat gebeurde - zie rekenlogica.md sectie 8a voor het parsen en sectie 9 voor de versheidscontrole. Het online automatisch ophalen van een METAR (in plaats van handmatig plakken) is een latere ronde; die vult straks dezelfde twee velden.",
-    "De piloot moet vliegveld- en baankeuze ALTIJD opnieuw bevestigen per berekening (rekenlogica.md sectie 5) - er is bewust geen 'last_confirmed'-veld dat een latere bevestiging zou kunnen overslaan.",
-    "AIP-koppeling (automatisch baangegevens ophalen als suggestie/prefill) is nog niet geimplementeerd - fase 3+, buiten de huidige scope. Nu alleen handmatige invoer via het 'Vliegvelden'-scherm."
+    "is_favorite (Fase 2c ronde 2): geen kolom op AirfieldEntity zelf, maar een losse favorite_airfields-tabel (FavoriteAirfieldEntity, zelfde patroon als favoriete zweeftypes) — beperkt welke vliegvelden in de keuzelijst van take-off/landing/sleepvlucht verschijnen. Vliegveldbeheer zelf toont altijd alle opgeslagen vliegvelden.",
+    "De piloot moet vliegveld- en baankeuze ALTIJD opnieuw bevestigen per berekening (rekenlogica.md sectie 5) - er is bewust geen 'last_confirmed'-veld dat een latere bevestiging zou kunnen overslaan. Sleepvlucht is hierop een uitzondering (rekenlogica.md sectie 5, stap 6) - zie daar voor de reden.",
+    "AIP-koppeling en het automatisch ophalen van vliegveld-/baangegevens uit de OurAirports CSV-bestanden zijn nog niet geimplementeerd - bewust uitgesteld (fase 3+ resp. een latere Fase 2c-ronde), buiten de huidige scope. Nu alleen handmatige invoer via het 'Vliegvelden'-scherm."
   ]
 }

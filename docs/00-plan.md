@@ -532,3 +532,47 @@ wind — zie `TakeoffViewModel.recalculate`'s KDoc.
 **Nog open voor een volgende ronde**: GPS-locatiebepaling, automatisch METAR ophalen (vult
 straks dezelfde `metarRaw`/`metarEnteredAtEpochMs`-velden die nu handmatig gevuld worden),
 AIP-baangegevens-prefill (fase 3+, buiten scope).
+
+## 13. Fase 2c ronde 2 (2026-08-16): bugfixes en polish op basis van toestel-feedback
+
+Na ronde 1 op een echt toestel getest; Frank meldde 11 losse punten, waarvan er twee een
+gedeelde onderliggende oorzaak bleken (zie hieronder). Alle punten zijn in deze ronde
+opgepakt behalve het OurAirports CSV-import-idee, dat Frank expliciet naar een latere ronde
+heeft verplaatst.
+
+- **Bugfix — baanidentiteit (id vs. label)**: "een baan met hetzelfde nummer selecteert beide"
+  en "grasbaan-conditie wijzigen verandert de berekening niet" bleken hetzelfde defect: de
+  `designator` op een baanrichting werd zowel als unieke sleutel als als weergavetekst gebruikt,
+  dus liepen twee gelijk-genummerde richtingen (bijv. gras "02" en asfalt "02") door elkaar.
+  Opgelost door `id` (stabiel, database-afgeleid) en `label` (weergave) te scheiden — zie
+  `rekenlogica.md` §5 voor de volledige uitleg. Zie ook `RunwayCandidate`/
+  `RunwayDirectionOption`'s KDoc.
+- **Eenrichtingsbanen**: een baanstrook kan nu als eenrichting gemarkeerd worden, met een eigen
+  naam — met een hint om gelijk-genummerde gras-/asfaltbanen te onderscheiden (bijv.
+  "02 gras"/"02 beton"), Frank's eigen suggestie voor de weergave-kant van het identiteitsprobleem.
+- **Gras-vandaag-selector**: verplaatst naar ná de METAR-samenvatting, en verschijnt alleen nog
+  als het gekozen vliegveld daadwerkelijk een grasbaan heeft.
+- **Sleepvlucht-baanadvies**: staat nu onderaan (na sleepvlieggewicht/instructievlucht/
+  sleepvliegtuiggewicht) in plaats van bovenaan, en heeft geen bevestigingsknop meer — de
+  ranking hangt af van velden die pas verderop worden ingevuld, dus toont het advies alleen
+  nog de uitkomst voor de configuratie die al op het scherm staat. `FlightContextCard` is
+  hiervoor gesplitst in zichzelf (modus/vliegveld/METAR/gras) en een losse `RunwayAdviceCard`
+  (baanlijst + optionele bevestiging), zodat Take-off/Landing (bevestiging aan) en Sleepvlucht
+  (bevestiging uit, andere positie) elk hun eigen samenstelling kunnen gebruiken.
+- **Resultaatkaartjes**: tonen nu ook de ondergrond (asfalt/gras/etc.) en de kale s1/s2 (zonder
+  marge) naast de bestaande met-marge-waarden, op alle drie rekenschermen.
+- **Favoriete vliegvelden**: net als bij zweeftypes limiteert een favorieten-lijst
+  (`FavoriteAirfieldEntity`) de vliegveldkeuze op de rekenschermen; vliegveldbeheer zelf toont
+  alle opgeslagen vliegvelden met een ster om favorieten te markeren.
+- **METAR/Handmatig-schakelaar voor het weer**: een aparte "METAR/Handmatig"-toggle
+  (`WeatherInputMode`) voor OAT/drukhoogte/tegenwind, los van de vliegveld/baankeuze zelf —
+  Frank koos expliciet voor deze scope tijdens een tussentijdse vraag, zodat een piloot de
+  veld-/baankeuze kan behouden terwijl hij het actuele weer met de hand bijstelt. Ondergrond/
+  helling behouden hun eigen, aparte per-veld-overschrijfmechanisme (rekenlogica.md §5).
+- **Room v7**: `runway_strips.oneWay`-kolom plus de nieuwe `favorite_airfields`-tabel, via
+  `MIGRATION_6_7` met bijbehorende `MigrationTest.kt`-dekking.
+
+**Bewust uitgesteld naar een latere ronde (Frank's keuze)**: het automatisch ophalen van
+vliegveld-/baangegevens uit de OurAirports CSV-bestanden
+(`davidmegginson.github.io/ourairports-data/{airports,runways}.csv`), inclusief een aparte,
+snellere filter-UI dan de zweeftype-lijst gebruikt (met in elk geval ICAO-code-zoeken).

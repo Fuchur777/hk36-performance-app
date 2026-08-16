@@ -15,8 +15,8 @@ android {
         applicationId = "nl.glcillustrious.hk36ttc"
         minSdk = 26
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.2.0"
+        versionCode = 5
+        versionName = "0.3.0"
 
         // Generated fresh at build configuration time - shown alongside versionName/versionCode
         // in the About screen so a specific build can still be pinned down within a day even

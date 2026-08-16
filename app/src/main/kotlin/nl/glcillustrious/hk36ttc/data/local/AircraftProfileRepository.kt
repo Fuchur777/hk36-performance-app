@@ -14,7 +14,8 @@ class AircraftProfileRepository(
     private val sleepvluchtInputDao: SleepvluchtInputDao,
     private val airfieldDao: AirfieldDao,
     private val runwayStripDao: RunwayStripDao,
-    private val flightContextDao: FlightContextDao
+    private val flightContextDao: FlightContextDao,
+    private val favoriteAirfieldDao: FavoriteAirfieldDao
 ) {
 
     fun observeAll(): Flow<List<AircraftProfileEntity>> = dao.observeAll()
@@ -94,7 +95,16 @@ class AircraftProfileRepository(
      * to Handmatig when the referenced airfield can no longer be found. */
     suspend fun deleteAirfieldCascade(airfield: AirfieldEntity) {
         runwayStripDao.deleteByAirfieldId(airfield.id)
+        favoriteAirfieldDao.deleteByAirfieldId(airfield.id)
         airfieldDao.delete(airfield)
+    }
+
+    fun observeFavoriteAirfieldIds(): Flow<List<Long>> =
+        favoriteAirfieldDao.observeAll().map { list -> list.map { it.airfieldId } }
+
+    suspend fun setAirfieldFavorite(airfieldId: Long, favorite: Boolean) {
+        if (favorite) favoriteAirfieldDao.insert(FavoriteAirfieldEntity(airfieldId))
+        else favoriteAirfieldDao.deleteByAirfieldId(airfieldId)
     }
 
     fun observeRunwayStrips(airfieldId: Long): Flow<List<RunwayStripEntity>> = runwayStripDao.observeByAirfield(airfieldId)

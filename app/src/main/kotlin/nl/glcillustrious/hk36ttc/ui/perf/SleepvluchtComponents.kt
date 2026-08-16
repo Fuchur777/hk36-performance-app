@@ -267,8 +267,14 @@ internal fun SleepvluchtResultCard(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Text(
+                stringResource(R.string.perf_result_surface_format, sleepvluchtSurfaceLabel(surfaceType)),
+                style = MaterialTheme.typography.bodyMedium
+            )
             ResultRow(stringResource(R.string.perf_ground_run_label), fmt(result.s1WithMarginM), "m")
             ResultRow(stringResource(R.string.perf_obstacle_15m_label), fmt(result.s2WithMarginM), "m")
+            ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmt(result.s1M), "m")
+            ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmt(result.s2M), "m")
             val surfaceTag = if (surfaceType == SleepvluchtSurfaceType.DROOG_GRAS || surfaceType == SleepvluchtSurfaceType.ASFALT) {
                 "[AFM]"
             } else {

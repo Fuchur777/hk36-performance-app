@@ -8,6 +8,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -18,13 +19,27 @@ import nl.glcillustrious.hk36ttc.data.local.AirfieldEntity
 import nl.glcillustrious.hk36ttc.data.local.RunwayStripEntity
 import nl.glcillustrious.hk36ttc.data.local.RunwaySurfaceType
 
+data class AirfieldRow(
+    val airfield: AirfieldEntity,
+    val isFavorite: Boolean
+)
+
 class AirfieldListViewModel(private val repository: AircraftProfileRepository) : ViewModel() {
 
-    val airfields: StateFlow<List<AirfieldEntity>> = repository.observeAirfields()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val rows: StateFlow<List<AirfieldRow>> = combine(
+        repository.observeAirfields(),
+        repository.observeFavoriteAirfieldIds()
+    ) { airfields, favoriteIds ->
+        val favoriteSet = favoriteIds.toSet()
+        airfields.map { AirfieldRow(it, isFavorite = favoriteSet.contains(it.id)) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun deleteAirfield(airfield: AirfieldEntity) {
         viewModelScope.launch { repository.deleteAirfieldCascade(airfield) }
+    }
+
+    fun toggleFavorite(row: AirfieldRow) {
+        viewModelScope.launch { repository.setAirfieldFavorite(row.airfield.id, !row.isFavorite) }
     }
 
     companion object {
@@ -60,7 +75,8 @@ data class RunwayStripFormState(
     val headingDegTrueA: Int = 0,
     val lengthM: Int = 800,
     val surface: RunwaySurfaceType = RunwaySurfaceType.ASPHALT,
-    val slopePctA: Int = 0
+    val slopePctA: Int = 0,
+    val oneWay: Boolean = false
 )
 
 fun RunwayStripEntity.toFormState() = RunwayStripFormState(
@@ -70,7 +86,8 @@ fun RunwayStripEntity.toFormState() = RunwayStripFormState(
     headingDegTrueA = headingDegTrueA.roundToInt(),
     lengthM = lengthM.roundToInt(),
     surface = RunwaySurfaceType.valueOf(surface),
-    slopePctA = slopePctA.roundToInt()
+    slopePctA = slopePctA.roundToInt(),
+    oneWay = oneWay
 )
 
 /**
@@ -144,11 +161,12 @@ class AirfieldEditViewModel(
                     id = form.id,
                     airfieldId = airfieldId,
                     designatorA = form.designatorA.trim(),
-                    designatorB = form.designatorB.trim(),
+                    designatorB = if (form.oneWay) "" else form.designatorB.trim(),
                     headingDegTrueA = form.headingDegTrueA.toDouble(),
                     lengthM = form.lengthM.toDouble(),
                     surface = form.surface.name,
-                    slopePctA = form.slopePctA.toDouble()
+                    slopePctA = form.slopePctA.toDouble(),
+                    oneWay = form.oneWay
                 )
             )
             refreshRunways(airfieldId)

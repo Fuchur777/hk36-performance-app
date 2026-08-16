@@ -1,13 +1,25 @@
 package nl.glcillustrious.hk36ttc.core.metar
 
-/** One usable runway direction to weigh against the current wind — e.g. "03" and "21" of the
+/**
+ * One usable runway direction to weigh against the current wind — e.g. "03" and "21" of the
  * same physical strip are two separate candidates with opposite headings and (per
- * rekenlogica.md) opposite-signed [slopePct]. */
+ * rekenlogica.md) opposite-signed [slopePct].
+ *
+ * [designator] MUST be a stable, unique key (the caller is responsible for this — e.g. derived
+ * from a database row id, never from user-entered free text). Two directions at the same field
+ * can easily share the same *displayed* runway number (a grass "02" and an asphalt "02" are
+ * common), so [label] carries whatever should actually be shown to the pilot, while
+ * [designator] is what this advisor's own de-duplication/selection logic keys off of. Mixing
+ * these up was a real bug once — a runway pick based on [label] silently resolved to whichever
+ * same-labelled candidate happened to come first, using the wrong surface/slope for the
+ * calculation.
+ */
 data class RunwayCandidate(
     val designator: String,
     val headingDegTrue: Double,
     val lengthM: Double,
-    val slopePct: Double = 0.0
+    val slopePct: Double = 0.0,
+    val label: String = designator
 )
 
 enum class RunwayAdviceStatus {

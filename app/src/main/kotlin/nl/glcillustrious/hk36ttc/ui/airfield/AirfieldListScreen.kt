@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -54,7 +56,7 @@ fun AirfieldListScreen(
     onEditAirfield: (AirfieldEntity) -> Unit
 ) {
     val viewModel: AirfieldListViewModel = viewModel(factory = AirfieldListViewModel.factory(repository))
-    val airfields by viewModel.airfields.collectAsState()
+    val rows by viewModel.rows.collectAsState()
     var airfieldPendingDelete by remember { mutableStateOf<AirfieldEntity?>(null) }
 
     Scaffold(
@@ -83,7 +85,7 @@ fun AirfieldListScreen(
             }
         }
     ) { padding ->
-        if (airfields.isEmpty()) {
+        if (rows.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(padding)) {
                 Column(
                     modifier = Modifier.align(Alignment.Center).padding(24.dp),
@@ -103,7 +105,15 @@ fun AirfieldListScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize().padding(padding)
             ) {
-                items(airfields, key = { it.id }) { airfield ->
+                item {
+                    Text(
+                        stringResource(R.string.airfield_list_favorite_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                items(rows, key = { it.airfield.id }) { row ->
+                    val airfield = row.airfield
                     Card(
                         onClick = { onEditAirfield(airfield) },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -118,6 +128,15 @@ fun AirfieldListScreen(
                             },
                             trailingContent = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(onClick = { viewModel.toggleFavorite(row) }) {
+                                        Icon(
+                                            if (row.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                            contentDescription = stringResource(
+                                                if (row.isFavorite) R.string.airfield_list_favorite_remove else R.string.airfield_list_favorite_add
+                                            ),
+                                            tint = if (row.isFavorite) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                     IconButton(onClick = { onEditAirfield(airfield) }) {
                                         Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.airfield_list_edit_content_description))
                                     }

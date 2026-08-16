@@ -45,6 +45,9 @@ import nl.glcillustrious.hk36ttc.ui.common.FlightContextCard
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.ResettableIntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.ResultRow
+import nl.glcillustrious.hk36ttc.ui.common.RunwayAdviceCard
+import nl.glcillustrious.hk36ttc.ui.common.WeatherInputMode
+import nl.glcillustrious.hk36ttc.ui.common.WeatherModeSelector
 import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
 import nl.glcillustrious.hk36ttc.ui.theme.status
 
@@ -103,21 +106,30 @@ fun TakeoffScreen(
                 hasGrassRunway = state.hasGrassRunway,
                 grassCondition = state.grassCondition,
                 onGrassConditionChange = { viewModel.setGrassCondition(it) },
-                runwayAdvice = state.runwayAdvice,
-                chosenDesignator = state.chosenRunwayDesignator,
-                onChooseRunway = { viewModel.chooseRunway(it) },
                 metarParsed = state.selectedAirfield?.metarRaw?.let { MetarParser.parse(it) },
-                metarConfig = metarConfig,
-                confirmed = state.flightConfirmed,
-                onConfirm = { viewModel.confirmFlightContext() }
+                metarConfig = metarConfig
             )
+            if (state.flightContextMode == FlightContextMode.AIRFIELD && state.selectedAirfield != null) {
+                RunwayAdviceCard(
+                    runwayAdvice = state.runwayAdvice,
+                    chosenDesignator = state.chosenRunwayDesignator,
+                    onChooseRunway = { viewModel.chooseRunway(it) },
+                    confirmed = state.flightConfirmed,
+                    onConfirm = { viewModel.confirmFlightContext() }
+                )
+            }
 
-            if (state.weatherDerivable && !state.oatOverridden) {
+            if (state.weatherDerivable) {
+                WeatherModeSelector(mode = state.weatherMode, onModeChange = { viewModel.setWeatherMode(it) })
+            }
+            val metarWeather = state.weatherDerivable && state.weatherMode == WeatherInputMode.METAR
+
+            if (metarWeather) {
                 DerivedValueField(
                     label = stringResource(R.string.perf_oat_label),
                     valueText = "${state.effectiveOatC}°C",
                     isOverridden = false,
-                    onEdit = { viewModel.editOat() },
+                    onEdit = { viewModel.setWeatherMode(WeatherInputMode.MANUAL) },
                     onResetToDerived = {}
                 )
             } else {
@@ -126,17 +138,14 @@ fun TakeoffScreen(
                     onValueChange = { v -> viewModel.update { it.copy(oatC = v) } },
                     min = -20, max = 45, suffix = "°C"
                 )
-                if (state.weatherDerivable && state.oatOverridden) {
-                    TextButton(onClick = { viewModel.resetOat() }) { Text(stringResource(R.string.derived_value_reset)) }
-                }
             }
 
-            if (state.pressureAltDerivable && !state.pressureAltOverridden) {
+            if (metarWeather && state.pressureAltDerivable) {
                 DerivedValueField(
                     label = stringResource(R.string.perf_pressure_alt_label),
                     valueText = "${state.effectivePressureAltM}m",
                     isOverridden = false,
-                    onEdit = { viewModel.editPressureAlt() },
+                    onEdit = { viewModel.setWeatherMode(WeatherInputMode.MANUAL) },
                     onResetToDerived = {}
                 )
             } else {
@@ -145,17 +154,14 @@ fun TakeoffScreen(
                     onValueChange = { v -> viewModel.update { it.copy(pressureAltM = v) } },
                     min = 0, max = 1500, suffix = "m"
                 )
-                if (state.pressureAltDerivable && state.pressureAltOverridden) {
-                    TextButton(onClick = { viewModel.resetPressureAlt() }) { Text(stringResource(R.string.derived_value_reset)) }
-                }
             }
 
-            if (state.weatherDerivable && !state.headwindOverridden) {
+            if (metarWeather) {
                 DerivedValueField(
                     label = stringResource(R.string.perf_headwind_label),
                     valueText = "${state.effectiveHeadwindKts}kts",
                     isOverridden = false,
-                    onEdit = { viewModel.editHeadwind() },
+                    onEdit = { viewModel.setWeatherMode(WeatherInputMode.MANUAL) },
                     onResetToDerived = {}
                 )
             } else {
@@ -164,9 +170,6 @@ fun TakeoffScreen(
                     onValueChange = { v -> viewModel.update { it.copy(headwindKts = v) } },
                     min = -10, max = 20, suffix = "kts"
                 )
-                if (state.weatherDerivable && state.headwindOverridden) {
-                    TextButton(onClick = { viewModel.resetHeadwind() }) { Text(stringResource(R.string.derived_value_reset)) }
-                }
             }
 
             if (state.weatherDerivable && !state.surfaceOverridden) {
@@ -284,8 +287,14 @@ private fun TakeoffResultCard(result: TakeoffResult, surfaceType: TakeoffSurface
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Text(
+                stringResource(R.string.perf_result_surface_format, takeoffSurfaceLabel(surfaceType)),
+                style = MaterialTheme.typography.bodyMedium
+            )
             ResultRow(stringResource(R.string.perf_ground_run_label), fmt(result.s1WithMarginM), "m")
             ResultRow(stringResource(R.string.perf_obstacle_15m_label), fmt(result.s2WithMarginM), "m")
+            ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmt(result.s1M), "m")
+            ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmt(result.s2M), "m")
             if (result.surfaceFactorApplied) {
                 val tag = if (surfaceType == TakeoffSurfaceType.DROOG_GRAS) "[AFM]" else "[AIC P173]"
                 Text(

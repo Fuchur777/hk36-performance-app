@@ -8,6 +8,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -32,6 +33,7 @@ import nl.glcillustrious.hk36ttc.data.local.RunwaySurfaceType
 import nl.glcillustrious.hk36ttc.data.local.TakeoffInputEntity
 import nl.glcillustrious.hk36ttc.ui.common.LoadGuard
 import nl.glcillustrious.hk36ttc.ui.common.RunwayDirectionOption
+import nl.glcillustrious.hk36ttc.ui.common.WeatherInputMode
 import nl.glcillustrious.hk36ttc.ui.common.directionOptions
 import nl.glcillustrious.hk36ttc.ui.common.toCandidate
 
@@ -70,9 +72,7 @@ data class TakeoffFormState(
     val grassCondition: GrassCondition = GrassCondition.DRY,
     val chosenRunwayDesignator: String? = null,
     val flightConfirmed: Boolean = false,
-    val oatOverridden: Boolean = false,
-    val pressureAltOverridden: Boolean = false,
-    val headwindOverridden: Boolean = false,
+    val weatherMode: WeatherInputMode = WeatherInputMode.METAR,
     val surfaceOverridden: Boolean = false,
     val slopeOverridden: Boolean = false,
     val runwayAdvice: List<RunwayAdvice> = emptyList(),
@@ -103,7 +103,10 @@ class TakeoffViewModel(
     private val _state = MutableStateFlow(TakeoffFormState(marginFactorPct = marginFactorDefaultPct))
     val state: StateFlow<TakeoffFormState> = _state
 
-    val airfields: StateFlow<List<AirfieldEntity>> = repository.observeAirfields()
+    /** Only favorited airfields, same "keep the picker fast" rule as favorite sailplane types. */
+    val airfields: StateFlow<List<AirfieldEntity>> = combine(
+        repository.observeAirfields(), repository.observeFavoriteAirfieldIds()
+    ) { airfields, favoriteIds -> val idSet = favoriteIds.toSet(); airfields.filter { it.id in idSet } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val loadGuard = LoadGuard()
@@ -181,33 +184,23 @@ class TakeoffViewModel(
         _state.update { it.copy(flightConfirmed = true) }
     }
 
-    fun editOat() {
-        _state.update { it.copy(oatOverridden = true, oatC = it.effectiveOatC) }
-        recalculate()
-    }
-
-    fun resetOat() {
-        _state.update { it.copy(oatOverridden = false) }
-        recalculate()
-    }
-
-    fun editPressureAlt() {
-        _state.update { it.copy(pressureAltOverridden = true, pressureAltM = it.effectivePressureAltM) }
-        recalculate()
-    }
-
-    fun resetPressureAlt() {
-        _state.update { it.copy(pressureAltOverridden = false) }
-        recalculate()
-    }
-
-    fun editHeadwind() {
-        _state.update { it.copy(headwindOverridden = true, headwindKts = it.effectiveHeadwindKts) }
-        recalculate()
-    }
-
-    fun resetHeadwind() {
-        _state.update { it.copy(headwindOverridden = false) }
+    /** Switching to [WeatherInputMode.MANUAL] seeds the raw fields from whatever the METAR
+     * currently derives, so editing starts from those numbers rather than stale/default ones —
+     * switching back to [WeatherInputMode.METAR] needs no such seeding, it just resumes reading
+     * the METAR. */
+    fun setWeatherMode(mode: WeatherInputMode) {
+        _state.update {
+            if (mode == WeatherInputMode.MANUAL) {
+                it.copy(
+                    weatherMode = mode,
+                    oatC = it.effectiveOatC,
+                    pressureAltM = it.effectivePressureAltM,
+                    headwindKts = it.effectiveHeadwindKts
+                )
+            } else {
+                it.copy(weatherMode = mode)
+            }
+        }
         recalculate()
     }
 
@@ -278,21 +271,22 @@ class TakeoffViewModel(
         val windDirection = parsedMetar?.windDirectionDeg
         val weatherDerivable = s.flightContextMode == FlightContextMode.AIRFIELD &&
             s.selectedAirfield != null && parsedMetar != null && windDirection != null
-        val pressureAltDerivable = weatherDerivable && parsedMetar?.qnhHpa != null
+        val pressureAltDerivable = weatherDerivable && parsedMetar.qnhHpa != null
 
-        val effOat = if (!weatherDerivable || s.oatOverridden) s.oatC else parsedMetar!!.temperatureC.roundToInt()
-        val effPressureAlt = if (!pressureAltDerivable || s.pressureAltOverridden) {
+        val manualWeather = s.weatherMode == WeatherInputMode.MANUAL
+        val effOat = if (!weatherDerivable || manualWeather) s.oatC else parsedMetar.temperatureC.roundToInt()
+        val effPressureAlt = if (!pressureAltDerivable || manualWeather) {
             s.pressureAltM
         } else {
-            PressureAltitude.fromElevationAndQnh(s.selectedAirfield!!.elevationM, parsedMetar!!.qnhHpa!!).roundToInt()
+            PressureAltitude.fromElevationAndQnh(s.selectedAirfield.elevationM, parsedMetar.qnhHpa!!).roundToInt()
         }
 
         val directions: List<RunwayDirectionOption> = s.runwayStrips.flatMap { it.directionOptions() }
         val advice: List<RunwayAdvice> = if (weatherDerivable && directions.isNotEmpty()) {
             RunwayAdvisor.advise(
                 candidates = directions.map { it.toCandidate() },
-                windDirectionDeg = windDirection!!,
-                windSpeedKts = parsedMetar!!.windSpeedKts,
+                windDirectionDeg = windDirection,
+                windSpeedKts = parsedMetar.windSpeedKts,
                 demonstratedCrosswindKts = kmhToKts(performanceNormal.demonstratedCrosswindKmh),
                 requiredDistanceM = { headwindKts, candidate ->
                     val direction = directions.first { it.designator == candidate.designator }
@@ -316,7 +310,7 @@ class TakeoffViewModel(
             ?: directions.find { d -> advice.any { it.candidate.designator == d.designator && it.status == RunwayAdviceStatus.PREFERRED } }
         val activeAdvice = advice.find { it.candidate.designator == activeDirection?.designator }
 
-        val effHeadwind = if (!weatherDerivable || s.headwindOverridden || activeAdvice == null) {
+        val effHeadwind = if (!weatherDerivable || manualWeather || activeAdvice == null) {
             s.headwindKts
         } else {
             activeAdvice.headwindKts.roundToInt()

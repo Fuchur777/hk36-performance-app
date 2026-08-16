@@ -10,9 +10,9 @@ import androidx.room.TypeConverters
     entities = [
         AircraftProfileEntity::class, LastWbResultEntity::class, FavoriteSailplaneTypeEntity::class,
         WbInputEntity::class, TakeoffInputEntity::class, LandingInputEntity::class, SleepvluchtInputEntity::class,
-        AirfieldEntity::class, RunwayStripEntity::class, FlightContextEntity::class
+        AirfieldEntity::class, RunwayStripEntity::class, FlightContextEntity::class, FavoriteAirfieldEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -28,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun airfieldDao(): AirfieldDao
     abstract fun runwayStripDao(): RunwayStripDao
     abstract fun flightContextDao(): FlightContextDao
+    abstract fun favoriteAirfieldDao(): FavoriteAirfieldDao
 
     companion object {
         @Volatile

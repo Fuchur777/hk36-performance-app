@@ -8,7 +8,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * `fallbackToDestructiveMigration` (which used to silently wipe every locally stored profile
  * and calculation input on any schema change — see docs/00-plan.md §11 point 2). The exact
  * `CREATE TABLE` SQL for each version is copied from the tracked schema exports in
- * `app/schemas/nl.glcillustrious.hk36ttc.data.local.AppDatabase/` (1.json through 6.json) —
+ * `app/schemas/nl.glcillustrious.hk36ttc.data.local.AppDatabase/` (1.json through 7.json) —
  * Room validates the post-migration schema against that export on the next app start, so any
  * drift here fails loudly instead of silently.
  */
@@ -112,6 +112,19 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
     }
 }
 
+/** v6 -> v7 (Fase 2c bugfix/feedback round): one-way runway support (`oneWay`, additive with a
+ * SQL-level `DEFAULT 0` — required because SQLite's `ADD COLUMN` rejects a `NOT NULL` column
+ * with no default when the table already has rows) and favorite airfields (mirrors
+ * `favorite_sailplane_types`). */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `runway_strips` ADD COLUMN `oneWay` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `favorite_airfields` (`airfieldId` INTEGER NOT NULL, PRIMARY KEY(`airfieldId`))"
+        )
+    }
+}
+
 /** Every migration `AppDatabase` currently ships, in order. Add the next one here (and never
  * remove an old one) whenever `AppDatabase.version` is bumped again. */
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)

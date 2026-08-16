@@ -47,13 +47,21 @@ import nl.glcillustrious.hk36ttc.data.local.GrassCondition
 import nl.glcillustrious.hk36ttc.ui.theme.status
 
 /**
- * The Vliegveld/Handmatig toggle plus everything that follows from picking "Vliegveld",
- * shared by the Take-off/Landing/Sleepvlucht screens (rekenlogica.md §5). Deliberately knows
- * nothing about OAT/pressure-altitude/surface derivation — each screen's own ViewModel builds
- * [runwayAdvice] (via [nl.glcillustrious.hk36ttc.core.metar.RunwayAdvisor], using that screen's
- * own distance calculator) and turns the confirmed choice into its own form fields. This card
- * only handles: which mode, which airfield, today's grass condition, which runway, and the
- * mandatory confirmation gate before a result may be shown.
+ * Whether OAT/wind/QNH-derived values come from the selected airfield's METAR or are typed in
+ * by hand — deliberately its own toggle, separate from [FlightContextMode] (rekenlogica.md §5):
+ * a pilot might trust the field/runway choice from a saved airfield but still want to type
+ * today's actual temperature or wind by hand, without losing the airfield/runway selection
+ * itself. Surface/slope keep their own separate per-field override instead of joining this
+ * toggle, since a runway's surface is a property of the strip, not something a METAR reports.
+ */
+enum class WeatherInputMode { METAR, MANUAL }
+
+/**
+ * The Vliegveld/Handmatig toggle, airfield picker, METAR summary and today's grass condition —
+ * shared by the Take-off/Landing/Sleepvlucht screens (rekenlogica.md §5). Deliberately stops
+ * short of the runway advice/confirmation (see [RunwayAdviceCard]): Sleepvlucht's ranking
+ * depends on sailplane/towplane mass entered further down that screen's form, so the two need
+ * to be positionable independently rather than living in one fixed card.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,13 +74,8 @@ fun FlightContextCard(
     hasGrassRunway: Boolean,
     grassCondition: GrassCondition,
     onGrassConditionChange: (GrassCondition) -> Unit,
-    runwayAdvice: List<RunwayAdvice>,
-    chosenDesignator: String?,
-    onChooseRunway: (String?) -> Unit,
     metarParsed: MetarParseResult?,
-    metarConfig: MetarConfigData,
-    confirmed: Boolean,
-    onConfirm: () -> Unit
+    metarConfig: MetarConfigData
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -115,13 +118,78 @@ fun FlightContextCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
+                        MetarSummary(metarParsed, selectedAirfield.elevationM.roundToInt(), metarConfig)
                         if (hasGrassRunway) {
                             GrassConditionSelector(grassCondition, onGrassConditionChange)
                         }
-                        MetarSummary(metarParsed, selectedAirfield.elevationM.roundToInt(), metarConfig)
-                        RunwayAdviceList(runwayAdvice, chosenDesignator, onChooseRunway)
-                        FlightContextConfirmRow(confirmed, onConfirm)
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The ranked runway list plus (optionally) the mandatory confirmation step from
+ * rekenlogica.md §5. Only meaningful once an airfield is selected — callers should gate
+ * rendering on that themselves (same as [FlightContextCard]'s own internal gating), since
+ * whether/where this appears varies per screen: Take-off/Landing show it right after
+ * [FlightContextCard], Sleepvlucht shows it after the sailplane/towplane-mass inputs, since
+ * the ranking depends on those.
+ *
+ * [requireConfirmation] is false for Sleepvlucht specifically: because the ranking already
+ * waits for every other input to be entered first, an extra confirmation tap on top adds
+ * friction without protecting against acting on stale/incomplete data the way it does for
+ * Take-off/Landing (where the card sits before those inputs even exist yet).
+ */
+@Composable
+fun RunwayAdviceCard(
+    runwayAdvice: List<RunwayAdvice>,
+    chosenDesignator: String?,
+    onChooseRunway: (String?) -> Unit,
+    confirmed: Boolean,
+    onConfirm: () -> Unit,
+    requireConfirmation: Boolean = true
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            RunwayAdviceList(runwayAdvice, chosenDesignator, onChooseRunway)
+            if (requireConfirmation) {
+                FlightContextConfirmRow(confirmed, onConfirm)
+            }
+        }
+    }
+}
+
+/**
+ * Segmented "METAR | Handmatig" toggle for the OAT/wind/QNH-derived fields, shown only while
+ * [WeatherInputMode] is a meaningful choice (i.e. the airfield's METAR actually yields usable
+ * weather — see each screen's `state.weatherDerivable`). Switching to [WeatherInputMode.MANUAL]
+ * is the caller's job to seed with the current METAR-derived values before flipping the mode,
+ * so editing starts from what the METAR said rather than from stale/default numbers.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WeatherModeSelector(mode: WeatherInputMode, onModeChange: (WeatherInputMode) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(R.string.weather_mode_label), style = MaterialTheme.typography.labelLarge)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().uniformSegmentedRowHeight()) {
+            WeatherInputMode.entries.forEachIndexed { index, option ->
+                SegmentedButton(
+                    selected = mode == option,
+                    onClick = { onModeChange(option) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = WeatherInputMode.entries.size),
+                    modifier = Modifier.fillMaxHeight()
+                ) {
+                    Text(
+                        when (option) {
+                            WeatherInputMode.METAR -> stringResource(R.string.weather_mode_metar)
+                            WeatherInputMode.MANUAL -> stringResource(R.string.weather_mode_manual)
+                        }
+                    )
                 }
             }
         }
@@ -231,7 +299,7 @@ private fun RunwayAdviceList(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(item.candidate.designator, style = MaterialTheme.typography.titleMedium)
+                        Text(item.candidate.label, style = MaterialTheme.typography.titleMedium)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             if (isChosen) Icon(Icons.Filled.Check, contentDescription = null, tint = statusColor)
                             Text(statusLabel, color = statusColor)

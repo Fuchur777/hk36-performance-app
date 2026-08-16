@@ -257,14 +257,47 @@ berekening (take-off/landing/sleepvlucht) voorafgaat:
    Vliegveldmodus totdat bevestigd is; in Handmatige modus (ongewijzigd
    gedrag) is er niets te bevestigen.
 
+   **Uitzondering — Sleepvlucht (Fase 2c ronde 2)**: de baanrangschikking
+   hangt hier ook af van sleepvlieggewicht/instructievlucht, die pas verderop
+   in het scherm worden ingevuld. Het baanadvies staat daarom onderaan (na die
+   velden) en heeft geen aparte bevestigingsknop — tegen de tijd dat het
+   getoond wordt, staan alle andere invoergegevens al vast, dus is het alleen
+   nog een weergave van de uitkomst voor de huidige configuratie, geen stap
+   om vooraf te bevestigen zoals bij Take-off/Landing.
+
 Deze flow geldt als harde randvoorwaarde: de rekenmodule mag nooit draaien op
 ongeverifieerde/onbevestigde invoer.
 
-**Per-veld overschrijven**: elke afgeleide waarde (OAT, drukhoogte, tegenwind,
-ondergrond+helling) kan afzonderlijk handmatig overschreven worden zonder de rest
-van de afleiding te verliezen — bijv. alleen de temperatuur bijstellen terwijl
-drukhoogte en baankeuze uit de METAR blijven komen. Een overschreven waarde kan
-altijd teruggezet worden naar de afgeleide waarde.
+**Overschrijven, twee aparte toggles (Fase 2c ronde 2):**
+
+- **Weer (OAT/drukhoogte/tegenwind)**: één gezamenlijke "METAR/Handmatig"-schakelaar
+  (`WeatherInputMode`, `ui/common/FlightContextCard.kt`) — bewust los van de
+  vliegveld/baankeuze zelf (rekenlogica.md §5 blijft ongewijzigd voor de baankeuze).
+  Overschakelen naar Handmatig vult de invoervelden eerst met de actuele
+  METAR-afgeleide waarden, zodat de piloot vanaf die waarden verder bijstelt in
+  plaats van vanaf een verouderd of leeg getal; terugschakelen naar METAR negeert
+  die handmatige waarden weer en leest gewoon opnieuw uit de METAR.
+- **Ondergrond+helling**: blijft een los per-veld overschrijf-mechanisme (potlood-
+  icoon, "terug naar advies"-knop) — een baanondergrond is een eigenschap van de
+  gekozen baan, geen METAR-gegeven, dus hoort niet bij dezelfde schakelaar.
+
+**Baanidentiteit — id vs. label (bugfix, Fase 2c ronde 2)**: een baanrichting had
+ooit maar één veld (`designator`) dat zowel als unieke sleutel (voor selectie/
+matching) als weergavetekst diende. Twee richtingen met hetzelfde weergavenummer
+(bijv. een grasbaan "02" én een asfaltbaan "02" op hetzelfde veld) botsten dan
+stilzwijgend: een baankeuze verwees naar de verkeerde baan. Opgelost door een
+stabiele `id` (afgeleid van de database-rij, nooit uit vrije tekst) te scheiden
+van `label` (de weergavetekst) — zowel in `RunwayCandidate` (`core`) als
+`RunwayDirectionOption` (`app`, `ui/common/RunwayDirections.kt`).
+
+**Eenrichtingsbanen**: een baanstrook kan als eenrichting gemarkeerd worden
+(`RunwayStripEntity.oneWay`) — dan levert die strook maar één bruikbare richting
+op in plaats van twee, en toont het beheerscherm maar één aanduidingsveld.
+
+**Favoriete vliegvelden**: net als bij zweeftypes beperkt een favorieten-lijst
+(`FavoriteAirfieldEntity`) welke vliegvelden in de keuzelijst van take-off/
+landing/sleepvlucht verschijnen — vliegveldbeheer zelf (`AirfieldListScreen`)
+toont wél alle opgeslagen vliegvelden, met een ster om favorieten te markeren.
 
 ## 6. JSON-configuratie op het toestel
 

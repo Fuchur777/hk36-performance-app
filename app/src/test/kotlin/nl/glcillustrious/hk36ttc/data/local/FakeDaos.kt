@@ -158,6 +158,20 @@ class FakeFlightContextDao : FlightContextDao {
     override suspend fun deleteByProfileId(profileId: Long) { contexts.remove(profileId) }
 }
 
+class FakeFavoriteAirfieldDao : FavoriteAirfieldDao {
+    private val favorites = MutableStateFlow<List<FavoriteAirfieldEntity>>(emptyList())
+
+    override fun observeAll(): Flow<List<FavoriteAirfieldEntity>> = favorites
+
+    override suspend fun insert(entity: FavoriteAirfieldEntity) {
+        if (favorites.value.none { it.airfieldId == entity.airfieldId }) favorites.value = favorites.value + entity
+    }
+
+    override suspend fun deleteByAirfieldId(airfieldId: Long) {
+        favorites.value = favorites.value.filterNot { it.airfieldId == airfieldId }
+    }
+}
+
 /** Builds a real [AircraftProfileRepository] backed entirely by the fakes above. */
 fun fakeAircraftProfileRepository(
     profileDao: FakeAircraftProfileDao = FakeAircraftProfileDao(),
@@ -169,9 +183,10 @@ fun fakeAircraftProfileRepository(
     sleepvluchtInputDao: FakeSleepvluchtInputDao = FakeSleepvluchtInputDao(),
     airfieldDao: FakeAirfieldDao = FakeAirfieldDao(),
     runwayStripDao: FakeRunwayStripDao = FakeRunwayStripDao(),
-    flightContextDao: FakeFlightContextDao = FakeFlightContextDao()
+    flightContextDao: FakeFlightContextDao = FakeFlightContextDao(),
+    favoriteAirfieldDao: FakeFavoriteAirfieldDao = FakeFavoriteAirfieldDao()
 ): AircraftProfileRepository = AircraftProfileRepository(
     profileDao, lastWbResultDao, favoriteSailplaneTypeDao,
     wbInputDao, takeoffInputDao, landingInputDao, sleepvluchtInputDao,
-    airfieldDao, runwayStripDao, flightContextDao
+    airfieldDao, runwayStripDao, flightContextDao, favoriteAirfieldDao
 )
