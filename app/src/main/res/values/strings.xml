@@ -107,7 +107,7 @@
     <string name="stepper_reset_to_default_format">Terug naar standaard (%1$d%2$s)</string>
 
     <!-- Prestaties: gedeeld tussen Take-off/Landing/Sleepvlucht -->
-    <string name="perf_oat_label">Buitentemperatuur (OAT)</string>
+    <string name="perf_oat_label">Buitentemperatuur</string>
     <string name="perf_pressure_alt_label">Drukhoogte</string>
     <string name="perf_headwind_label">Tegenwind (negatief = rugwind)</string>
     <string name="perf_wind_direction_label">Windrichting (ware koers)</string>
@@ -120,9 +120,9 @@
     <string name="perf_surface_zacht">Zacht</string>
     <string name="perf_slope_label">[AIC P173] Hellingshoek (positief = oplopend)</string>
     <string name="perf_margin_factor_label">[AIC P173] Marge-factor (aanbevolen)</string>
-    <string name="perf_ground_run_label">Grondloop</string>
+    <string name="perf_ground_run_label">Grondrol</string>
     <string name="perf_obstacle_15m_label">Over 15m obstakel</string>
-    <string name="perf_ground_run_raw_label">Grondloop (zonder marge)</string>
+    <string name="perf_ground_run_raw_label">Grondrol (zonder marge)</string>
     <string name="perf_obstacle_15m_raw_label">Over 15m obstakel (zonder marge)</string>
     <string name="perf_result_section_title">Resultaat</string>
     <string name="perf_result_surface_format">Ondergrond: %1$s</string>
@@ -317,7 +317,7 @@
     <string name="flight_context_runway_status_fits_without_margin">Past zonder veiligheidsmarge</string>
     <string name="flight_context_runway_status_does_not_fit">Past niet</string>
     <string name="flight_context_runway_status_tailwind">Rugwind — niet beschikbaar</string>
-    <string name="flight_context_runway_detail_format">Tegenwind %1$d kt · Kruiswind %2$d kt</string>
+    <string name="flight_context_runway_detail_format">Tegenwind %1$d kt · zijwind %2$d kt</string>
     <string name="flight_context_runway_remaining_label">Resterende lengte</string>
-    <string name="flight_context_crosswind_exceeded_warning">Kruiswind boven de gedemonstreerde limiet</string>
+    <string name="flight_context_crosswind_exceeded_warning">Zijwind boven de gedemonstreerde limiet</string>
 </resources>
