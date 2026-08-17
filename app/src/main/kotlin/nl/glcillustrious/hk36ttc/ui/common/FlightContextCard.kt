@@ -300,8 +300,10 @@ fun RunwayResultCard(
             ) {
                 ResultRow(stringResource(R.string.perf_ground_run_label), fmtDistance(groundRunWithMarginM), "m")
                 ResultRow(stringResource(R.string.perf_obstacle_15m_label), fmtDistance(obstacleWithMarginM), "m")
-                ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmtDistance(groundRunRawM), "m")
-                ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmtDistance(obstacleRawM), "m")
+                // Not bold: reference figures beside the two above, which are what the pilot
+                // actually plans on — same treatment as the single-result cards.
+                ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmtDistance(groundRunRawM), "m", emphasized = false)
+                ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmtDistance(obstacleRawM), "m", emphasized = false)
                 remainingM?.let {
                     ResultRow(stringResource(R.string.flight_context_runway_remaining_label), fmtSignedDistance(it), "m")
                 }

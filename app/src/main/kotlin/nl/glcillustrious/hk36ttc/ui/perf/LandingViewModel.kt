@@ -5,10 +5,14 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import kotlin.math.roundToInt
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -61,11 +65,19 @@ data class LandingRunwayResult(
  * Landing has no headwind input at all (the AFM landing tables aren't headwind-indexed); wind
  * still drives *which* runways are excluded as tailwind in the results list (an airmanship
  * default, not an AFM limitation — see [LandingViewModel]'s recalculate KDoc).
+ *
+ * Fase 2c ronde 4: every flag below mirrors [TakeoffFormState] one-for-one — see there for the
+ * reasoning behind each. [windDirectionDeg]/[windSpeedKts]/[windManuallySet] let the pilot
+ * supply the wind by hand when the METAR's own is variable/missing or they chose Handmatig,
+ * which for landing decides tailwind exclusion and ranking rather than a distance.
  */
 data class LandingFormState(
     val registration: String? = null,
     val oatC: Int = 15,
     val pressureAltM: Int = 0,
+    val windDirectionDeg: Int = 0,
+    val windSpeedKts: Int = 0,
+    val windManuallySet: Boolean = false,
     val surfaceType: LandingSurfaceType = LandingSurfaceType.ASFALT,
     val customSurfaceFactorPct: Int = 115,
     val slopePct: Int = 0,
@@ -79,17 +91,33 @@ data class LandingFormState(
     val runwayResults: List<LandingRunwayResult> = emptyList(),
     val weatherDerivable: Boolean = false,
     val pressureAltDerivable: Boolean = false,
+    val metarWindUsable: Boolean = false,
     val effectiveOatC: Int = 15,
     val effectivePressureAltM: Int = 0
 ) {
     val hasGrassRunway: Boolean
         get() = runwayStrips.any { RunwaySurfaceType.valueOf(it.surface) == RunwaySurfaceType.GRASS }
 
+    /** See [TakeoffFormState.showGrassCondition]. */
+    val showGrassCondition: Boolean
+        get() = flightContextMode == FlightContextMode.AIRFIELD && selectedAirfield != null && hasGrassRunway
+
+    /** See [TakeoffFormState.showRunwayResults]. */
     val showRunwayResults: Boolean
+        get() = flightContextMode == FlightContextMode.AIRFIELD && selectedAirfield != null && runwayResults.isNotEmpty()
+
+    /** See [TakeoffFormState.windNeedsManualEntry]. */
+    val windNeedsManualEntry: Boolean
         get() = flightContextMode == FlightContextMode.AIRFIELD && selectedAirfield != null &&
-            weatherDerivable && runwayResults.isNotEmpty()
+            (weatherMode == WeatherInputMode.MANUAL || !metarWindUsable)
+
+    /** See [TakeoffFormState.windDirectionUnknown]. */
+    val windDirectionUnknown: Boolean
+        get() = flightContextMode == FlightContextMode.AIRFIELD && selectedAirfield != null &&
+            weatherMode == WeatherInputMode.METAR && !metarWindUsable
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class LandingViewModel(
     private val repository: AircraftProfileRepository,
     private val profileId: Long,
@@ -108,6 +136,9 @@ class LandingViewModel(
     ) { airfields, favoriteIds -> val idSet = favoriteIds.toSet(); airfields.filter { it.id in idSet } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /** See [TakeoffViewModel.selectedAirfieldId]. */
+    private val selectedAirfieldId = MutableStateFlow<Long?>(null)
+
     private val loadGuard = LoadGuard()
 
     init {
@@ -115,8 +146,6 @@ class LandingViewModel(
             val entity = repository.getById(profileId)
             val savedInput = repository.getLandingInput(profileId)
             val flightContext = repository.getFlightContext(profileId)
-            val selectedAirfield = flightContext?.airfieldId?.let { repository.getAirfield(it) }
-            val runwayStrips = selectedAirfield?.let { repository.getRunwayStrips(it.id) } ?: emptyList()
 
             _state.update { current ->
                 var next = current.copy(registration = entity?.registration)
@@ -133,15 +162,32 @@ class LandingViewModel(
                 if (flightContext != null) {
                     next = next.copy(
                         flightContextMode = FlightContextMode.valueOf(flightContext.mode),
-                        grassCondition = GrassCondition.valueOf(flightContext.grassCondition),
-                        selectedAirfield = selectedAirfield,
-                        runwayStrips = runwayStrips
+                        grassCondition = GrassCondition.valueOf(flightContext.grassCondition)
                     )
                 }
                 next
             }
+            selectedAirfieldId.value = flightContext?.airfieldId
             loadGuard.markLoaded()
-            recalculate()
+            // No recalculate() here — the collector below owns it. See TakeoffViewModel.init.
+        }
+
+        // See TakeoffViewModel.init for why airfield and strips are combined *inside* one
+        // flatMapLatest rather than as two independently keyed flows.
+        viewModelScope.launch {
+            selectedAirfieldId.flatMapLatest { id ->
+                if (id == null) {
+                    flowOf<Pair<AirfieldEntity?, List<RunwayStripEntity>>>(null to emptyList())
+                } else {
+                    combine(
+                        repository.observeAirfields().map { list -> list.find { it.id == id } },
+                        repository.observeRunwayStrips(id)
+                    ) { airfield, strips -> airfield to strips }
+                }
+            }.collect { (airfield, strips) ->
+                _state.update { it.copy(selectedAirfield = airfield, runwayStrips = strips) }
+                recalculate()
+            }
         }
     }
 
@@ -157,12 +203,9 @@ class LandingViewModel(
     }
 
     fun selectAirfield(airfield: AirfieldEntity) {
-        viewModelScope.launch {
-            val strips = repository.getRunwayStrips(airfield.id)
-            _state.update { it.copy(selectedAirfield = airfield, runwayStrips = strips) }
-            recalculate()
-            saveFlightContext()
-        }
+        selectedAirfieldId.value = airfield.id
+        _state.update { it.copy(windManuallySet = false) }
+        saveFlightContext()
     }
 
     fun setGrassCondition(condition: GrassCondition) {
@@ -175,7 +218,16 @@ class LandingViewModel(
     fun setWeatherMode(mode: WeatherInputMode) {
         _state.update {
             if (mode == WeatherInputMode.MANUAL) {
-                it.copy(weatherMode = mode, oatC = it.effectiveOatC, pressureAltM = it.effectivePressureAltM)
+                val parsedMetar = it.selectedAirfield?.metarRaw
+                    ?.let { raw -> (MetarParser.parse(raw) as? MetarParseResult.Success)?.metar }
+                it.copy(
+                    weatherMode = mode,
+                    oatC = it.effectiveOatC,
+                    pressureAltM = it.effectivePressureAltM,
+                    windDirectionDeg = parsedMetar?.windDirectionDeg?.roundToInt() ?: it.windDirectionDeg,
+                    windSpeedKts = parsedMetar?.windSpeedKts?.roundToInt() ?: it.windSpeedKts,
+                    windManuallySet = true
+                )
             } else {
                 it.copy(weatherMode = mode)
             }
@@ -190,7 +242,7 @@ class LandingViewModel(
                 FlightContextEntity(
                     profileId = profileId,
                     mode = s.flightContextMode.name,
-                    airfieldId = s.selectedAirfield?.id,
+                    airfieldId = selectedAirfieldId.value,
                     grassCondition = s.grassCondition.name
                 )
             )
@@ -234,26 +286,42 @@ class LandingViewModel(
         val parsedMetar = s.selectedAirfield?.metarRaw
             ?.let { raw -> (MetarParser.parse(raw) as? MetarParseResult.Success)?.metar }
 
-        val windDirection = parsedMetar?.windDirectionDeg
-        val weatherDerivable = s.flightContextMode == FlightContextMode.AIRFIELD &&
-            s.selectedAirfield != null && parsedMetar != null && windDirection != null
+        val airfieldContextActive = s.flightContextMode == FlightContextMode.AIRFIELD && s.selectedAirfield != null
+        // See TakeoffViewModel.recalculate — OAT/QNH parse independently of the wind group.
+        val weatherDerivable = airfieldContextActive && parsedMetar != null
         val pressureAltDerivable = weatherDerivable && parsedMetar.qnhHpa != null
+        val metarWindDirection = parsedMetar?.windDirectionDeg
+        val metarWindUsable = airfieldContextActive && parsedMetar != null && metarWindDirection != null
 
         val manualWeather = s.weatherMode == WeatherInputMode.MANUAL
         val effOat = if (!weatherDerivable || manualWeather) s.oatC else parsedMetar.temperatureC.roundToInt()
+        // Floored at 0 m: the AFM tables start there, and a sub-sea-level pressure altitude is
+        // the most favourable case there is — see rekenlogica.md §8b.
         val effPressureAlt = if (!pressureAltDerivable || manualWeather) {
             s.pressureAltM
         } else {
-            PressureAltitude.fromElevationAndQnh(s.selectedAirfield.elevationM, parsedMetar.qnhHpa!!).roundToInt()
+            PressureAltitude.fromElevationAndQnh(s.selectedAirfield.elevationM, parsedMetar.qnhHpa!!)
+                .roundToInt()
+                .coerceAtLeast(0)
+        }
+
+        val windDirectionDeg: Double?
+        val windSpeedKts: Double
+        if (airfieldContextActive && (manualWeather || !metarWindUsable)) {
+            windDirectionDeg = if (s.windManuallySet) s.windDirectionDeg.toDouble() else null
+            windSpeedKts = s.windSpeedKts.toDouble()
+        } else {
+            windDirectionDeg = metarWindDirection
+            windSpeedKts = parsedMetar?.windSpeedKts ?: 0.0
         }
 
         val directions: List<RunwayDirectionOption> = s.runwayStrips.flatMap { it.directionOptions() }
-        val runwayResults: List<LandingRunwayResult> = if (weatherDerivable && directions.isNotEmpty()) {
+        val runwayResults: List<LandingRunwayResult> = if (windDirectionDeg != null && directions.isNotEmpty()) {
             val fullResultsByDesignator = mutableMapOf<String, LandingResult>()
             val advice = RunwayAdvisor.advise(
                 candidates = directions.map { it.toCandidate() },
-                windDirectionDeg = windDirection,
-                windSpeedKts = parsedMetar.windSpeedKts,
+                windDirectionDeg = windDirectionDeg,
+                windSpeedKts = windSpeedKts,
                 demonstratedCrosswindKts = kmhToKts(performanceNormal.demonstratedCrosswindKmh),
                 requiredDistances = { _, candidate ->
                     val direction = directions.first { it.id == candidate.designator }
@@ -297,6 +365,7 @@ class LandingViewModel(
                 runwayResults = runwayResults,
                 weatherDerivable = weatherDerivable,
                 pressureAltDerivable = pressureAltDerivable,
+                metarWindUsable = metarWindUsable,
                 effectiveOatC = effOat,
                 effectivePressureAltM = effPressureAlt
             )

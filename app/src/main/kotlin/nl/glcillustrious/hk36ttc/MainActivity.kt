@@ -33,6 +33,8 @@ import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import nl.glcillustrious.hk36ttc.data.catalog.AirportCatalogRepository
+import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 import nl.glcillustrious.hk36ttc.data.local.AppCalculationData
 import nl.glcillustrious.hk36ttc.data.local.CalculationDataResult
@@ -41,6 +43,7 @@ import nl.glcillustrious.hk36ttc.data.local.LanguagePreference
 import nl.glcillustrious.hk36ttc.ui.about.AboutScreen
 import nl.glcillustrious.hk36ttc.ui.airfield.AirfieldEditScreen
 import nl.glcillustrious.hk36ttc.ui.airfield.AirfieldListScreen
+import nl.glcillustrious.hk36ttc.ui.airfield.AirportCatalogScreen
 import nl.glcillustrious.hk36ttc.ui.documents.DocumentsScreen
 import nl.glcillustrious.hk36ttc.ui.explainer.ExplainerScreen
 import nl.glcillustrious.hk36ttc.ui.hub.RegistrationHubScreen
@@ -67,6 +70,7 @@ private object Routes {
     const val SAILPLANE_TYPES = "sailplane_types"
     const val AIRFIELDS = "airfields"
     const val AIRFIELD_EDIT = "airfield_edit/{airfieldId}"
+    const val AIRPORT_CATALOG = "airport_catalog"
     const val EXPLAINER = "explainer"
     const val ABOUT = "about"
     const val SETTINGS = "settings"
@@ -108,13 +112,22 @@ class MainActivity : ComponentActivity() {
 
         val app = application as Hk36Application
         val repository = app.repository
+        val airportCatalog = app.airportCatalogRepository
+        val metarRepository = app.metarRepository
         val dataStore = app.calculationDataStore
 
         setContent {
             Hk36ttcTheme {
                 CalculationDataGate(dataStore) { appData ->
                     val navController = rememberNavController()
-                    Hk36NavHost(navController, repository, appData, onLanguageChanged = { recreate() })
+                    Hk36NavHost(
+                        navController,
+                        repository,
+                        airportCatalog,
+                        metarRepository,
+                        appData,
+                        onLanguageChanged = { recreate() }
+                    )
                 }
             }
         }
@@ -176,6 +189,8 @@ private fun CalculationDataGate(
 private fun Hk36NavHost(
     navController: NavHostController,
     repository: AircraftProfileRepository,
+    airportCatalog: AirportCatalogRepository,
+    metarRepository: MetarRepository,
     appData: AppCalculationData,
     onLanguageChanged: () -> Unit
 ) {
@@ -216,15 +231,39 @@ private fun Hk36NavHost(
         composable(Routes.AIRFIELDS) {
             AirfieldListScreen(
                 repository = repository,
+                catalog = airportCatalog,
                 onBack = { navController.popBackStack() },
-                onAddAirfield = { navController.navigate(Routes.airfieldEdit(0)) },
-                onEditAirfield = { airfield -> navController.navigate(Routes.airfieldEdit(airfield.id)) }
+                onEditAirfield = { airfield -> navController.navigate(Routes.airfieldEdit(airfield.id)) },
+                onOpenCatalog = { navController.navigate(Routes.AIRPORT_CATALOG) }
+            )
+        }
+        composable(Routes.AIRPORT_CATALOG) {
+            AirportCatalogScreen(
+                catalog = airportCatalog,
+                onBack = { navController.popBackStack() },
+                onAirfieldCreated = { airfieldId ->
+                    // Straight into the editor for the freshly created airfield, so the pilot
+                    // can pull in its runways and check everything. popUpTo keeps Back going to
+                    // the airfield list rather than back into the search results.
+                    navController.navigate(Routes.airfieldEdit(airfieldId)) {
+                        popUpTo(Routes.AIRPORT_CATALOG) { inclusive = true }
+                    }
+                },
+                onAddManually = {
+                    // Same destination the old "+" FAB on the airfield list used to open —
+                    // only reachable now once a search has come up empty.
+                    navController.navigate(Routes.airfieldEdit(0)) {
+                        popUpTo(Routes.AIRPORT_CATALOG) { inclusive = true }
+                    }
+                }
             )
         }
         composable(Routes.AIRFIELD_EDIT) { backStackEntry ->
             val airfieldId = backStackEntry.arguments?.getString("airfieldId")?.toLongOrNull() ?: 0L
             AirfieldEditScreen(
                 repository = repository,
+                catalog = airportCatalog,
+                metarRepository = metarRepository,
                 metarConfig = appData.metarConfig,
                 airfieldId = airfieldId,
                 onBack = { navController.popBackStack() }
@@ -266,6 +305,7 @@ private fun Hk36NavHost(
             val profileId = backStackEntry.arguments?.getString("profileId")?.toLongOrNull() ?: 0L
             TakeoffScreen(
                 repository = repository,
+                metarRepository = metarRepository,
                 performanceNormal = appData.performanceNormal,
                 performanceCorrections = appData.performanceCorrections,
                 metarConfig = appData.metarConfig,

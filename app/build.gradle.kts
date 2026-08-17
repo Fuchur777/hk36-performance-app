@@ -15,8 +15,8 @@ android {
         applicationId = "nl.glcillustrious.hk36ttc"
         minSdk = 26
         targetSdk = 37
-        versionCode = 7
-        versionName = "0.4.0"
+        versionCode = 13
+        versionName = "0.7.0"
 
         // Generated fresh at build configuration time - shown alongside versionName/versionCode
         // in the About screen so a specific build can still be pinned down within a day even
@@ -58,7 +58,8 @@ android {
         // Lets MigrationTest (androidTest) load the tracked schema exports to build historic
         // versions of the database via MigrationTestHelper.
         getByName("androidTest") {
-            assets.srcDirs("$projectDir/schemas")
+            // `directories` rather than the deprecated `srcDirs(...)` (AGP 9).
+            assets.directories.add("$projectDir/schemas")
         }
     }
 }

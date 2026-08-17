@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import nl.glcillustrious.hk36ttc.R
 import nl.glcillustrious.hk36ttc.core.metar.MetarAge
@@ -33,9 +34,19 @@ fun MetarParseError.toStringRes(): Int = when (this) {
  * [MetarConfigData.staleAfterMinutes] (rekenlogica.md §9). Shared between the airfield editor
  * (where the METAR is entered) and [FlightContextCard] (where it's reviewed before a
  * calculation) so the two never drift apart on what's shown or how staleness is judged.
+ *
+ * [warning] is an optional bold-red line appended inside the card — used by the calculation
+ * screens for "this METAR decoded fine, but the wind can't be used, type it yourself"
+ * (rekenlogica.md §5). It belongs *in* the card rather than beside it because it's a statement
+ * about this METAR's contents, not about the form below it.
  */
 @Composable
-fun MetarSummary(parsed: MetarParseResult?, elevationM: Int, metarConfig: MetarConfigData) {
+fun MetarSummary(
+    parsed: MetarParseResult?,
+    elevationM: Int,
+    metarConfig: MetarConfigData,
+    warning: String? = null
+) {
     if (parsed == null) {
         Text(
             stringResource(R.string.airfield_edit_metar_empty_hint),
@@ -62,7 +73,16 @@ fun MetarSummary(parsed: MetarParseResult?, elevationM: Int, metarConfig: MetarC
                     val windGustKts = metar.windGustKts
                     val qnhHpa = metar.qnhHpa
                     val windText = when {
-                        metar.windVariableDirection -> stringResource(R.string.airfield_edit_metar_summary_wind_variable, metar.windSpeedKts.toInt())
+                        // The long variant spells out "richting onbekend, vul handmatig in"
+                        // itself, which would repeat [warning] verbatim two lines further
+                        // down. When the caller supplies that warning it states it more
+                        // prominently, so the wind line drops back to just the facts; the
+                        // airfield editor passes no warning and keeps the full sentence.
+                        metar.windVariableDirection -> if (warning != null) {
+                            stringResource(R.string.airfield_edit_metar_summary_wind_variable_short, metar.windSpeedKts.toInt())
+                        } else {
+                            stringResource(R.string.airfield_edit_metar_summary_wind_variable, metar.windSpeedKts.toInt())
+                        }
                         windGustKts != null -> stringResource(
                             R.string.airfield_edit_metar_summary_wind_gust_format,
                             metar.windDirectionDeg?.toInt() ?: 0, metar.windSpeedKts.toInt(), windGustKts.toInt()
@@ -95,6 +115,13 @@ fun MetarSummary(parsed: MetarParseResult?, elevationM: Int, metarConfig: MetarC
                         ageText,
                         color = if (stale) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (warning != null) {
+                        Text(
+                            warning,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

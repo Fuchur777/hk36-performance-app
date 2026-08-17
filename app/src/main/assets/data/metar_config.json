@@ -1,7 +1,11 @@
 {
   "source": {
-    "note": "Not AFM/AIC data - a practical flight-safety threshold (rekenlogica.md section 9), not a certification requirement. Always user-adjustable, never hardcoded in Kotlin."
+    "note": "Not AFM/AIC data - practical flight-safety and data-source settings (rekenlogica.md sections 5c and 9), not certification requirements. Always user-adjustable, never hardcoded in Kotlin."
   },
   "stale_after_minutes": 60,
-  "stale_after_minutes_note": "Warning (non-blocking) shown at the confirmation step once a pasted/fetched METAR is older than this. The pilot always confirms or re-enters the weather regardless of age (rekenlogica.md section 5) - this only controls whether an extra staleness warning is shown alongside that confirmation."
+  "stale_after_minutes_note": "Warning (non-blocking) shown once a fetched METAR is older than this. The pilot always checks the weather regardless of age (rekenlogica.md section 5) - this only controls whether an extra staleness warning is shown.",
+  "fetch_url_template": "https://aviationweather.gov/api/data/metar?ids={stations}&format=raw",
+  "fetch_url_template_note": "Online lookup endpoint. {stations} is replaced by a comma-separated list of ICAO station codes. aviationweather.gov is free and needs no account or API key. Blank this string to disable online lookup entirely - the app then keeps whatever was last fetched, and the pilot enters wind/temperature/pressure by hand on the calculation screen.",
+  "auto_refresh_after_minutes": 20,
+  "auto_refresh_after_minutes_note": "How old a stored METAR may be before the app fetches a fresh one on its own. Lower than stale_after_minutes on purpose: refreshing earlier than you warn is sensible, and observations are typically reissued every 30 minutes."
 }

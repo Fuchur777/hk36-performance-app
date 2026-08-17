@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+        Used only to refresh the OurAirports vliegveld-/baancatalogus from
+        davidmegginson.github.io on an explicit tap. The app works fully offline without it:
+        the catalogue ships bundled in the APK, and every calculation is local. The same
+        permission will carry the planned online METAR lookup (docs/00-plan.md Fase 2c).
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".Hk36Application"
         android:allowBackup="true"

@@ -611,3 +611,115 @@ maar twee mechanismen volledig weghalen:
 
 Geen nieuwe Room-migratie deze ronde — puur een UI-/rekenlaag-herziening bovenop het
 bestaande v7-schema.
+
+## 15. Fase 2c ronde 4 (2026-08-17): variabele wind, live vliegveldgegevens, resultaatkaart
+
+Testronde op toestel bracht een reeks samenhangende problemen aan het licht, allemaal rond het
+geval "METAR parset prima, maar de wind is `VRB`". Eerst uitsluitend op het take-off-scherm
+opgelost en daar bevestigd door Frank, daarna in één keer doorgetrokken naar landing en
+sleepvlucht.
+
+**Bugs (met de oorzaak, want die was in beide gevallen niet wat hij leek):**
+
+- **Waarschuwing + windvelden knipperden weg.** Ze verschenen één frame en verdwenen dan.
+  Oorzaak: `IntStepperField` roept `onFocusChanged` óók af bij het aanhechten van het veld, met
+  "niet gefocust", en voerde dan de blur-clamp uit inclusief `onValueChange`. Voor elk ander
+  veld is dat onzichtbaar (dezelfde waarde wordt teruggeschreven), maar hier zette het
+  `windManuallySet` op true — waarop er resultaten kwamen en het hele blok, dat achter
+  `!showRunwayResults` zat, zichzelf wiste. Twee fixes: de stepper klemt pas na échte focus, en
+  het windblok hangt niet langer af van `!showRunwayResults` (die velden zijn de *bron* van de
+  resultaten, dus horen zichtbaar te blijven).
+- **Verkeerd vliegveld/baan-paar bij wisselen.** De geselecteerde airfield en zijn banen werden
+  door twee los `flatMapLatest`'te flows geleverd en met een buitenste `combine()` samengevoegd.
+  `combine()` paart wie er net emit met de *laatst gecachte* waarde van de ander — dus kon het
+  nieuwe vliegveld even gepaard worden met de banen van het vorige. Opgelost door beide bronnen
+  binnen één `flatMapLatest` op het id te combineren, zodat ze samen worden afgebroken en
+  opgebouwd.
+
+**Functionele wijzigingen (alle drie de schermen):**
+
+- Wind losgekoppeld van de rest van het weer; eigen richting/snelheid-velden met een
+  "aangeraakt"-vlag, en de rode waarschuwing ín de METAR-kaart. Zie rekenlogica.md §5.
+- Negatieve drukhoogte wordt afgekapt op 0 m in de berekening (rekenlogica.md §8b).
+- Grasconditie-selector alleen nog in vliegveldmodus.
+- Resultaatkaart (de enkele, niet-per-baan variant): groene achtergrond, kop "Resultaat", geen
+  "Incl. marge"-regel meer, en de afstanden zónder marge niet langer vetgedrukt — dat laatste
+  ook in de per-baan-kaartjes.
+
+Opnieuw geen Room-migratie: alles speelt zich af in de UI- en rekenlaag.
+
+## 16. Fase 2c ronde 5 (2026-08-17): vliegveld- en baandatabase uit OurAirports
+
+De uitgestelde wens uit §13 is uitgevoerd: vliegvelden en banen komen nu uit
+`airports.csv`/`runways.csv` van `davidmegginson.github.io/ourairports-data`, dagelijks
+bijgewerkt. Wereldwijd, gebundeld in de APK én te verversen vanaf GitHub.
+
+**Randvoorwaarde van Frank, en hoe die is afgedwongen**: eigen baangegevens mogen nooit
+verdwijnen of overschreven worden. Daarom:
+
+- De catalogus staat in een **aparte database** (`airport_catalog.db`), niet in `hk36ttc.db`.
+  Importeren of verversen kan de eigen tabellen fysiek niet raken. `fallbackToDestructive-
+  Migration` is daar juist correct — alles is herbouwbaar uit het gebundelde asset — waar dat
+  in `AppDatabase` ondenkbaar zou zijn.
+- Banen ophalen is een **expliciete knop per vliegveld**, die alleen verschijnt zolang dat
+  vliegveld nog géén eigen banen heeft. Alles-of-niets; er wordt nooit samengevoegd.
+- "Bijwerken uit bron" raakt uitsluitend naam en veldhoogte. METAR-station, METAR-tekst en
+  banen blijven ongemoeid — vastgelegd in `AirportCatalogRepositoryTest`.
+
+**Nieuw in `:core`**: een header-gestuurde CSV-lezer (`CsvReader`) plus twee parsers. Header-
+gestuurd is geen nettigheid — de werkelijke kolomvolgorde in `airports.csv` wijkt af van de
+OurAirports-documentatie (`icao_code` staat er vóór `gps_code`), dus een positionele lezer zou
+stilzwijgend GPS-codes in het ICAO-veld schrijven.
+
+**Twee bewuste veiligheidskeuzes in de baanconversie** (zie
+`docs/data/airfield_profile_schema.json` voor de volledige regels):
+
+- Een onbekende ondergrond wordt **gras**, niet asfalt. Gras kost ≥20% extra afstand, dus
+  gokken kan de benodigde baanlengte alleen overschatten.
+- Een ontbrekende ware koers wordt afgeleid uit het baannummer en **als afgeleid gemeld**; is
+  er geen numeriek baannummer, dan wordt de baan overgeslagen in plaats van op 0° gezet.
+
+**INTERNET-permissie** is hiervoor toegevoegd (stond bewust nog uit). De app blijft volledig
+offline bruikbaar; de permissie dient alleen de verversknop, en straks het online ophalen van
+de METAR — die had hem later toch nodig gehad.
+
+Assets: ~6 MB (`airports.csv`) + ~1 MB (`runways.csv`), kolom-uitgedund maar met dezelfde
+headernamen, zodat één parser zowel het gebundelde als het gedownloade volledige bestand
+aankan. Seeden gebeurt op aanvraag bij het eerste bezoek aan het zoekscherm, niet bij het
+opstarten — ruim 100.000 rijen mogen de app-start niet ophouden.
+
+## 17. Fase 2c ronde 6 (2026-08-17): METAR automatisch ophalen
+
+Het handmatig plakken van METAR-tekst vervalt als verplichte stap. Bron:
+`aviationweather.gov` — gratis, geen account, geen API-key, en al in §Fase 2c als beoogde
+bron genoemd. De volledige regels staan in `rekenlogica.md` §5c; hier alleen wat het voor de
+opbouw van de app betekent.
+
+- **Endpoint in `metar_config.json`**, niet in Kotlin, met `{stations}` als plaatshouder.
+  Leegmaken schakelt het ophalen uit en zet de app terug op plakken. Bestaande installaties
+  houden hun eigen `metar_config.json` (de seeding kopieert alleen als het bestand ontbreekt);
+  de nieuwe velden hebben Kotlin-defaults, dus zo'n oud bestand blijft gewoon werken.
+- **Twee ingangen**: een knop "METAR online ophalen" op het vliegveld-bewerkscherm (met
+  expliciete foutmelding), en stil automatisch verversen op de rekenschermen zodra de
+  opgeslagen METAR ontbreekt of ouder is dan `auto_refresh_after_minutes`.
+- **Twee valkuilen die de bron zelf oplevert**, allebei met een test vastgelegd: rapporten
+  beginnen met het rapporttype (`METAR ...`), wat de parser eerder liet falen op
+  `MissingStation`; en de dienst antwoordt in haar eigen volgorde en laat stations zonder
+  waarneming weg, dus toewijzen gebeurt op de stationscode uit het rapport zelf en nooit op
+  positie.
+- **Offline-first ongewijzigd**: elke faalroute laat de opgeslagen METAR intact. `INTERNET`
+  was in ronde 5 al toegevoegd voor de catalogus, dus er komt geen permissie bij.
+
+Geen Room-migratie: `metarRaw`/`metarEnteredAtEpochMs` bestonden al.
+
+### Ronde 6, aanvulling: handmatige METAR-invoer volledig vervallen
+
+Direct na oplevering teruggekoppeld: als de app de METAR toch ophaalt, hoeft het plakken er
+niet meer naast te staan. Zowel het METAR-tekstveld als de knop "METAR online ophalen" zijn
+daarom uit het vliegveld-bewerkscherm verdwenen. Wat overblijft is het METAR-station-veld — dat
+bepaalt immers *waar* gelezen wordt — plus een read-only samenvatting van de laatst opgehaalde
+melding.
+
+Ophalen gebeurt nu bij het openen van het scherm en zodra het station wijzigt. Problemen
+(geen station, geen waarneming, netwerkfout) staan inline onder de samenvatting in plaats van
+in een dialoog: op dit scherm staat de oplossing meestal één veld hoger.

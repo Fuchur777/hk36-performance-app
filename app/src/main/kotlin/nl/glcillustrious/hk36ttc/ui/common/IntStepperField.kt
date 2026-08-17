@@ -50,6 +50,13 @@ fun IntStepperField(
     step: Int = 1
 ) {
     var text by remember(value) { mutableStateOf(value.toString()) }
+    // `onFocusChanged` also fires once when the field is first attached, reporting
+    // "not focused" — without this guard that initial event runs the lose-focus clamp below
+    // and calls `onValueChange` before the pilot has touched anything. For most fields that's
+    // an invisible no-op (it writes the same value back), but a caller that treats any
+    // `onValueChange` as "the pilot entered this" (Take-off's wind direction/speed, which set
+    // `windManuallySet`) would see a phantom entry the instant the field appeared.
+    var hasBeenFocused by remember { mutableStateOf(false) }
 
     Column {
         Row(
@@ -76,7 +83,9 @@ fun IntStepperField(
                 modifier = Modifier
                     .weight(1f)
                     .onFocusChanged { focusState ->
-                        if (!focusState.isFocused) {
+                        if (focusState.isFocused) {
+                            hasBeenFocused = true
+                        } else if (hasBeenFocused) {
                             val clamped = (text.toIntOrNull() ?: value).coerceIn(min, max)
                             text = clamped.toString()
                             onValueChange(clamped)

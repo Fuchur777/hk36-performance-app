@@ -107,4 +107,50 @@ class MetarParserTest {
         val result = MetarParser.parse("EHDL 010600Z 09008KT 9999 Q1013")
         assertEquals(MetarParseResult.Failure(MetarParseError.MissingTemperature), result)
     }
+
+    /**
+     * Real-world METAR reported not to derive weather on the Take-off screen even though it
+     * decoded fine on the Airfield screen. Confirms two extra groups this parser doesn't
+     * specifically model — `AUTO` (automated station) and a variable-direction range like
+     * `320V060` (wind varies between two headings around the reported mean) — are simply
+     * unmatched by every regex and ignored, rather than being mistaken for something else or
+     * breaking the primary wind group's extraction. The actual bug turned out to be a stale
+     * airfield snapshot in the ViewModel, not a parsing defect — this test locks in that the
+     * parser itself was never at fault for this exact string.
+     */
+    /**
+     * aviationweather.gov's raw feed prefixes every report with its type keyword. The station
+     * check is deliberately positional (token 0), so without stripping this the whole report
+     * would fail as MissingStation — which is exactly what it did before the online lookup was
+     * added.
+     */
+    @Test
+    fun `a leading METAR or SPECI report-type keyword is skipped`() {
+        val routine = parseOrFail("METAR EHAM 170655Z VRB02KT 9999 FEW009 SCT044 16/14 Q1015 NOSIG")
+        assertEquals("EHAM", routine.stationIcao)
+        assertApprox(16.0, routine.temperatureC)
+        assertApprox(1015.0, requireNotNull(routine.qnhHpa))
+
+        val special = parseOrFail("SPECI EHGR 170720Z 24012KT 9999 SCT025 18/12 Q1013")
+        assertEquals("EHGR", special.stationIcao)
+    }
+
+    @Test
+    fun `a report-type keyword with nothing after it still fails cleanly`() {
+        assertEquals(
+            MetarParseResult.Failure(MetarParseError.MissingStation),
+            MetarParser.parse("METAR")
+        )
+    }
+
+    @Test
+    fun `AUTO station indicator and a variable-direction range group don't break parsing`() {
+        val metar = parseOrFail("EHGR 161825Z AUTO 35006KT 320V060 9999 FEW310 21/14 Q1016 BLU")
+
+        assertEquals(350.0, metar.windDirectionDeg)
+        assertEquals(false, metar.windVariableDirection)
+        assertApprox(6.0, metar.windSpeedKts)
+        assertApprox(21.0, metar.temperatureC)
+        assertApprox(1016.0, requireNotNull(metar.qnhHpa))
+    }
 }

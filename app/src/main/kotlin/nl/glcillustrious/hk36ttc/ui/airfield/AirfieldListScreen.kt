@@ -11,17 +11,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import nl.glcillustrious.hk36ttc.R
+import nl.glcillustrious.hk36ttc.data.catalog.AirportCatalogRepository
 import nl.glcillustrious.hk36ttc.data.local.AirfieldEntity
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 
@@ -51,13 +52,30 @@ import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 @Composable
 fun AirfieldListScreen(
     repository: AircraftProfileRepository,
+    catalog: AirportCatalogRepository,
     onBack: () -> Unit,
-    onAddAirfield: () -> Unit,
-    onEditAirfield: (AirfieldEntity) -> Unit
+    onEditAirfield: (AirfieldEntity) -> Unit,
+    onOpenCatalog: () -> Unit
 ) {
-    val viewModel: AirfieldListViewModel = viewModel(factory = AirfieldListViewModel.factory(repository))
+    val viewModel: AirfieldListViewModel = viewModel(factory = AirfieldListViewModel.factory(repository, catalog))
     val rows by viewModel.rows.collectAsState()
+    val refreshResult by viewModel.refreshResult.collectAsState()
     var airfieldPendingDelete by remember { mutableStateOf<AirfieldEntity?>(null) }
+
+    refreshResult?.let { result ->
+        AlertDialog(
+            onDismissRequest = { viewModel.clearRefreshResult() },
+            title = { Text(stringResource(R.string.airfield_list_update_from_source)) },
+            text = {
+                Text(stringResource(R.string.airfield_list_update_result_format, result.updated, result.checked))
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearRefreshResult() }) {
+                    Text(stringResource(R.string.common_ok))
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -68,22 +86,22 @@ fun AirfieldListScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
+                actions = {
+                    IconButton(onClick = onOpenCatalog) {
+                        Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.airport_catalog_open))
+                    }
+                    IconButton(onClick = { viewModel.updateFromCatalog() }, enabled = rows.isNotEmpty()) {
+                        Icon(Icons.Filled.Sync, contentDescription = stringResource(R.string.airfield_list_update_from_source))
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddAirfield,
-                containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = MaterialTheme.colorScheme.onSecondary
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.airfield_list_add_content_description))
-            }
-        }
     ) { padding ->
         if (rows.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(padding)) {

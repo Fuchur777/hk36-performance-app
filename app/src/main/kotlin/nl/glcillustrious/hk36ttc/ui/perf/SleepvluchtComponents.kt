@@ -250,31 +250,34 @@ internal fun SleepvluchtResultCard(
     }
     val statusColors = MaterialTheme.status
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        // See TakeoffScreen's result card: green, since there is only one result here and no
+        // ranking to express.
+        colors = CardDefaults.cardColors(
+            containerColor = statusColors.success,
+            contentColor = statusColors.onSuccess
+        ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.sleepvlucht_class_format, result.selectedClassId ?: ""), style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.perf_result_section_title), style = MaterialTheme.typography.labelLarge)
+            Text(
+                stringResource(R.string.sleepvlucht_class_format, result.selectedClassId ?: ""),
+                style = MaterialTheme.typography.bodyMedium
+            )
             if (result.classBumpedUp) {
                 Text(
                     stringResource(R.string.sleepvlucht_class_bumped_up_note),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
-            Text(
-                stringResource(R.string.perf_margin_included_format, fmt(result.marginFactor)),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
             Text(
                 stringResource(R.string.perf_result_surface_format, sleepvluchtSurfaceLabel(surfaceType)),
                 style = MaterialTheme.typography.bodyMedium
             )
             ResultRow(stringResource(R.string.perf_ground_run_label), fmt(result.s1WithMarginM), "m")
             ResultRow(stringResource(R.string.perf_obstacle_15m_label), fmt(result.s2WithMarginM), "m")
-            ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmt(result.s1M), "m")
-            ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmt(result.s2M), "m")
+            ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmt(result.s1M), "m", emphasized = false)
+            ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmt(result.s2M), "m", emphasized = false)
             val surfaceTag = if (surfaceType == SleepvluchtSurfaceType.DROOG_GRAS || surfaceType == SleepvluchtSurfaceType.ASFALT) {
                 "[AFM]"
             } else {
@@ -282,21 +285,19 @@ internal fun SleepvluchtResultCard(
             }
             Text(
                 stringResource(R.string.sleepvlucht_surface_toeslag_format, surfaceTag, fmt(surfaceFactor * 100)),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodySmall
             )
             if (result.slopeApplied) {
                 Text(
                     stringResource(R.string.sleepvlucht_slope_correction_format, fmt(result.slopePct)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
             if (result.outOfRangeWarning) {
                 Text(
                     stringResource(R.string.perf_out_of_range_warning),
-                    color = statusColors.warning,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }

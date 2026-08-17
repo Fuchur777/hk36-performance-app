@@ -61,9 +61,21 @@ object MetarParser {
     private const val INHG_TO_HPA = 33.8639
     private const val MPS_TO_KT = 1.94384
 
+    /** Optional leading report-type keywords: a routine observation and a special (off-cycle)
+     * one respectively. Neither changes how anything below is read. */
+    private val REPORT_TYPE_TOKENS = setOf("METAR", "SPECI")
+
     fun parse(raw: String): MetarParseResult {
-        val tokens = raw.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
-        if (tokens.isEmpty()) return MetarParseResult.Failure(MetarParseError.Empty)
+        val allTokens = raw.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+        if (allTokens.isEmpty()) return MetarParseResult.Failure(MetarParseError.Empty)
+
+        // The report-type keyword is optional in the format and absent from most copy-pasted
+        // METARs, but aviationweather.gov's raw feed always emits it ("METAR EHGR 170655Z ...").
+        // Dropping it here keeps the station check below — which is deliberately strict about
+        // position, to avoid matching some four-letter group later in the report — working for
+        // both shapes.
+        val tokens = if (allTokens.first() in REPORT_TYPE_TOKENS) allTokens.drop(1) else allTokens
+        if (tokens.isEmpty()) return MetarParseResult.Failure(MetarParseError.MissingStation)
 
         val station = tokens.getOrNull(0)?.takeIf { STATION_REGEX.matches(it) }
             ?: return MetarParseResult.Failure(MetarParseError.MissingStation)

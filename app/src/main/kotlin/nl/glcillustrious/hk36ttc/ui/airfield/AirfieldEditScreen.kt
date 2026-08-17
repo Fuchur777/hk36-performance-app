@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,6 +24,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -47,13 +51,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import nl.glcillustrious.hk36ttc.R
 import nl.glcillustrious.hk36ttc.core.metar.MetarConfigData
+import nl.glcillustrious.hk36ttc.data.catalog.AirportCatalogRepository
+import nl.glcillustrious.hk36ttc.data.catalog.RunwayImportResult
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 import nl.glcillustrious.hk36ttc.data.local.RunwayStripEntity
 import nl.glcillustrious.hk36ttc.data.local.RunwaySurfaceType
+import nl.glcillustrious.hk36ttc.data.metar.MetarFetchResult
+import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.MetarSummary
 import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
@@ -62,16 +71,61 @@ import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
 @Composable
 fun AirfieldEditScreen(
     repository: AircraftProfileRepository,
+    catalog: AirportCatalogRepository,
+    metarRepository: MetarRepository,
     metarConfig: MetarConfigData,
     airfieldId: Long,
     onBack: () -> Unit
 ) {
-    val viewModel: AirfieldEditViewModel = viewModel(factory = AirfieldEditViewModel.factory(repository, airfieldId))
+    val viewModel: AirfieldEditViewModel = viewModel(
+        factory = AirfieldEditViewModel.factory(repository, catalog, metarRepository, metarConfig, airfieldId)
+    )
     val state by viewModel.state.collectAsState()
     val runways by viewModel.runways.collectAsState()
+    val catalogIdent by viewModel.catalogIdent.collectAsState()
+    val importResult by viewModel.runwayImportResult.collectAsState()
+    val metarFetching by viewModel.metarFetching.collectAsState()
+    val metarFetchResult by viewModel.metarFetchResult.collectAsState()
     var runwayDialogFor by remember { mutableStateOf<RunwayStripFormState?>(null) }
     var runwayPendingDelete by remember { mutableStateOf<RunwayStripEntity?>(null) }
     var showNewRunwayDialog by remember { mutableStateOf(false) }
+
+    importResult?.let { result ->
+        AlertDialog(
+            onDismissRequest = { viewModel.clearRunwayImportResult() },
+            title = { Text(stringResource(R.string.airfield_edit_import_runways)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    when (result) {
+                        is RunwayImportResult.Imported -> {
+                            Text(stringResource(R.string.airfield_edit_import_runways_result_format, result.imported))
+                            if (result.withDerivedHeading > 0) {
+                                // A designator-derived heading is a rounded magnetic one
+                                // standing in for a true one, so it never passes silently.
+                                Text(
+                                    stringResource(
+                                        R.string.airfield_edit_import_runways_derived_format,
+                                        result.withDerivedHeading
+                                    ),
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        RunwayImportResult.NothingAvailable ->
+                            Text(stringResource(R.string.airfield_edit_import_runways_none))
+                        RunwayImportResult.AlreadyHasRunways ->
+                            Text(stringResource(R.string.airfield_edit_import_runways_none))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearRunwayImportResult() }) {
+                    Text(stringResource(R.string.common_ok))
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -135,14 +189,36 @@ fun AirfieldEditScreen(
 
             HorizontalDivider()
             Text(stringResource(R.string.airfield_edit_metar_section_title), style = MaterialTheme.typography.titleMedium)
-            OutlinedTextField(
-                value = state.metarRaw,
-                onValueChange = { v -> viewModel.update { it.copy(metarRaw = v) } },
-                label = { Text(stringResource(R.string.airfield_edit_metar_label)) },
-                placeholder = { Text(stringResource(R.string.airfield_edit_metar_placeholder)) },
-                modifier = Modifier.fillMaxWidth()
+            Text(
+                stringResource(R.string.airfield_edit_metar_auto_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            MetarSummary(state.parsedMetar, state.elevationM, metarConfig)
+            if (metarFetching) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.airfield_edit_metar_fetching),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                MetarSummary(state.parsedMetar, state.elevationM, metarConfig)
+            }
+            // Reported inline rather than in a dialog: this screen is exactly where the fix
+            // lives — usually filling in a nearby METAR station above.
+            metarFetchResult?.problemTextRes()?.let { problem ->
+                Text(
+                    when (problem) {
+                        is MetarProblem.WithReason -> stringResource(problem.res, problem.reason)
+                        is MetarProblem.Plain -> stringResource(problem.res)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
 
             Button(
                 onClick = { viewModel.saveAirfieldInfo() },
@@ -171,6 +247,22 @@ fun AirfieldEditScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    // Offered only while there is nothing to lose: once this airfield has any
+                    // runway of its own the button is gone, which is the visible half of the
+                    // guard enforced in AirportCatalogRepository.importRunwaysForAirfield.
+                    if (catalogIdent != null) {
+                        Text(
+                            stringResource(R.string.airfield_edit_import_runways_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        OutlinedButton(
+                            onClick = { viewModel.importRunwaysFromCatalog() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.airfield_edit_import_runways))
+                        }
+                    }
                 }
                 runways.forEach { strip ->
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
@@ -386,4 +478,23 @@ private fun RunwayEditDialog(
             }
         }
     )
+}
+
+/**
+ * A fetch outcome worth telling the pilot about, reduced to the string it maps to. Success with
+ * a report is silent — the decoded weather appears in the summary and speaks for itself.
+ */
+internal sealed interface MetarProblem {
+    data class Plain(val res: Int) : MetarProblem
+    data class WithReason(val res: Int, val reason: String) : MetarProblem
+}
+
+internal fun MetarFetchResult.problemTextRes(): MetarProblem? = when (this) {
+    is MetarFetchResult.Failed -> MetarProblem.WithReason(R.string.metar_fetch_failed_format, reason)
+    MetarFetchResult.NoStations -> MetarProblem.Plain(R.string.metar_fetch_no_station)
+    MetarFetchResult.Disabled -> MetarProblem.Plain(R.string.metar_fetch_disabled)
+    // withoutReport > 0 means the station exists but has no current observation; updated == 0
+    // with nothing missing simply means the stored report was already the latest.
+    is MetarFetchResult.Success ->
+        if (withoutReport > 0) MetarProblem.Plain(R.string.metar_fetch_no_report) else null
 }

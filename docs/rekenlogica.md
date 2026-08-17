@@ -245,13 +245,14 @@ Wat overblijft is puur nog dataflow, geen goedkeuringsstap:
 1. **Locatie bepalen**: gebruiker kiest GPS of handmatige invoer (beide gelijkwaardig, geen
    default-voorkeur). **Nog niet geïmplementeerd** — voorlopig kiest de piloot direct een
    opgeslagen vliegveld.
-2. **METAR ophalen** (indien internet beschikbaar): via gratis publieke bron (bijv.
-   aviationweather.gov, geen API-key). **Nog niet geïmplementeerd** — de piloot plakt de
-   METAR voorlopig zelf in bij het vliegveldprofiel; §8b beschrijft hoe die tekst wordt
+2. **METAR ophalen** (indien internet beschikbaar): **geïmplementeerd sinds Fase 2c ronde 6**
+   via aviationweather.gov — gratis, geen account of API-key. Zie §5c. Zelf plakken blijft
+   gewoon mogelijk en is de terugval zonder internet; §8b beschrijft hoe die tekst wordt
    uitgelezen.
 3. **Vliegveldprofiel kiezen of invoeren**: gebruiker selecteert een opgeslagen
-   vliegveldprofiel (baanrichtingen/-typen/-lengtes) of voert dit handmatig in voor een
-   nieuwe locatie. AIP-prefill is nog niet geïmplementeerd (fase 3+).
+   vliegveldprofiel (baanrichtingen/-typen/-lengtes), voert dit handmatig in, of neemt het
+   sinds Fase 2c ronde 5 over uit de OurAirports-catalogus (§5b). AIP-prefill is nog niet
+   geïmplementeerd (fase 3+).
 4. Zodra vliegveld + bruikbare METAR-wind + minstens één baan aanwezig zijn, toont het
    scherm automatisch de resultaten per baan (§8c) — geen verdere actie nodig. Ontbreekt een
    van die drie, dan valt het scherm terug op de gewone handmatige invoervelden (ongewijzigd
@@ -281,6 +282,68 @@ identiek gedrag, ook hier geen bevestiging, ook hier continu herberekend.
   vliegveld zonder banen) blijven tegenwind, ondergrond en helling gewoon losse handmatige
   velden, zoals vóór Fase 2c.
 
+**Windbron ontkoppeld van de rest van het weer (Fase 2c ronde 4)**: temperatuur en QNH
+worden altijd uit de METAR afgeleid zodra die überhaupt parset — of de windgroep bruikbaar
+is doet daar niets aan af. Alleen de *wind* heeft een terugvaloptie nodig, want zonder
+specifieke richting is er geen tegenwindcomponent te berekenen. Is de windgroep `VRB` of
+ontbreekt hij, dan:
+
+- blijft de METAR-samenvatting OAT/QNH/drukhoogte gewoon tonen en gebruiken;
+- verschijnt de zin "Richting onbekend — vul deze handmatig in." vetgedrukt en rood **in**
+  de METAR-kaart zelf (niet ernaast — het is een uitspraak over die METAR);
+- krijgt de piloot twee eigen velden, windrichting (ware koers) en windsnelheid, die exact
+  dezelfde baanadvies-berekening voeden als een werkende METAR zou doen.
+
+Datzelfde tweetal velden verschijnt ook wanneer de piloot bewust Handmatig weer kiest terwijl
+er wél een vliegveld geselecteerd is: ondergrond en helling worden dan nog steeds uit de
+baangegevens gehaald, want dat zijn eigenschappen van de baan, niet van het weer.
+
+Cruciaal is dat de app pas rekent zodra de piloot die velden echt heeft aangeraakt: 0°/0 kt is
+een geldige windstille waarde, dus aan de waarde alleen is niet te zien of er al iets is
+ingevuld. Een aparte "aangeraakt"-vlag (`windManuallySet`) bewaakt dat, zodat er nooit stilletjes
+met een niet-ingevulde standaardwaarde gerekend wordt. De invoervelden blijven zichtbaar zodra de
+resultaten verschijnen — ze zijn immers de *bron* van die resultaten, niet een voorportaal ervan.
+
+**Grasconditie alleen in vliegveldmodus**: de "gras vandaag"-keuze (droog/nat/zacht) voedt
+uitsluitend de per-baan-berekening, die de ondergrond uit de baangegevens haalt. In Handmatige
+modus kiest de piloot de ondergrond rechtstreeks, dus staat die selector daar niet — ook niet
+wanneer het laatst gekozen vliegveld (dat bewust in het geheugen blijft) een grasbaan heeft.
+
+## 5b. Vliegveld- en baangegevens uit OurAirports **[APP]** — geïmplementeerd (Fase 2c ronde 5)
+
+Bron: `airports.csv` en `runways.csv` van
+`davidmegginson.github.io/ourairports-data`, dagelijks bijgewerkt. Wereldwijd meegeleverd in
+de app (kolom-uitgedund, ~7 MB) en te verversen vanaf diezelfde bron.
+
+**Alles wat de piloot zelf invoerde blijft van de piloot.** De catalogus staat in een aparte
+database (`airport_catalog.db`), niet bij de eigen vliegvelden en banen. Overnemen gebeurt
+alleen op expliciete actie, en:
+
+- **Banen ophalen** kan uitsluitend bij een vliegveld dat nog géén eigen banen heeft. Alles of
+  niets: er wordt nooit samengevoegd, bijgewerkt of verwijderd.
+- **Vliegvelden bijwerken** raakt alleen naam en veldhoogte. Het METAR-station (vaak bewust een
+  ánder veld, zoals Terlet dat EHDL leest), de geplakte METAR-tekst en de banen blijven staan.
+
+**Conversie van de baangegevens.** De bron is niet genormaliseerd, dus twee keuzes bepalen de
+veiligheid van deze import:
+
+1. **Onbekende ondergrond wordt gras, nooit asfalt.** De `surface`-kolom is vrije tekst
+   (`ASPH`, `ASPH-G`, `Turf`, `GVL`, `GRVL`, …). Gras kost minstens 20% extra afstand (§2.1),
+   dus gras gokken kan de benodigde baanlengte alleen overschatten — de veilige kant. Water,
+   sneeuw en ijs worden overgeslagen in plaats van gras genoemd. Gesloten banen en banen zonder
+   lengte vallen af.
+2. **Ontbrekende ware koers wordt afgeleid en gemeld.** `le_heading_degT` is in de bron meestal
+   leeg, terwijl §8 juist een *ware* koers nodig heeft voor kop- en dwarswind. Is er geen,
+   dan wordt de koers uit het baannummer gereconstrueerd (`04` → 040°) en als afgeleid geteld;
+   het scherm meldt hoeveel banen dat betreft met de opdracht ze te controleren. Dat is
+   namelijk een afgeronde *magnetische* koers die als ware koers dienstdoet — in Nederland
+   ~2-3° verschil, elders tot 20°, genoeg om in een dwarswindcomponent te merken. Is er geen
+   koers én geen numeriek baannummer (`H1`, `N`, `S`), dan wordt de baan overgeslagen: 0°
+   opslaan zou een stilzwijgende leugen zijn waar de app vervolgens gewoon mee rekent.
+
+Helling zit niet in de bron en blijft 0 tot de piloot hem invult; geen enkele publieke dataset
+publiceert baanhelling.
+
 **Baanidentiteit — id vs. label (bugfix, Fase 2c ronde 2)**: een baanrichting had
 ooit maar één veld (`designator`) dat zowel als unieke sleutel (voor selectie/
 matching) als weergavetekst diende. Twee richtingen met hetzelfde weergavenummer
@@ -298,6 +361,52 @@ op in plaats van twee, en toont het beheerscherm maar één aanduidingsveld.
 (`FavoriteAirfieldEntity`) welke vliegvelden in de keuzelijst van take-off/
 landing/sleepvlucht verschijnen — vliegveldbeheer zelf (`AirfieldListScreen`)
 toont wél alle opgeslagen vliegvelden, met een ster om favorieten te markeren.
+
+### 5c. METAR online ophalen **[APP]** — geïmplementeerd (Fase 2c ronde 6)
+
+**Vervangt het handmatig plakken van METAR-tekst volledig.** Er is geen invoerveld en geen
+ophaalknop meer: het vliegveldprofiel legt alleen nog vast *welk station* gelezen moet worden,
+en de app haalt daar zelf de laatste melding op. Wat de piloot bij een vliegveld invult, is
+dus alleen nog naam, ICAO, METAR-station en veldhoogte.
+
+Zonder internet blijft de laatst opgehaalde melding gewoon staan en bruikbaar; ontbreekt die
+ook, dan valt het rekenscherm terug op handmatige invoer van wind, temperatuur en drukhoogte
+(§5, ronde 4).
+
+**Bron**: `https://aviationweather.gov/api/data/metar?ids={stations}&format=raw` — gratis,
+geen account, geen API-key. De URL staat in `metar_config.json`, niet in Kotlin, conform de
+projectregel dat ook bron-instellingen in de JSON-laag horen. Leegmaken van dat veld schakelt
+het online ophalen volledig uit; de app valt dan terug op plakken.
+
+**Welk station**: `metarStationIcao` als die is ingevuld, anders de ICAO-code van het
+vliegveld zelf. Dat onderscheid is precies waarom het twee losse velden zijn — de meeste
+Nederlandse zweefvelden hebben geen eigen station en lenen dat van een buur (Terlet → EHDL).
+
+**Batchen en toewijzen**: alle stations gaan in één verzoek (de dienst accepteert een
+komma-gescheiden lijst), wat op een zweefveld met matig bereik één ronde-trip scheelt in
+plaats van vijf. De dienst antwoordt echter **niet in de gevraagde volgorde**, en laat
+stations zonder waarneming gewoon weg. Toewijzen op positie zou een piloot dus het weer van
+een ánder veld kunnen geven; `MetarFeed.splitByStation` sleutelt daarom op de stationscode die
+elk rapport zelf noemt. Rapporten van aviationweather.gov beginnen bovendien met het
+rapporttype (`METAR ...`), dat de parser sinds deze ronde overslaat.
+
+**Wanneer er opgehaald wordt**: op het vliegveld-bewerkscherm bij openen en zodra het
+METAR-station wijzigt (opslaan is het moment waarop een net getypte stationscode echt bestaat),
+en op een rekenscherm zodra de opgeslagen melding ontbreekt of ouder is dan
+`auto_refresh_after_minutes` (standaard 20). Dat staat los van `stale_after_minutes` (standaard 60, §9):
+eerder verversen dan waarschuwen is logisch, en een waarneming wordt doorgaans elk half uur
+opnieuw uitgegeven.
+
+Op een rekenscherm is het ophalen **stil** — mislukt het, dan werkt het scherm gewoon door met
+de vorige waarden, want daar kan de piloot toch niets aan doen. Per vliegveld wordt het per
+sessie één keer geprobeerd, zodat een veld zonder station niet bij elke herberekening opnieuw
+het netwerk op gaat. Op het **vliegveld-bewerkscherm** wordt een probleem juist wél getoond, en
+inline in plaats van in een dialoog: dát is de plek waar de oplossing staat, meestal het
+invullen van een nabijgelegen METAR-station (Terlet → EHDL).
+
+**Offline-first blijft leidend**: elke faalroute laat de al opgeslagen METAR ongemoeid, zodat
+de piloot verder kan met het vorige rapport of met handmatige invoer. Een ongewijzigd rapport
+zet de tijdstempel niet opnieuw, anders zou een oude waarneming vers lijken.
 
 ## 6. JSON-configuratie op het toestel
 
@@ -425,6 +534,16 @@ drukhoogte = veldhoogte + (1013,25 − QNH) × 8,23 m/hPa
 ISA-standaarddruk (1013,25 hPa) en de ~8,23 m/hPa-relatie zijn universele
 atmosferische constanten, geen AFM-instelbare waarden — vastgelegd als
 literals in de code, niet in `metar_config.json`.
+
+**Negatieve drukhoogte wordt afgekapt op 0 m in de berekening [APP].** Bij een hoge QNH
+(bijv. 1016 hPa op een veld van 15 m) komt de drukhoogte onder zeeniveau uit. De AFM-tabellen
+beginnen bij 0 m, dus dat viel voorheen buiten het gepubliceerde bereik en leverde de
+"buiten bereik"-waarschuwing op — juist voor het gunstigste geval dat er is (dichtere lucht,
+kortere afstanden). Afkappen op 0 m rekent dus conservatief: de app rapporteert nooit méér
+prestatie dan de tabel dekt, alleen minder, en de waarschuwing blijft voorbehouden aan
+werkelijke extrapolatie. De METAR-samenvatting toont wél de echte afgeleide waarde (`≈ −8 m`);
+alleen de rekenkern gebruikt de afgekapte waarde. Geldt sinds Fase 2c ronde 4 op alle drie de
+rekenschermen.
 
 ### 8c. Baanadvies — resultaten per baan **[APP]** — geïmplementeerd (herzien in Fase 2c ronde 3)
 

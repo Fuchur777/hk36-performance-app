@@ -28,6 +28,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.math.roundToInt
@@ -38,6 +39,7 @@ import nl.glcillustrious.hk36ttc.core.perf.LandingResult
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceCorrectionsData
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceNormalData
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
+import nl.glcillustrious.hk36ttc.data.local.FlightContextMode
 import nl.glcillustrious.hk36ttc.ui.common.FlightContextCard
 import nl.glcillustrious.hk36ttc.ui.common.GrassConditionSelector
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
@@ -106,15 +108,54 @@ fun LandingScreen(
             )
 
             val parsedMetar = state.selectedAirfield?.metarRaw?.let { MetarParser.parse(it) }
-            if (state.weatherDerivable) {
+            if (state.flightContextMode == FlightContextMode.AIRFIELD && state.selectedAirfield != null) {
                 WeatherModeSelector(mode = state.weatherMode, onModeChange = { viewModel.setWeatherMode(it) })
-                if (state.weatherMode == WeatherInputMode.METAR) {
-                    MetarSummary(parsedMetar, state.selectedAirfield?.elevationM?.roundToInt() ?: 0, metarConfig)
-                }
+            }
+            if (state.flightContextMode == FlightContextMode.AIRFIELD && state.selectedAirfield?.metarRaw != null &&
+                (!state.weatherDerivable || state.weatherMode == WeatherInputMode.METAR)
+            ) {
+                MetarSummary(
+                    parsedMetar,
+                    state.selectedAirfield?.elevationM?.roundToInt() ?: 0,
+                    metarConfig,
+                    warning = if (state.windDirectionUnknown) {
+                        stringResource(R.string.perf_wind_direction_unknown_warning)
+                    } else {
+                        null
+                    }
+                )
             }
             val metarWeather = state.weatherDerivable && state.weatherMode == WeatherInputMode.METAR
 
-            if (!state.showRunwayResults) {
+            // See TakeoffScreen: not gated on `!showRunwayResults` — these fields feed those
+            // results, so they must not vanish the moment a wind is entered. Surface/slope come
+            // from the runway data in this branch, so they aren't asked for here.
+            if (state.windNeedsManualEntry) {
+                if (!metarWeather) {
+                    IntStepperField(
+                        label = stringResource(R.string.perf_oat_label), value = state.oatC,
+                        onValueChange = { v -> viewModel.update { it.copy(oatC = v) } },
+                        min = -20, max = 45, suffix = "°C"
+                    )
+                }
+                if (!(metarWeather && state.pressureAltDerivable)) {
+                    IntStepperField(
+                        label = stringResource(R.string.perf_pressure_alt_label), value = state.pressureAltM,
+                        onValueChange = { v -> viewModel.update { it.copy(pressureAltM = v) } },
+                        min = 0, max = 1500, suffix = "m"
+                    )
+                }
+                IntStepperField(
+                    label = stringResource(R.string.perf_wind_direction_label), value = state.windDirectionDeg,
+                    onValueChange = { v -> viewModel.update { it.copy(windDirectionDeg = v, windManuallySet = true) } },
+                    min = 0, max = 359, suffix = "°"
+                )
+                IntStepperField(
+                    label = stringResource(R.string.perf_wind_speed_label), value = state.windSpeedKts,
+                    onValueChange = { v -> viewModel.update { it.copy(windSpeedKts = v, windManuallySet = true) } },
+                    min = 0, max = 60, suffix = "kts"
+                )
+            } else if (!state.showRunwayResults) {
                 if (!metarWeather) {
                     IntStepperField(
                         label = stringResource(R.string.perf_oat_label), value = state.oatC,
@@ -164,7 +205,7 @@ fun LandingScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            if (state.hasGrassRunway) {
+            if (state.showGrassCondition) {
                 GrassConditionSelector(state.grassCondition, { viewModel.setGrassCondition(it) })
             }
 
@@ -254,14 +295,18 @@ private fun LandingSurfaceSelector(surfaceType: LandingSurfaceType, onSelected: 
 private fun LandingResultCard(result: LandingResult, surfaceType: LandingSurfaceType) {
     val statusColors = MaterialTheme.status
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        // See TakeoffScreen's result card: green, since there is only one result here and no
+        // ranking to express.
+        colors = CardDefaults.cardColors(
+            containerColor = statusColors.success,
+            contentColor = statusColors.onSuccess
+        ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
-                stringResource(R.string.perf_margin_included_format, fmt(result.marginFactor)),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                stringResource(R.string.perf_result_section_title),
+                style = MaterialTheme.typography.labelLarge
             )
             Text(
                 stringResource(R.string.perf_result_surface_format, landingSurfaceLabel(surfaceType)),
@@ -269,27 +314,25 @@ private fun LandingResultCard(result: LandingResult, surfaceType: LandingSurface
             )
             ResultRow(stringResource(R.string.perf_ground_run_label), fmt(result.l1WithMarginM), "m")
             ResultRow(stringResource(R.string.perf_obstacle_15m_label), fmt(result.l2WithMarginM), "m")
-            ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmt(result.l1M), "m")
-            ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmt(result.l2M), "m")
+            ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmt(result.l1M), "m", emphasized = false)
+            ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmt(result.l2M), "m", emphasized = false)
             if (result.surfaceFactorApplied) {
                 Text(
                     stringResource(R.string.landing_surface_correction_format, fmt(result.surfaceFactor * 100)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
             if (result.slopeApplied) {
                 Text(
                     stringResource(R.string.landing_slope_correction_format, fmt(-result.slopePct)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
             if (result.outOfRangeWarning) {
                 Text(
                     stringResource(R.string.perf_out_of_range_warning),
-                    color = statusColors.warning,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }

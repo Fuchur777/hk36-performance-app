@@ -38,6 +38,8 @@ import nl.glcillustrious.hk36ttc.core.perf.PerformanceCorrectionsData
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceNormalData
 import nl.glcillustrious.hk36ttc.core.perf.TakeoffResult
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
+import nl.glcillustrious.hk36ttc.data.local.FlightContextMode
+import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
 import nl.glcillustrious.hk36ttc.ui.common.FlightContextCard
 import nl.glcillustrious.hk36ttc.ui.common.GrassConditionSelector
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
@@ -56,6 +58,7 @@ import kotlin.math.roundToInt
 @Composable
 fun TakeoffScreen(
     repository: AircraftProfileRepository,
+    metarRepository: MetarRepository,
     performanceNormal: PerformanceNormalData,
     performanceCorrections: PerformanceCorrectionsData,
     metarConfig: MetarConfigData,
@@ -63,7 +66,9 @@ fun TakeoffScreen(
     onBack: () -> Unit
 ) {
     val viewModel: TakeoffViewModel = viewModel(
-        factory = TakeoffViewModel.factory(repository, profileId, performanceNormal, performanceCorrections)
+        factory = TakeoffViewModel.factory(
+            repository, profileId, performanceNormal, performanceCorrections, metarRepository, metarConfig
+        )
     )
     val state by viewModel.state.collectAsState()
     val airfields by viewModel.airfields.collectAsState()
@@ -107,15 +112,67 @@ fun TakeoffScreen(
             )
 
             val parsedMetar = state.selectedAirfield?.metarRaw?.let { MetarParser.parse(it) }
-            if (state.weatherDerivable) {
+            if (state.flightContextMode == FlightContextMode.AIRFIELD && state.selectedAirfield != null) {
                 WeatherModeSelector(mode = state.weatherMode, onModeChange = { viewModel.setWeatherMode(it) })
-                if (state.weatherMode == WeatherInputMode.METAR) {
-                    MetarSummary(parsedMetar, state.selectedAirfield?.elevationM?.roundToInt() ?: 0, metarConfig)
-                }
+            }
+            if (state.flightContextMode == FlightContextMode.AIRFIELD && state.selectedAirfield?.metarRaw != null &&
+                (!state.weatherDerivable || state.weatherMode == WeatherInputMode.METAR)
+            ) {
+                MetarSummary(
+                    parsedMetar,
+                    state.selectedAirfield?.elevationM?.roundToInt() ?: 0,
+                    metarConfig,
+                    // Bold red, inside the METAR card: it's a statement about this METAR's own
+                    // wind group, so it belongs with the decoded values rather than floating
+                    // above the input fields.
+                    warning = if (state.windDirectionUnknown) {
+                        stringResource(R.string.perf_wind_direction_unknown_warning)
+                    } else {
+                        null
+                    }
+                )
             }
             val metarWeather = state.weatherDerivable && state.weatherMode == WeatherInputMode.METAR
 
-            if (!state.showRunwayResults) {
+            // Deliberately NOT gated on `!showRunwayResults`: these fields are the *source* of
+            // the wind those results are computed from, so hiding them once results exist made
+            // them erase themselves the moment a wind was entered. They stay put and the
+            // results appear below them.
+            if (state.windNeedsManualEntry) {
+                // Airfield known: OAT/pressure-alt stay METAR-derived whenever the METAR
+                // itself parses (they don't depend on the wind group at all), only the
+                // wind needs typing — either because Handmatig was chosen, or because the
+                // METAR's own wind is unusable (variable/missing). Surface/slope always
+                // come from the runway data + grass-condition selector below, never asked
+                // here.
+                if (!metarWeather) {
+                    IntStepperField(
+                        label = stringResource(R.string.perf_oat_label), value = state.oatC,
+                        onValueChange = { v -> viewModel.update { it.copy(oatC = v) } },
+                        min = -20, max = 45, suffix = "°C"
+                    )
+                }
+                if (!(metarWeather && state.pressureAltDerivable)) {
+                    IntStepperField(
+                        label = stringResource(R.string.perf_pressure_alt_label), value = state.pressureAltM,
+                        onValueChange = { v -> viewModel.update { it.copy(pressureAltM = v) } },
+                        min = 0, max = 1500, suffix = "m"
+                    )
+                }
+                IntStepperField(
+                    label = stringResource(R.string.perf_wind_direction_label), value = state.windDirectionDeg,
+                    onValueChange = { v -> viewModel.update { it.copy(windDirectionDeg = v, windManuallySet = true) } },
+                    min = 0, max = 359, suffix = "°"
+                )
+                IntStepperField(
+                    label = stringResource(R.string.perf_wind_speed_label), value = state.windSpeedKts,
+                    onValueChange = { v -> viewModel.update { it.copy(windSpeedKts = v, windManuallySet = true) } },
+                    min = 0, max = 60, suffix = "kts"
+                )
+            } else if (!state.showRunwayResults) {
+                // Plain Handmatig (no airfield at all), or an airfield with no runways entered
+                // yet: the pre-Fase-2c single-value form, where the pilot resolves the headwind
+                // component, surface and slope themselves.
                 if (!metarWeather) {
                     IntStepperField(
                         label = stringResource(R.string.perf_oat_label), value = state.oatC,
@@ -153,7 +210,7 @@ fun TakeoffScreen(
                 min = 100, max = 200, suffix = "%"
             )
 
-            if (state.hasGrassRunway) {
+            if (state.showGrassCondition) {
                 GrassConditionSelector(state.grassCondition, { viewModel.setGrassCondition(it) })
             }
 
@@ -253,14 +310,18 @@ private fun TakeoffResultCard(result: TakeoffResult, surfaceType: TakeoffSurface
     }
     val statusColors = MaterialTheme.status
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        // Same green as a RECOMMENDED per-runway card: in Handmatig there is only one result
+        // and no ranking to express, so it reads as the plain "this is your answer" card.
+        colors = CardDefaults.cardColors(
+            containerColor = statusColors.success,
+            contentColor = statusColors.onSuccess
+        ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
-                stringResource(R.string.perf_margin_included_format, fmt(result.marginFactor)),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                stringResource(R.string.perf_result_section_title),
+                style = MaterialTheme.typography.labelLarge
             )
             Text(
                 stringResource(R.string.perf_result_surface_format, takeoffSurfaceLabel(surfaceType)),
@@ -268,29 +329,30 @@ private fun TakeoffResultCard(result: TakeoffResult, surfaceType: TakeoffSurface
             )
             ResultRow(stringResource(R.string.perf_ground_run_label), fmt(result.s1WithMarginM), "m")
             ResultRow(stringResource(R.string.perf_obstacle_15m_label), fmt(result.s2WithMarginM), "m")
-            ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmt(result.s1M), "m")
-            ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmt(result.s2M), "m")
+            // Not bold: the raw figures are reference values next to the two above, which are
+            // what the pilot actually plans on. Their own labels already say "zonder marge",
+            // and the margin factor itself is set in the stepper right above this card.
+            ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmt(result.s1M), "m", emphasized = false)
+            ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmt(result.s2M), "m", emphasized = false)
             if (result.surfaceFactorApplied) {
                 val tag = if (surfaceType == TakeoffSurfaceType.DROOG_GRAS) "[AFM]" else "[AIC P173]"
                 Text(
                     stringResource(R.string.takeoff_surface_toeslag_format, tag, fmt((result.surfaceFactor - 1.0) * 100)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
             if (result.slopeApplied) {
                 Text(
                     stringResource(R.string.takeoff_slope_correction_format, fmt(result.slopePct)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
             if (result.outOfRangeWarning) {
                 Text(
                     stringResource(R.string.perf_out_of_range_warning),
-                    color = statusColors.warning,
                     modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }

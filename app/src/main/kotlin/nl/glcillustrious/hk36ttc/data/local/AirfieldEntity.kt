@@ -19,9 +19,9 @@ import kotlinx.coroutines.flow.Flow
  * Dutch gliding sites (Terlet, Malden, ...) have no METAR station of their own and rely on a
  * nearby one (e.g. Terlet -> EHDL). Leave it blank to fall back to [icao].
  *
- * [metarRaw]/[metarEnteredAtEpochMs] hold the last METAR text the pilot pasted in here (see
- * rekenlogica.md §5/§9) — entering it is a manual step for now; a future round adds an online
- * lookup that fills these same two fields instead.
+ * [metarRaw]/[metarEnteredAtEpochMs] hold the last METAR fetched for this airfield (see
+ * rekenlogica.md §5c/§9). Since Fase 2c ronde 6 these are filled by the online lookup only —
+ * there is no hand-entered METAR text anymore, just the station to read it from.
  */
 @Entity(tableName = "airfields")
 data class AirfieldEntity(

@@ -5,6 +5,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -28,7 +29,12 @@ import nl.glcillustrious.hk36ttc.data.local.fakeAircraftProfileRepository
  * `PerformanceCalculatorTest.kt` (itself a literal copy of docs/data/performance_normal.json,
  * AFM 3.01.20-E Rev. 4) — duplicated rather than shared across modules, per docs/00-plan.md
  * §11 point 4, since `core`'s test sources aren't exposed to `app`'s test source set.
+ *
+ * The opt-in covers `Dispatchers.setMain`/`resetMain` below: swapping the Main dispatcher is
+ * still flagged experimental in kotlinx-coroutines 1.11.0, but it is the standard — and only —
+ * way to give a `viewModelScope` a controllable dispatcher in a JVM unit test.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class TakeoffViewModelTest {
 
     private val normalJson = """
@@ -265,5 +271,361 @@ class TakeoffViewModelTest {
         assertTrue(state.weatherDerivable)
         assertTrue(state.runwayResults.isNotEmpty())
         assertNotNull(state.result)
+    }
+
+    /**
+     * Regression test for a real bug: the airfield the pilot selected was stored as a
+     * one-time snapshot in [TakeoffFormState], so editing its METAR afterwards (e.g. on the
+     * Airfield screen) never showed up here unless the pilot re-picked it from the dropdown —
+     * exactly the "it decodes on the airfield screen but not on Take-off" report. Fixed by
+     * deriving `selectedAirfield` from a live observation of the airfields table instead of a
+     * frozen copy.
+     */
+    @Test
+    fun `editing the selected airfield's METAR after selection is picked up without re-selecting it`() = runTest {
+        val profileDao = FakeAircraftProfileDao()
+        profileDao.seed(
+            AircraftProfileEntity(
+                id = 1,
+                registration = "PH-XYZ",
+                emptyMassKg = 560.0,
+                emptyMassCgPositionMm = 2350.0,
+                mtowKg = 770.0,
+                cgEnvelopeForwardLimitMm = 2300.0,
+                cgEnvelopeAftLimitMm = 2450.0,
+                fuelTankType = FuelTankType.STANDARD_55L
+            )
+        )
+        val airfieldDao = FakeAirfieldDao()
+        airfieldDao.seed(
+            AirfieldEntity(
+                id = 1,
+                name = "Vliegbasis Gilze-Rijen",
+                icao = "EHGR",
+                metarStationIcao = null,
+                elevationM = 15.0,
+                metarRaw = null,
+                metarEnteredAtEpochMs = null
+            )
+        )
+        val repository = fakeAircraftProfileRepository(profileDao = profileDao, airfieldDao = airfieldDao)
+
+        val viewModel = TakeoffViewModel(repository, profileId = 1, performanceNormal = performanceNormal, corrections = corrections)
+        testScheduler.advanceUntilIdle()
+
+        viewModel.setFlightContextMode(FlightContextMode.AIRFIELD)
+        testScheduler.advanceUntilIdle()
+        viewModel.selectAirfield(airfieldDao.getById(1)!!)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(null, viewModel.state.value.selectedAirfield?.metarRaw)
+
+        // Simulate editing the METAR on the Airfield screen after it's already selected here.
+        airfieldDao.update(
+            airfieldDao.getById(1)!!.copy(metarRaw = "EHGR 161825Z AUTO 35006KT 320V060 9999 FEW310 21/14 Q1016 BLU")
+        )
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(
+            "EHGR 161825Z AUTO 35006KT 320V060 9999 FEW310 21/14 Q1016 BLU",
+            viewModel.state.value.selectedAirfield?.metarRaw
+        )
+    }
+
+    /**
+     * Regression test: a variable/light wind (`VRB01KT`) makes the headwind component
+     * un-computable, but temperature and QNH parse from the very same METAR regardless of
+     * the wind group — OAT/pressure-altitude must stay derived (and hidden from manual entry)
+     * even while [TakeoffFormState.windDirectionUnknown] prompts the pilot to type the wind
+     * by hand. Before this fix, all three fell back to manual together.
+     */
+    @Test
+    fun `variable wind still derives OAT and pressure altitude, only the wind itself needs manual entry`() = runTest {
+        val profileDao = FakeAircraftProfileDao()
+        profileDao.seed(
+            AircraftProfileEntity(
+                id = 1,
+                registration = "PH-XYZ",
+                emptyMassKg = 560.0,
+                emptyMassCgPositionMm = 2350.0,
+                mtowKg = 770.0,
+                cgEnvelopeForwardLimitMm = 2300.0,
+                cgEnvelopeAftLimitMm = 2450.0,
+                fuelTankType = FuelTankType.STANDARD_55L
+            )
+        )
+        val airfieldDao = FakeAirfieldDao()
+        airfieldDao.seed(
+            AirfieldEntity(
+                id = 1,
+                name = "Vliegbasis Gilze-Rijen",
+                icao = "EHGR",
+                metarStationIcao = null,
+                elevationM = 15.0,
+                metarRaw = "EHGR 161825Z VRB01KT 9999 FEW310 21/14 Q1016 BLU",
+                metarEnteredAtEpochMs = null
+            )
+        )
+        val runwayStripDao = FakeRunwayStripDao()
+        runwayStripDao.seed(
+            RunwayStripEntity(
+                id = 1,
+                airfieldId = 1,
+                designatorA = "02",
+                designatorB = "20",
+                headingDegTrueA = 20.0,
+                lengthM = 1730.0,
+                surface = "ASPHALT",
+                slopePctA = 0.0
+            )
+        )
+        val repository = fakeAircraftProfileRepository(
+            profileDao = profileDao, airfieldDao = airfieldDao, runwayStripDao = runwayStripDao
+        )
+
+        val viewModel = TakeoffViewModel(repository, profileId = 1, performanceNormal = performanceNormal, corrections = corrections)
+        testScheduler.advanceUntilIdle()
+
+        viewModel.setFlightContextMode(FlightContextMode.AIRFIELD)
+        testScheduler.advanceUntilIdle()
+        viewModel.selectAirfield(airfieldDao.getById(1)!!)
+        testScheduler.advanceUntilIdle()
+
+        val state = viewModel.state.value
+        assertTrue(state.weatherDerivable)
+        assertTrue(state.pressureAltDerivable)
+        assertEquals(false, state.metarWindUsable)
+        assertTrue(state.windDirectionUnknown)
+        assertEquals(21, state.effectiveOatC)
+        // 15m elevation + (1013.25 - 1016) * 8.23 m/hPa rounds to -8 m, but the AFM tables
+        // start at 0 m, so the calculation floors it there rather than extrapolating below
+        // sea level and flagging out-of-range for the most favourable case there is.
+        assertEquals(0, state.effectivePressureAltM)
+    }
+
+    /**
+     * Regression test for a real bug: 0°/0kt (the manual wind fields' default) is a real,
+     * valid calm wind, so the per-runway results silently computed from that untouched
+     * default the instant a variable-wind METAR made wind un-derivable — the pilot never saw
+     * the "type the wind" prompt at all. Results must stay empty until the pilot actually
+     * touches the wind fields ([TakeoffViewModel.update] with `windManuallySet = true`,
+     * exactly what the Take-off screen's steppers do on every change).
+     */
+    @Test
+    fun `results stay empty until the pilot actually enters a wind, even though 0 is a valid value`() = runTest {
+        val profileDao = FakeAircraftProfileDao()
+        profileDao.seed(
+            AircraftProfileEntity(
+                id = 1,
+                registration = "PH-XYZ",
+                emptyMassKg = 560.0,
+                emptyMassCgPositionMm = 2350.0,
+                mtowKg = 770.0,
+                cgEnvelopeForwardLimitMm = 2300.0,
+                cgEnvelopeAftLimitMm = 2450.0,
+                fuelTankType = FuelTankType.STANDARD_55L
+            )
+        )
+        val airfieldDao = FakeAirfieldDao()
+        airfieldDao.seed(
+            AirfieldEntity(
+                id = 1,
+                name = "Vliegbasis Gilze-Rijen",
+                icao = "EHGR",
+                metarStationIcao = null,
+                elevationM = 15.0,
+                metarRaw = "EHGR 161825Z VRB01KT 9999 FEW310 21/14 Q1016 BLU",
+                metarEnteredAtEpochMs = null
+            )
+        )
+        val runwayStripDao = FakeRunwayStripDao()
+        runwayStripDao.seed(
+            RunwayStripEntity(
+                id = 1,
+                airfieldId = 1,
+                designatorA = "02",
+                designatorB = "20",
+                headingDegTrueA = 20.0,
+                lengthM = 1730.0,
+                surface = "ASPHALT",
+                slopePctA = 0.0
+            )
+        )
+        val repository = fakeAircraftProfileRepository(
+            profileDao = profileDao, airfieldDao = airfieldDao, runwayStripDao = runwayStripDao
+        )
+
+        val viewModel = TakeoffViewModel(repository, profileId = 1, performanceNormal = performanceNormal, corrections = corrections)
+        testScheduler.advanceUntilIdle()
+        viewModel.setFlightContextMode(FlightContextMode.AIRFIELD)
+        testScheduler.advanceUntilIdle()
+        viewModel.selectAirfield(airfieldDao.getById(1)!!)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(false, viewModel.state.value.showRunwayResults)
+        assertTrue(viewModel.state.value.runwayResults.isEmpty())
+
+        viewModel.update { it.copy(windDirectionDeg = 20, windSpeedKts = 10, windManuallySet = true) }
+        testScheduler.advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.showRunwayResults)
+        assertTrue(viewModel.state.value.runwayResults.isNotEmpty())
+
+        // The wind fields are the *source* of those results, so needing them by hand must not
+        // switch off just because results now exist — the screen keeps both on display. An
+        // earlier version hid the whole manual-wind block behind `!showRunwayResults`, which
+        // made the fields erase themselves the instant a wind was entered.
+        assertTrue(viewModel.state.value.windNeedsManualEntry)
+        assertTrue(viewModel.state.value.windDirectionUnknown)
+    }
+
+    /**
+     * The variable-wind fallback is only reachable while the pilot can actually see the fields
+     * that drive it, so every flag the Take-off screen keys that UI on has to survive a plain
+     * airfield switch — the reported symptom was the warning plus both wind fields appearing
+     * for a frame and then vanishing again.
+     */
+    @Test
+    fun `switching from a usable-wind airfield to a variable-wind one lands on manual wind entry`() = runTest {
+        val profileDao = FakeAircraftProfileDao()
+        profileDao.seed(
+            AircraftProfileEntity(
+                id = 1,
+                registration = "PH-XYZ",
+                emptyMassKg = 560.0,
+                emptyMassCgPositionMm = 2350.0,
+                mtowKg = 770.0,
+                cgEnvelopeForwardLimitMm = 2300.0,
+                cgEnvelopeAftLimitMm = 2450.0,
+                fuelTankType = FuelTankType.STANDARD_55L
+            )
+        )
+        val airfieldDao = FakeAirfieldDao()
+        airfieldDao.seed(
+            AirfieldEntity(
+                id = 1,
+                name = "Test",
+                icao = "EHTL",
+                metarStationIcao = null,
+                elevationM = 10.0,
+                metarRaw = "EHTL 161350Z 24012KT 9999 SCT025 18/12 Q1013 NOSIG",
+                metarEnteredAtEpochMs = null
+            )
+        )
+        airfieldDao.seed(
+            AirfieldEntity(
+                id = 2,
+                name = "Vliegbasis Gilze-Rijen",
+                icao = "EHGR",
+                metarStationIcao = null,
+                elevationM = 15.0,
+                metarRaw = "EHGR 161825Z VRB01KT 9999 FEW310 21/14 Q1016 BLU",
+                metarEnteredAtEpochMs = null
+            )
+        )
+        val runwayStripDao = FakeRunwayStripDao()
+        runwayStripDao.seed(
+            RunwayStripEntity(
+                id = 1, airfieldId = 1, designatorA = "05", designatorB = "23",
+                headingDegTrueA = 50.0, lengthM = 1200.0, surface = "ASPHALT", slopePctA = 0.0
+            )
+        )
+        runwayStripDao.seed(
+            RunwayStripEntity(
+                id = 2, airfieldId = 2, designatorA = "02", designatorB = "20",
+                headingDegTrueA = 20.0, lengthM = 1730.0, surface = "ASPHALT", slopePctA = 0.0
+            )
+        )
+        val repository = fakeAircraftProfileRepository(
+            profileDao = profileDao, airfieldDao = airfieldDao, runwayStripDao = runwayStripDao
+        )
+
+        val viewModel = TakeoffViewModel(repository, profileId = 1, performanceNormal = performanceNormal, corrections = corrections)
+        testScheduler.advanceUntilIdle()
+        viewModel.setFlightContextMode(FlightContextMode.AIRFIELD)
+        testScheduler.advanceUntilIdle()
+
+        viewModel.selectAirfield(airfieldDao.getById(1)!!)
+        testScheduler.advanceUntilIdle()
+        // The usable-wind field computes straight away, with nothing to type by hand.
+        assertTrue(viewModel.state.value.showRunwayResults)
+        assertEquals(false, viewModel.state.value.windNeedsManualEntry)
+
+        viewModel.selectAirfield(airfieldDao.getById(2)!!)
+        testScheduler.advanceUntilIdle()
+
+        // ...and the variable-wind field must settle on the manual-wind state, not flip back.
+        val state = viewModel.state.value
+        assertEquals(2L, state.selectedAirfield?.id)
+        assertEquals(1, state.runwayStrips.size)
+        assertEquals(false, state.metarWindUsable)
+        assertTrue(state.windNeedsManualEntry)
+        assertTrue(state.windDirectionUnknown)
+        assertEquals(false, state.showRunwayResults)
+        // OAT/pressure altitude still come from that same METAR — only the wind is missing.
+        assertTrue(state.weatherDerivable)
+        assertTrue(state.pressureAltDerivable)
+        assertEquals(21, state.effectiveOatC)
+    }
+
+    /**
+     * Switching to Handmatig keeps the previously selected airfield's runways in state on
+     * purpose (switching back must not lose them), so "this airfield has grass" stays true —
+     * but the grass-condition selector only drives the per-runway calculation, and Handmatig
+     * asks for the surface outright instead. Leaving it on screen gave the pilot a control
+     * that changed nothing.
+     */
+    @Test
+    fun `the grass-condition selector disappears in Handmatig, even with a grass airfield still selected`() = runTest {
+        val profileDao = FakeAircraftProfileDao()
+        profileDao.seed(
+            AircraftProfileEntity(
+                id = 1,
+                registration = "PH-XYZ",
+                emptyMassKg = 560.0,
+                emptyMassCgPositionMm = 2350.0,
+                mtowKg = 770.0,
+                cgEnvelopeForwardLimitMm = 2300.0,
+                cgEnvelopeAftLimitMm = 2450.0,
+                fuelTankType = FuelTankType.STANDARD_55L
+            )
+        )
+        val airfieldDao = FakeAirfieldDao()
+        airfieldDao.seed(
+            AirfieldEntity(
+                id = 1,
+                name = "Terlet",
+                icao = "EHTL",
+                metarStationIcao = null,
+                elevationM = 50.0,
+                metarRaw = "EHTL 161350Z 24012KT 9999 SCT025 18/12 Q1013 NOSIG",
+                metarEnteredAtEpochMs = null
+            )
+        )
+        val runwayStripDao = FakeRunwayStripDao()
+        runwayStripDao.seed(
+            RunwayStripEntity(
+                id = 1, airfieldId = 1, designatorA = "07", designatorB = "25",
+                headingDegTrueA = 70.0, lengthM = 900.0, surface = "GRASS", slopePctA = 0.0
+            )
+        )
+        val repository = fakeAircraftProfileRepository(
+            profileDao = profileDao, airfieldDao = airfieldDao, runwayStripDao = runwayStripDao
+        )
+
+        val viewModel = TakeoffViewModel(repository, profileId = 1, performanceNormal = performanceNormal, corrections = corrections)
+        testScheduler.advanceUntilIdle()
+        viewModel.setFlightContextMode(FlightContextMode.AIRFIELD)
+        viewModel.selectAirfield(airfieldDao.getById(1)!!)
+        testScheduler.advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.showGrassCondition)
+
+        viewModel.setFlightContextMode(FlightContextMode.MANUAL)
+        testScheduler.advanceUntilIdle()
+
+        // The runways stay loaded — only the selector is gone.
+        assertTrue(viewModel.state.value.hasGrassRunway)
+        assertEquals(false, viewModel.state.value.showGrassCondition)
     }
 }

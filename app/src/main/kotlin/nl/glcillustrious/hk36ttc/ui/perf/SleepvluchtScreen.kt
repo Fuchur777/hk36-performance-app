@@ -37,6 +37,7 @@ import nl.glcillustrious.hk36ttc.core.perf.PerformanceNormalData
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceTowData
 import nl.glcillustrious.hk36ttc.core.perf.SailplaneTypesData
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
+import nl.glcillustrious.hk36ttc.data.local.FlightContextMode
 import nl.glcillustrious.hk36ttc.ui.common.FlightContextCard
 import nl.glcillustrious.hk36ttc.ui.common.GrassConditionSelector
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
@@ -108,15 +109,53 @@ fun SleepvluchtScreen(
             )
 
             val parsedMetar = state.selectedAirfield?.metarRaw?.let { MetarParser.parse(it) }
-            if (state.weatherDerivable) {
+            if (state.flightContextMode == FlightContextMode.AIRFIELD && state.selectedAirfield != null) {
                 WeatherModeSelector(mode = state.weatherMode, onModeChange = { viewModel.setWeatherMode(it) })
-                if (state.weatherMode == WeatherInputMode.METAR) {
-                    MetarSummary(parsedMetar, state.selectedAirfield?.elevationM?.roundToInt() ?: 0, metarConfig)
-                }
+            }
+            if (state.flightContextMode == FlightContextMode.AIRFIELD && state.selectedAirfield?.metarRaw != null &&
+                (!state.weatherDerivable || state.weatherMode == WeatherInputMode.METAR)
+            ) {
+                MetarSummary(
+                    parsedMetar,
+                    state.selectedAirfield?.elevationM?.roundToInt() ?: 0,
+                    metarConfig,
+                    warning = if (state.windDirectionUnknown) {
+                        stringResource(R.string.perf_wind_direction_unknown_warning)
+                    } else {
+                        null
+                    }
+                )
             }
             val metarWeather = state.weatherDerivable && state.weatherMode == WeatherInputMode.METAR
 
-            if (!state.showRunwayResults) {
+            // See TakeoffScreen: not gated on `!showRunwayResults` — these fields feed those
+            // results, so they must not vanish the moment a wind is entered.
+            if (state.windNeedsManualEntry) {
+                if (!metarWeather) {
+                    IntStepperField(
+                        label = stringResource(R.string.perf_oat_label), value = state.oatC,
+                        onValueChange = { v -> viewModel.update { it.copy(oatC = v) } },
+                        min = -20, max = 45, suffix = "°C"
+                    )
+                }
+                if (!(metarWeather && state.pressureAltDerivable)) {
+                    IntStepperField(
+                        label = stringResource(R.string.perf_pressure_alt_label), value = state.pressureAltM,
+                        onValueChange = { v -> viewModel.update { it.copy(pressureAltM = v) } },
+                        min = 0, max = 1500, suffix = "m"
+                    )
+                }
+                IntStepperField(
+                    label = stringResource(R.string.perf_wind_direction_label), value = state.windDirectionDeg,
+                    onValueChange = { v -> viewModel.update { it.copy(windDirectionDeg = v, windManuallySet = true) } },
+                    min = 0, max = 359, suffix = "°"
+                )
+                IntStepperField(
+                    label = stringResource(R.string.perf_wind_speed_label), value = state.windSpeedKts,
+                    onValueChange = { v -> viewModel.update { it.copy(windSpeedKts = v, windManuallySet = true) } },
+                    min = 0, max = 60, suffix = "kts"
+                )
+            } else if (!state.showRunwayResults) {
                 if (!metarWeather) {
                     IntStepperField(
                         label = stringResource(R.string.perf_oat_label), value = state.oatC,
@@ -190,7 +229,7 @@ fun SleepvluchtScreen(
                 min = 100, max = 200, suffix = "%"
             )
 
-            if (state.hasGrassRunway) {
+            if (state.showGrassCondition) {
                 GrassConditionSelector(state.grassCondition, { viewModel.setGrassCondition(it) })
             }
 
