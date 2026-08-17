@@ -11,9 +11,10 @@ internal const val FEET_TO_METRES = 0.3048
  * pressure-altitude derivation (rekenlogica.md §8b) and from there into every distance. Null
  * forces the app-side to leave the field for the pilot to fill in instead.
  *
- * [latitudeDeg]/[longitudeDeg] are carried even though nothing reads them yet: the
- * nearest-airfield-by-GPS feature is already on the roadmap (docs/00-plan.md, Fase 2c), and
- * re-importing 83,000 rows later just to add two columns would be needless.
+ * [latitudeDeg]/[longitudeDeg] are parsed but **nothing reads them**. They were added for a
+ * nearest-airfield-by-GPS lookup that has since been dropped (see docs/00-plan.md); they stay
+ * only because removing them would force a catalogue version bump and a re-seed on every
+ * device for a ~1.4 MB saving. Don't treat their presence as a plan to use them.
  */
 data class ParsedAirport(
     val ident: String,

@@ -44,8 +44,6 @@ import nl.glcillustrious.hk36ttc.ui.about.AboutScreen
 import nl.glcillustrious.hk36ttc.ui.airfield.AirfieldEditScreen
 import nl.glcillustrious.hk36ttc.ui.airfield.AirfieldListScreen
 import nl.glcillustrious.hk36ttc.ui.airfield.AirportCatalogScreen
-import nl.glcillustrious.hk36ttc.ui.documents.DocumentsScreen
-import nl.glcillustrious.hk36ttc.ui.explainer.ExplainerScreen
 import nl.glcillustrious.hk36ttc.ui.hub.RegistrationHubScreen
 import nl.glcillustrious.hk36ttc.ui.perf.LandingScreen
 import nl.glcillustrious.hk36ttc.ui.perf.SleepvluchtScreen
@@ -66,12 +64,10 @@ private object Routes {
     const val TAKEOFF = "takeoff/{profileId}"
     const val SLEEPVLUCHT = "sleepvlucht/{profileId}"
     const val LANDING = "landing/{profileId}"
-    const val DOCUMENTS = "documents"
     const val SAILPLANE_TYPES = "sailplane_types"
     const val AIRFIELDS = "airfields"
     const val AIRFIELD_EDIT = "airfield_edit/{airfieldId}"
     const val AIRPORT_CATALOG = "airport_catalog"
-    const val EXPLAINER = "explainer"
     const val ABOUT = "about"
     const val SETTINGS = "settings"
 
@@ -201,22 +197,14 @@ private fun Hk36NavHost(
                 onAddProfile = { navController.navigate(Routes.profileEdit(0)) },
                 onOpenProfile = { profile -> navController.navigate(Routes.hub(profile.id)) },
                 onEditProfile = { profile -> navController.navigate(Routes.profileEdit(profile.id)) },
-                onOpenDocuments = { navController.navigate(Routes.DOCUMENTS) },
                 onOpenSailplaneTypes = { navController.navigate(Routes.SAILPLANE_TYPES) },
                 onOpenAirfields = { navController.navigate(Routes.AIRFIELDS) },
-                onOpenExplainer = { navController.navigate(Routes.EXPLAINER) },
                 onOpenAbout = { navController.navigate(Routes.ABOUT) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) }
             )
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(onBack = { navController.popBackStack() }, onLanguageChanged = onLanguageChanged)
-        }
-        composable(Routes.DOCUMENTS) {
-            DocumentsScreen(onBack = { navController.popBackStack() })
-        }
-        composable(Routes.EXPLAINER) {
-            ExplainerScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.ABOUT) {
             AboutScreen(onBack = { navController.popBackStack() })

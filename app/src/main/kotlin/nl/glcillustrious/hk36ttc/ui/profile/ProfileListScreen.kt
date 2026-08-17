@@ -53,10 +53,8 @@ fun ProfileListScreen(
     onAddProfile: () -> Unit,
     onOpenProfile: (AircraftProfileEntity) -> Unit,
     onEditProfile: (AircraftProfileEntity) -> Unit,
-    onOpenDocuments: () -> Unit,
     onOpenSailplaneTypes: () -> Unit,
     onOpenAirfields: () -> Unit,
-    onOpenExplainer: () -> Unit,
     onOpenAbout: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
@@ -77,12 +75,16 @@ fun ProfileListScreen(
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
+                    // Ordered by how often a pilot actually needs them: airfields and sailplane
+                    // types get touched per flight, settings rarely, About once. Source
+                    // documents and the calculation explainer are sections inside About since
+                    // they are all read-once reference material.
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.settings_title)) },
+                            text = { Text(stringResource(R.string.airfield_list_title)) },
                             onClick = {
                                 menuExpanded = false
-                                onOpenSettings()
+                                onOpenAirfields()
                             }
                         )
                         DropdownMenuItem(
@@ -93,24 +95,10 @@ fun ProfileListScreen(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.airfield_list_title)) },
+                            text = { Text(stringResource(R.string.settings_title)) },
                             onClick = {
                                 menuExpanded = false
-                                onOpenAirfields()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.documents_title)) },
-                            onClick = {
-                                menuExpanded = false
-                                onOpenDocuments()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.explainer_title)) },
-                            onClick = {
-                                menuExpanded = false
-                                onOpenExplainer()
+                                onOpenSettings()
                             }
                         )
                         DropdownMenuItem(

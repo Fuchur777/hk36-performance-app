@@ -221,9 +221,10 @@ controle van de interpolatie-methode zelf.
 
 ## 5. Locatie, weer, baanconfiguratie — workflow (niet-rekenkundig, maar verplicht vóór elke berekening)
 
-**Status (t/m Fase 2c ronde 3, geïmplementeerd):** vliegveld/baanbeheer en METAR-parsing
-(handmatig geplakte tekst — online ophalen volgt in een latere ronde) zijn gebouwd. GPS-
-locatiebepaling en automatisch METAR ophalen zijn bewust nog niet gebouwd.
+**Status (t/m Fase 2c ronde 6): Fase 2c is af.** Vliegveld- en baanbeheer, de wereldwijde
+OurAirports-catalogus (§5b), en het automatisch ophalen én uitlezen van de METAR (§5c) zijn
+gebouwd. **GPS-locatiebepaling is geschrapt** (2026-08-17, te weinig toegevoegde waarde), net
+als Fase 2d eerder — er is dus geen "nog te bouwen" deel meer in deze sectie.
 
 **Fase 2c ronde 3 — bevestiging en baankeuze vervallen, alles continu herberekend.**
 Ronde 1/2 hadden een expliciete "Bevestig weer en baan"-stap en een keuzelijst waaruit de
@@ -242,9 +243,9 @@ Beide mechanismen zijn daarom volledig verwijderd:
 
 Wat overblijft is puur nog dataflow, geen goedkeuringsstap:
 
-1. **Locatie bepalen**: gebruiker kiest GPS of handmatige invoer (beide gelijkwaardig, geen
-   default-voorkeur). **Nog niet geïmplementeerd** — voorlopig kiest de piloot direct een
-   opgeslagen vliegveld.
+1. **Locatie bepalen**: de piloot kiest een vliegveld uit zijn eigen lijst, of zoekt er een op
+   in de wereldwijde catalogus (§5b). **GPS-locatiebepaling is geschrapt** (2026-08-17, te
+   weinig toegevoegde waarde) — het handmatig kiezen blijft de enige route.
 2. **METAR ophalen** (indien internet beschikbaar): **geïmplementeerd sinds Fase 2c ronde 6**
    via aviationweather.gov — gratis, geen account of API-key. Zie §5c. Zelf plakken blijft
    gewoon mogelijk en is de terugval zonder internet; §8b beschrijft hoe die tekst wordt

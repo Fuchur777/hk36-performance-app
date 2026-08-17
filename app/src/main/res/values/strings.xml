@@ -16,12 +16,7 @@
     <string name="settings_language_system">Systeemtaal (automatisch)</string>
 
     <!-- Documenten -->
-    <string name="documents_title">Brondocumenten</string>
     <string name="documents_open_content_description">Openen</string>
-    <string name="documents_afm_description">HK36 TTC/TTS vlieghandboek (3.01.20-E)</string>
-    <string name="documents_afm_sup1_description">Supplement No. 1 — sleepvlucht</string>
-    <string name="documents_afm_sup11_description">Supplement No. 11 — landing</string>
-    <string name="documents_aic_p173_description">UK CAA AIC P 173/2024</string>
 
     <!-- Over deze app -->
     <string name="about_title">Over deze app</string>
@@ -37,6 +32,11 @@
     <string name="about_source_aic_detail">Take-off, Climb and Landing Performance of Light Aeroplanes</string>
     <string name="about_source_aic_license">Publieke UK CAA-circulaire</string>
     <string name="about_source_xcsoar_detail">Zweeftype-referentielijst (leeggewicht/MTOW/L-D)</string>
+    <string name="about_source_ourairports_detail">Wereldwijde vliegveld- en baangegevens</string>
+    <string name="about_source_ourairports_license">Publiek domein</string>
+    <string name="about_source_awc_detail">Actuele METAR-waarnemingen</string>
+    <string name="about_source_awc_license">Publieke dienst van de Amerikaanse NWS — geen account nodig</string>
+    <string name="about_contact_body">Vragen, fouten of wensen? Mail me gerust.</string>
 
     <!-- Zweeftypes -->
     <string name="sailplane_types_title">Zweeftypes</string>

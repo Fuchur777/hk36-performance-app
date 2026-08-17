@@ -142,8 +142,9 @@ Fase 2c kan van start.
 **Fase 2c — Locatie, weer, baanconfiguratie (nieuw, toegevoegd na overleg)**
 
 *Locatie:*
-- Gebruiker kan de vliegveldlocatie per keer kiezen via GPS **of** handmatige
-  invoer — beide gelijkwaardig, geen voorkeursvolgorde afgedwongen door de app
+- ~~Gebruiker kan de vliegveldlocatie per keer kiezen via GPS **of** handmatige
+  invoer~~ — **GPS geschrapt (2026-08-17, te weinig toegevoegde waarde)**. De piloot
+  kiest een vliegveld uit zijn eigen lijst of zoekt het op in de catalogus (§16)
 
 *METAR:*
 - App is **hybride**: online METAR-lookup als extra, met volledige offline-
@@ -529,9 +530,11 @@ mislukt parsen, of variabele wind), valt de hele afgeleide bundel terug op handm
 plaats van gedeeltelijk ondergrond/helling af te leiden van een handmatig gekozen baan zonder
 wind — zie `TakeoffViewModel.recalculate`'s KDoc.
 
-**Nog open voor een volgende ronde**: GPS-locatiebepaling, automatisch METAR ophalen (vult
-straks dezelfde `metarRaw`/`metarEnteredAtEpochMs`-velden die nu handmatig gevuld worden),
-AIP-baangegevens-prefill (fase 3+, buiten scope).
+**Nog open voor een volgende ronde** *(stand ronde 2 — inmiddels achterhaald, zie §16/§17)*:
+GPS-locatiebepaling, automatisch METAR ophalen, AIP-baangegevens-prefill. Van deze drie is
+het METAR ophalen gebouwd in ronde 6 en zijn de baangegevens in ronde 5 uit OurAirports
+gehaald in plaats van uit de AIP; **GPS is op 2026-08-17 geschrapt** wegens te weinig
+toegevoegde waarde.
 
 ## 13. Fase 2c ronde 2 (2026-08-16): bugfixes en polish op basis van toestel-feedback
 
@@ -723,3 +726,26 @@ melding.
 Ophalen gebeurt nu bij het openen van het scherm en zodra het station wijzigt. Problemen
 (geen station, geen waarneming, netwerkfout) staan inline onder de samenvatting in plaats van
 in een dialoog: op dit scherm staat de oplossing meestal één veld hoger.
+
+## 18. Menu-herindeling (2026-08-17): drie referentieschermen samengevoegd tot "About"
+
+Het overloopmenu op het startscherm had zes ingangen, waarvan er drie hetzelfde soort
+naslag waren die je één keer leest: Brondocumenten, "Hoe rekent deze app" en Over deze app.
+Die drie zijn nu secties binnen één **About**-scherm (`ui/about/AboutScreen.kt`);
+`ui/documents/` en `ui/explainer/` zijn verwijderd, net als hun routes. Alle bijbehorende
+strings blijven bestaan — ze zijn nu kopjes binnen About in plaats van schermtitels.
+
+About bevat, in deze volgorde: wat de app is (naam/versie/build/omschrijving), **contact
+(frank+hk36ttc@schellenberg.nl, tikbaar via een mailto-intent)**, hoe de app rekent, en één
+lijst "Rekengegevens en bronnen", gevolgd door de gebruikte bibliotheken.
+
+Die bronnenlijst is bewust **één** lijst. In de eerste opzet stonden de AFM, beide supplementen
+en AIC P173 er twee keer in — als brondocument (naam + link) én als databron (naam + licentie),
+oftewel hetzelfde document twee keer anders beschreven. Nu staat per bron alles bij elkaar:
+naam, wat het levert, licentie, en een open-icoon als er een leesbare versie achter zit.
+OurAirports en aviationweather.gov zijn erbij gekomen — die waren in ronde 5/6 in gebruik
+genomen zonder vermelding.
+
+Menuvolgorde is nu op gebruiksfrequentie in plaats van willekeur:
+**Vliegvelden, Zweeftypes, Instellingen, About.** De eerste twee raak je per vlucht aan, de
+derde zelden, de laatste eenmalig.

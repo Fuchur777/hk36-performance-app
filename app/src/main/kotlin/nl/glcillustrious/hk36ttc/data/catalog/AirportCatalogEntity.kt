@@ -21,7 +21,8 @@ import androidx.room.Query
  * one where it exists, and is what an existing hand-entered airfield is matched on.
  *
  * [elevationM] is nullable for the same reason as in the parser: unknown is not sea level.
- * [latitudeDeg]/[longitudeDeg] are stored for the planned nearest-airfield lookup.
+ * [latitudeDeg]/[longitudeDeg] are stored but unused — see [ParsedAirport] for why they are
+ * kept rather than dropped.
  */
 @Entity(
     tableName = "airport_catalog",
