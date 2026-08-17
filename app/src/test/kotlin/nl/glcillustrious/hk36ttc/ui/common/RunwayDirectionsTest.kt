@@ -3,6 +3,7 @@ package nl.glcillustrious.hk36ttc.ui.common
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import nl.glcillustrious.hk36ttc.data.local.RunwayStripEntity
 
 /**
@@ -81,5 +82,85 @@ class RunwayDirectionsTest {
         assertEquals(2.0, options[0].slopePct)
         assertEquals(210.0, options[1].headingDegTrue)
         assertEquals(-2.0, options[1].slopePct)
+    }
+}
+
+/**
+ * `deriveOppositeDesignator`/`padDesignatorNumber` back the runway edit dialog's "type A, get B
+ * for free" friendliness — a pilot shouldn't have to work out that runway 09's other end is 27.
+ */
+class DeriveOppositeDesignatorTest {
+
+    @Test
+    fun `plain two-digit numbers derive their 18-apart opposite`() {
+        assertEquals("20", deriveOppositeDesignator("02"))
+        assertEquals("27", deriveOppositeDesignator("09"))
+        assertEquals("09", deriveOppositeDesignator("27"))
+    }
+
+    /** Works from either end — the pilot isn't forced to always enter the lower number first. */
+    @Test
+    fun `deriving is symmetric regardless of which end was typed first`() {
+        assertEquals(deriveOppositeDesignator("09"), "27")
+        assertEquals(deriveOppositeDesignator(deriveOppositeDesignator("09")!!), "09")
+    }
+
+    @Test
+    fun `the 18 and 36 boundary wraps correctly`() {
+        assertEquals("36", deriveOppositeDesignator("18"))
+        assertEquals("18", deriveOppositeDesignator("36"))
+    }
+
+    @Test
+    fun `an unpadded single digit is still recognised as a valid runway number`() {
+        assertEquals("20", deriveOppositeDesignator("2"))
+    }
+
+    @Test
+    fun `a side suffix is swapped, left for right, centre stays centre`() {
+        assertEquals("22R", deriveOppositeDesignator("04L"))
+        assertEquals("04L", deriveOppositeDesignator("22R"))
+        assertEquals("22C", deriveOppositeDesignator("04C"))
+    }
+
+    /** The naming-hint example from the runway dialog — trailing disambiguation text survives. */
+    @Test
+    fun `trailing free text used to disambiguate same-numbered strips is preserved`() {
+        assertEquals("20 gras", deriveOppositeDesignator("02 gras"))
+        assertEquals("22R beton", deriveOppositeDesignator("04L beton"))
+    }
+
+    @Test
+    fun `non-numeric or out-of-range designators can't be derived from`() {
+        assertNull(deriveOppositeDesignator("H1"))
+        assertNull(deriveOppositeDesignator(""))
+        assertNull(deriveOppositeDesignator("37"))
+        assertNull(deriveOppositeDesignator("00"))
+        assertNull(deriveOppositeDesignator("N"))
+    }
+}
+
+class PadDesignatorNumberTest {
+
+    @Test
+    fun `a single digit gets a leading zero`() {
+        assertEquals("02", padDesignatorNumber("2"))
+    }
+
+    @Test
+    fun `an already two-digit number is left alone`() {
+        assertEquals("18", padDesignatorNumber("18"))
+    }
+
+    @Test
+    fun `trailing text and suffixes survive padding untouched`() {
+        assertEquals("02 gras", padDesignatorNumber("2 gras"))
+        assertEquals("04L", padDesignatorNumber("4L"))
+    }
+
+    @Test
+    fun `non-numeric designators pass through unchanged`() {
+        assertEquals("H1", padDesignatorNumber("H1"))
+        assertEquals("", padDesignatorNumber(""))
     }
 }

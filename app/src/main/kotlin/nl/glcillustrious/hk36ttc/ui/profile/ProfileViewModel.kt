@@ -61,10 +61,35 @@ data class ProfileFormState(
     val fuelTankType: FuelTankType = FuelTankType.STANDARD_55L,
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
-    val errors: Map<String, ProfileFieldError> = emptyMap()
+    /** True once a save has been attempted while [registration] was blank — see
+     * [nl.glcillustrious.hk36ttc.ui.airfield.AirfieldFormState.saveAttempted], the same fix
+     * for the same bug: tapping Save on a blank required field used to just do nothing. */
+    val saveAttempted: Boolean = false
 ) {
+    /**
+     * Recomputed from the current fields every time, not stored — the old stored-map design
+     * only refreshed inside [ProfileEditViewModel.update], so a save attempt on an untouched
+     * fresh screen saw an empty, stale map (silent failure) while nudging an unrelated stepper
+     * could make the registration error pop up before the pilot had even reached that field.
+     *
+     * [ProfileFieldError.REQUIRED] is gated on [saveAttempted] for that reason — an empty
+     * required field shouldn't be flagged before the pilot has tried to submit it.
+     * [ProfileFieldError.AFT_LIMIT_MUST_EXCEED_FORWARD] is not gated: it can only ever fire
+     * from a value the pilot just set (the defaults are always internally consistent), so
+     * showing it immediately while adjusting the steppers is useful, not premature.
+     */
+    val errors: Map<String, ProfileFieldError>
+        get() {
+            val result = mutableMapOf<String, ProfileFieldError>()
+            if (saveAttempted && registration.isBlank()) result["registration"] = ProfileFieldError.REQUIRED
+            if (cgEnvelopeForwardLimitMm >= cgEnvelopeAftLimitMm) {
+                result["cgEnvelopeAftLimitMm"] = ProfileFieldError.AFT_LIMIT_MUST_EXCEED_FORWARD
+            }
+            return result
+        }
+
     fun toDomainOrNull(): AircraftProfile? {
-        if (errors.isNotEmpty() || registration.isBlank()) return null
+        if (registration.isBlank() || cgEnvelopeForwardLimitMm >= cgEnvelopeAftLimitMm) return null
         return AircraftProfile(
             registration = registration.trim(),
             emptyMassKg = emptyMassKg.toDouble(),
@@ -127,25 +152,24 @@ class ProfileEditViewModel(
     }
 
     fun update(transform: (ProfileFormState) -> ProfileFormState) {
-        _state.value = validate(transform(_state.value))
-    }
-
-    private fun validate(form: ProfileFormState): ProfileFormState {
-        val errors = mutableMapOf<String, ProfileFieldError>()
-        if (form.registration.isBlank()) errors["registration"] = ProfileFieldError.REQUIRED
-        if (form.cgEnvelopeForwardLimitMm >= form.cgEnvelopeAftLimitMm) {
-            errors["cgEnvelopeAftLimitMm"] = ProfileFieldError.AFT_LIMIT_MUST_EXCEED_FORWARD
-        }
-        return form.copy(errors = errors)
+        _state.value = transform(_state.value)
     }
 
     fun save() {
         val current = _state.value
-        val domain = current.toDomainOrNull() ?: return
+        val domain = current.toDomainOrNull()
+        if (domain == null) {
+            // Surface it instead of doing nothing — see AirfieldEditViewModel.saveAirfieldInfo
+            // for the same fix on the same silent-failure bug.
+            _state.value = current.copy(saveAttempted = true)
+            return
+        }
         viewModelScope.launch {
             _state.value = current.copy(isLoading = true)
-            repository.save(domain, current.id)
-            _state.value = current.copy(isLoading = false, isSaved = true)
+            // Capture the returned id: for a brand-new profile (current.id == 0), that's the
+            // only place the real auto-generated id ever becomes known.
+            val savedId = repository.save(domain, current.id)
+            _state.value = current.copy(id = savedId, isLoading = false, isSaved = true)
         }
     }
 

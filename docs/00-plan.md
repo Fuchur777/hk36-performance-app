@@ -749,3 +749,39 @@ genomen zonder vermelding.
 Menuvolgorde is nu op gebruiksfrequentie in plaats van willekeur:
 **Vliegvelden, Zweeftypes, Instellingen, About.** De eerste twee raak je per vlucht aan, de
 derde zelden, de laatste eenmalig.
+
+## 19. Verplichte-veldfeedback en baannaam-vriendelijkheid (2026-08-17)
+
+Gebruikersfeedback op het vliegveld-bewerkscherm: bij "Nieuwe baan toevoegen" was niet
+duidelijk dat de Naam eerst ingevuld moest zijn, en een baannummer "2" bleef "2" in plaats van
+de gangbare "02".
+
+**Stille no-op op verplichte velden verholpen, app-breed.** Op te sporen bleek het probleem
+erger dan onduidelijke styling: op "opslaan" tikken met een leeg verplicht veld deed
+letterlijk niets, zonder enige terugkoppeling. Twee plekken hadden dit patroon —
+`AirfieldEditViewModel.saveAirfieldInfo` (Naam) en `ProfileEditViewModel.save` (Registratie,
+via een subtielere variant: de foutenkaart werd alleen ververst binnen `update()`, dus een vers
+scherm zag bij opslaan een stale lege kaart). Beide zijn nu hetzelfde patroon: een
+`saveAttempted`-vlag die pas na een mislukte poging het veld rood maakt met "Verplicht"
+eronder — niet meteen bij het openen van een leeg scherm, wat elk nieuw item onnodig streng
+zou laten aanvoelen. Bij het kistscherm blijft de CG-achtergrens-regel bewust wél live
+(ongeacht `saveAttempted`), want die kan nooit vanuit de standaardwaarden afgaan en is nuttige
+directe feedback terwijl je aan de steppers draait. Terzijde gevonden en gefixt: na het
+opslaan van een nieuw kistprofiel werd het teruggekregen database-id nooit in de state gezet.
+
+Bewust ongemoeid: de baannaam-velden A/B in het baandialoogvenster. Die zijn al niet-stil via
+een uitgegrijsde Opslaan-knop zolang een verplicht veld leeg is — een ander, maar even geldig
+mechanisme. Consistente rode-rand-styling daar is een keuze voor een volgende ronde, niet een
+onopgeloste bug.
+
+**Baannaam-vriendelijkheid.** Twee pure functies in `ui/common/RunwayDirections.kt`, naast de
+al bestaande afleiding van richting B's koers/helling uit A:
+- `padDesignatorNumber` vult op focus-verlies aan tot twee cijfers ("2" → "02"), niet tijdens
+  het typen — anders wordt "18" intypen onmogelijk, zelfde reden als bij de bestaande
+  steppervelden.
+- `deriveOppositeDesignator` vult richting B automatisch in zodra A getypt wordt, tot de
+  piloot zelf in B klikt. Werkt symmetrisch beide kanten op (27 → 09 net zo goed als 09 → 27,
+  dus geen kunstmatige eis dat A ≤ 18 moet zijn), met L/C/R-suffixen (04L→22R) en met de
+  bestaande "02 gras"-naamgevingsconventie voor twee gelijknummerde stroken.
+
+Geen Room-migratie. Versie 0.7.3 (versionCode 16).

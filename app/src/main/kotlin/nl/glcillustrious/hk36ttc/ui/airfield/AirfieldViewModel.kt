@@ -93,10 +93,18 @@ data class AirfieldFormState(
     val metarStationIcao: String = "",
     val elevationM: Int = 0,
     val metarRaw: String = "",
-    val metarEnteredAtEpochMs: Long? = null
+    val metarEnteredAtEpochMs: Long? = null,
+    /** True once a save has been attempted while [name] was blank — pressing "opslaan" on an
+     * empty name used to just silently do nothing, which read as a broken button rather than a
+     * validation error. Drives [nameError] instead of showing an error on a screen the pilot
+     * hasn't touched yet. */
+    val saveAttempted: Boolean = false
 ) {
     val parsedMetar: MetarParseResult?
         get() = metarRaw.takeIf { it.isNotBlank() }?.let { MetarParser.parse(it) }
+
+    val nameError: Boolean
+        get() = saveAttempted && name.isBlank()
 }
 
 data class RunwayStripFormState(
@@ -187,7 +195,12 @@ class AirfieldEditViewModel(
     }
 
     fun saveAirfieldInfo() {
-        if (_state.value.name.isBlank()) return
+        if (_state.value.name.isBlank()) {
+            // Surface it instead of doing nothing — a blank-name save used to just silently
+            // fail, which reads as a broken button rather than "fill this in first".
+            _state.update { it.copy(saveAttempted = true) }
+            return
+        }
         viewModelScope.launch { saveAirfieldInfoAndWait() }
     }
 

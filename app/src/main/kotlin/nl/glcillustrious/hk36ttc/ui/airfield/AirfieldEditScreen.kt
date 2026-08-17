@@ -50,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -65,6 +66,8 @@ import nl.glcillustrious.hk36ttc.data.metar.MetarFetchResult
 import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.MetarSummary
+import nl.glcillustrious.hk36ttc.ui.common.deriveOppositeDesignator
+import nl.glcillustrious.hk36ttc.ui.common.padDesignatorNumber
 import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -161,6 +164,14 @@ fun AirfieldEditScreen(
                 value = state.name,
                 onValueChange = { v -> viewModel.update { it.copy(name = v) } },
                 label = { Text(stringResource(R.string.airfield_edit_name_label)) },
+                // isError only lights up after a failed save attempt, not on a blank field the
+                // pilot hasn't reached yet — see AirfieldFormState.saveAttempted.
+                isError = state.nameError,
+                supportingText = if (state.nameError) {
+                    { Text(stringResource(R.string.profile_edit_error_required)) }
+                } else {
+                    null
+                },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -396,23 +407,40 @@ private fun RunwayEditDialog(
                         onValueChange = { form = form.copy(designatorA = it) },
                         label = { Text(stringResource(R.string.airfield_edit_runway_designator_one_way_label)) },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().onFocusChanged {
+                            if (!it.isFocused) form = form.copy(designatorA = padDesignatorNumber(form.designatorA))
+                        }
                     )
                 } else {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = form.designatorA,
-                            onValueChange = { form = form.copy(designatorA = it) },
+                            onValueChange = { newA ->
+                                // B is prefilled from A for as long as the pilot hasn't typed
+                                // into it themselves — the moment it holds anything, that's
+                                // either their own edit or an existing runway's saved value,
+                                // and either way A must never overwrite it again.
+                                val derivedB = deriveOppositeDesignator(newA)
+                                form = if (form.designatorB.isBlank() && derivedB != null) {
+                                    form.copy(designatorA = newA, designatorB = derivedB)
+                                } else {
+                                    form.copy(designatorA = newA)
+                                }
+                            },
                             label = { Text(stringResource(R.string.airfield_edit_runway_designator_a_label)) },
                             singleLine = true,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).onFocusChanged {
+                                if (!it.isFocused) form = form.copy(designatorA = padDesignatorNumber(form.designatorA))
+                            }
                         )
                         OutlinedTextField(
                             value = form.designatorB,
                             onValueChange = { form = form.copy(designatorB = it) },
                             label = { Text(stringResource(R.string.airfield_edit_runway_designator_b_label)) },
                             singleLine = true,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).onFocusChanged {
+                                if (!it.isFocused) form = form.copy(designatorB = padDesignatorNumber(form.designatorB))
+                            }
                         )
                     }
                 }
@@ -466,7 +494,17 @@ private fun RunwayEditDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(form) },
+                onClick = {
+                    // Padding also happens on blur, but tapping this button can itself be what
+                    // moves focus away from a designator field — don't depend on that
+                    // recomposition having landed first.
+                    onConfirm(
+                        form.copy(
+                            designatorA = padDesignatorNumber(form.designatorA),
+                            designatorB = if (form.oneWay) form.designatorB else padDesignatorNumber(form.designatorB)
+                        )
+                    )
+                },
                 enabled = form.designatorA.isNotBlank() && (form.oneWay || form.designatorB.isNotBlank())
             ) {
                 Text(stringResource(R.string.common_save))
