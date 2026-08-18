@@ -38,6 +38,7 @@ import nl.glcillustrious.hk36ttc.core.perf.PerformanceTowData
 import nl.glcillustrious.hk36ttc.core.perf.SailplaneTypesData
 import nl.glcillustrious.hk36ttc.core.perf.TowBlockReason
 import nl.glcillustrious.hk36ttc.core.perf.TowTakeoffResult
+import nl.glcillustrious.hk36ttc.ui.common.DistanceResultBlock
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.ResultRow
 import nl.glcillustrious.hk36ttc.ui.theme.status
@@ -274,10 +275,17 @@ internal fun SleepvluchtResultCard(
                 stringResource(R.string.perf_result_surface_format, sleepvluchtSurfaceLabel(surfaceType)),
                 style = MaterialTheme.typography.bodyMedium
             )
-            ResultRow(stringResource(R.string.perf_ground_run_label), fmt(result.s1WithMarginM), "m")
-            ResultRow(stringResource(R.string.perf_obstacle_15m_label), fmt(result.s2WithMarginM), "m")
-            ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmt(result.s1M), "m", emphasized = false)
-            ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmt(result.s2M), "m", emphasized = false)
+            DistanceResultBlock(
+                marginFactor = result.marginFactor,
+                groundRunLabel = stringResource(R.string.perf_ground_run_label),
+                obstacleLabel = stringResource(R.string.perf_obstacle_15m_label),
+                withMarginHeading = stringResource(R.string.perf_with_margin_heading_format, fmt(result.marginFactor)),
+                withoutMarginHeading = stringResource(R.string.perf_without_margin_heading),
+                groundRunWithMarginM = result.s1WithMarginM,
+                obstacleWithMarginM = result.s2WithMarginM,
+                groundRunRawM = result.s1M,
+                obstacleRawM = result.s2M
+            )
             val surfaceTag = if (surfaceType == SleepvluchtSurfaceType.DROOG_GRAS || surfaceType == SleepvluchtSurfaceType.ASFALT) {
                 "[AFM]"
             } else {

@@ -40,6 +40,7 @@ import nl.glcillustrious.hk36ttc.core.perf.PerformanceCorrectionsData
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceNormalData
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 import nl.glcillustrious.hk36ttc.data.local.FlightContextMode
+import nl.glcillustrious.hk36ttc.ui.common.DistanceResultBlock
 import nl.glcillustrious.hk36ttc.ui.common.FlightContextCard
 import nl.glcillustrious.hk36ttc.ui.common.GrassConditionSelector
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
@@ -49,8 +50,14 @@ import nl.glcillustrious.hk36ttc.ui.common.ResultRow
 import nl.glcillustrious.hk36ttc.ui.common.RunwayResultCard
 import nl.glcillustrious.hk36ttc.ui.common.WeatherInputMode
 import nl.glcillustrious.hk36ttc.ui.common.WeatherModeSelector
+import nl.glcillustrious.hk36ttc.ui.common.grassConditionLabel
 import nl.glcillustrious.hk36ttc.ui.common.runwayStatusPresentation
 import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
+import nl.glcillustrious.hk36ttc.ui.report.PerformanceReportContext
+import nl.glcillustrious.hk36ttc.ui.report.PerformanceReportResult
+import nl.glcillustrious.hk36ttc.ui.report.RunwayReportEntry
+import nl.glcillustrious.hk36ttc.ui.report.SharePdfButton
+import nl.glcillustrious.hk36ttc.ui.report.buildPerformanceReport
 import nl.glcillustrious.hk36ttc.ui.theme.status
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -226,7 +233,8 @@ fun LandingScreen(
                         obstacleWithMarginM = row.fullResult?.l2WithMarginM,
                         obstacleRawM = row.fullResult?.l2M,
                         remainingM = row.advice.remainingWithMarginM,
-                        surfaceLabel = landingSurfaceLabel(row.surfaceType)
+                        surfaceLabel = landingSurfaceLabel(row.surfaceType),
+                        marginFactor = state.marginFactorPct / 100.0
                     )
                 }
             } else {
@@ -237,6 +245,76 @@ fun LandingScreen(
                 stringResource(R.string.landing_mtow_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            val reportTitle = stringResource(
+                R.string.report_title_format,
+                stringResource(R.string.report_title_landing),
+                state.registration ?: ""
+            )
+            val labels = performanceReportLabels()
+            val grassLabel = if (state.showGrassCondition) grassConditionLabel(state.grassCondition) else null
+            val mtowNote = stringResource(R.string.landing_mtow_note)
+            val easaNote = stringResource(R.string.landing_easa_note)
+            val runwayEntries = state.runwayResults.map { row ->
+                RunwayReportEntry(
+                    label = row.advice.candidate.label,
+                    statusLabel = runwayStatusPresentation(row.advice.status).label,
+                    surfaceLabel = landingSurfaceLabel(row.surfaceType),
+                    headwindKts = row.advice.headwindKts,
+                    crosswindKts = row.advice.crosswindKts,
+                    crosswindExceeded = row.advice.crosswindExceeded,
+                    groundRunWithMarginM = row.fullResult?.l1WithMarginM,
+                    obstacleWithMarginM = row.fullResult?.l2WithMarginM,
+                    remainingM = row.advice.remainingWithMarginM
+                )
+            }
+            val singleResult = state.result?.takeIf { !state.showRunwayResults }
+            val manualEntry = state.windNeedsManualEntry
+            // Hoisted out of buildDocument: that lambda runs on tap, outside composable context.
+            val manualSurfaceLabel = landingSurfaceLabel(state.surfaceType)
+
+            SharePdfButton(
+                kind = "landing",
+                registration = state.registration,
+                enabled = state.showRunwayResults || singleResult != null,
+                buildDocument = { timestamp ->
+                    buildPerformanceReport(
+                        title = reportTitle,
+                        timestamp = timestamp,
+                        labels = labels,
+                        context = PerformanceReportContext(
+                            registration = state.registration,
+                            airfieldName = state.selectedAirfield?.name,
+                            metarRaw = state.selectedAirfield?.metarRaw,
+                            grassConditionLabel = grassLabel,
+                            oatC = state.effectiveOatC,
+                            pressureAltM = state.effectivePressureAltM,
+                            // The AFM landing table isn't headwind-indexed at all (rekenlogica.md
+                            // §2.2) — wind only decides which runways are excluded as tailwind.
+                            headwindKts = null,
+                            windDirectionDeg = if (manualEntry) state.windDirectionDeg else null,
+                            windSpeedKts = if (manualEntry) state.windSpeedKts else null,
+                            surfaceLabel = if (state.showRunwayResults) null else manualSurfaceLabel,
+                            slopePct = if (state.showRunwayResults) null else state.slopePct,
+                            marginFactorPct = state.marginFactorPct
+                        ),
+                        result = singleResult?.let {
+                            PerformanceReportResult(
+                                groundRunWithMarginM = it.l1WithMarginM,
+                                obstacleWithMarginM = it.l2WithMarginM,
+                                groundRunRawM = it.l1M,
+                                obstacleRawM = it.l2M,
+                                outOfRange = it.outOfRangeWarning,
+                                // Landing has no tailwind block: excluding a downwind runway is an
+                                // airmanship default here, not an AFM data gap.
+                                tailwindBlocked = false
+                            )
+                        },
+                        runways = runwayEntries,
+                        extraNotes = listOf(easaNote, mtowNote)
+                    )
+                }
             )
         }
     }
@@ -312,10 +390,17 @@ private fun LandingResultCard(result: LandingResult, surfaceType: LandingSurface
                 stringResource(R.string.perf_result_surface_format, landingSurfaceLabel(surfaceType)),
                 style = MaterialTheme.typography.bodyMedium
             )
-            ResultRow(stringResource(R.string.perf_ground_run_label), fmt(result.l1WithMarginM), "m")
-            ResultRow(stringResource(R.string.perf_obstacle_15m_label), fmt(result.l2WithMarginM), "m")
-            ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmt(result.l1M), "m", emphasized = false)
-            ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmt(result.l2M), "m", emphasized = false)
+            DistanceResultBlock(
+                marginFactor = result.marginFactor,
+                groundRunLabel = stringResource(R.string.perf_ground_run_label),
+                obstacleLabel = stringResource(R.string.perf_obstacle_15m_label),
+                withMarginHeading = stringResource(R.string.perf_with_margin_heading_format, fmt(result.marginFactor)),
+                withoutMarginHeading = stringResource(R.string.perf_without_margin_heading),
+                groundRunWithMarginM = result.l1WithMarginM,
+                obstacleWithMarginM = result.l2WithMarginM,
+                groundRunRawM = result.l1M,
+                obstacleRawM = result.l2M
+            )
             if (result.surfaceFactorApplied) {
                 Text(
                     stringResource(R.string.landing_surface_correction_format, fmt(result.surfaceFactor * 100)),

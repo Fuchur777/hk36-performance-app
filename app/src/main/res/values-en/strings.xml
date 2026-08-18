@@ -8,12 +8,29 @@
     <string name="common_delete">Delete</string>
     <string name="common_save">Save</string>
     <string name="common_ok">OK</string>
+    <string name="common_yes">Yes</string>
+    <string name="common_no">No</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_language_heading">Language</string>
     <string name="settings_language_explanation">By default, Android shows the app in Dutch if the device is set to Dutch, otherwise in English. You can override that manually here.</string>
     <string name="settings_language_system">System language (automatic)</string>
+    <string name="settings_data_heading">Data</string>
+    <string name="settings_data_explanation">Back up everything you entered yourself: aircraft, airfields with their runways, favourites, your last calculation values and your language choice. Useful for a new device or before a reinstall.</string>
+    <string name="settings_data_export">Export data</string>
+    <string name="settings_data_export_detail">Share or save a single JSON file</string>
+    <string name="settings_data_import">Import data</string>
+    <string name="settings_data_import_detail">Replaces everything currently stored</string>
+    <string name="settings_data_import_chooser">Choose a backup file</string>
+    <string name="settings_data_export_chooser">Share backup</string>
+    <string name="settings_data_import_confirm_title">Replace everything?</string>
+    <string name="settings_data_import_confirm_body_format">This file holds %1$d aircraft and %2$d airfields.\n\nEverything currently in the app — aircraft, airfields, runways, favourites and saved calculation values — will be deleted and replaced. This cannot be undone.</string>
+    <string name="settings_data_import_confirm_button">Replace</string>
+    <string name="settings_data_import_done">Data imported.</string>
+    <string name="settings_data_import_failed_unreadable">This file could not be read as a backup. Is it the right file?</string>
+    <string name="settings_data_import_failed_too_new_format">This file comes from a newer version of the app (format %1$d, this app knows %2$d). Update the app first.</string>
+    <string name="settings_data_export_failed">Export failed.</string>
 
     <!-- Documents -->
     <string name="documents_open_content_description">Open</string>
@@ -122,8 +139,12 @@
     <string name="perf_margin_factor_label">[AIC P173] Margin factor (recommended)</string>
     <string name="perf_ground_run_label">Ground run</string>
     <string name="perf_obstacle_15m_label">Over 15m obstacle</string>
+    <!-- Only used by the PDF report now: there each line stands alone without a group heading,
+         so a self-describing label is better. On screen the headings below carry that. -->
     <string name="perf_ground_run_raw_label">Ground run (no margin)</string>
     <string name="perf_obstacle_15m_raw_label">Over 15m obstacle (no margin)</string>
+    <string name="perf_with_margin_heading_format">With margin %1$s×</string>
+    <string name="perf_without_margin_heading">Without margin</string>
     <string name="perf_result_section_title">Result</string>
     <string name="perf_result_surface_format">Surface: %1$s</string>
     <string name="perf_margin_included_format">Incl. margin %1$sx</string>
@@ -131,6 +152,32 @@
     <string name="perf_no_correction_table_note">No correction table available for other weights/altitudes/temperatures.</string>
     <string name="perf_warning_heading">Warning</string>
     <string name="perf_tailwind_not_supported">Tailwind is not supported — the AFM provides no data for this.</string>
+
+    <!-- PDF report of a calculation -->
+    <string name="report_share_pdf">Share as PDF</string>
+    <string name="report_share_chooser_title">Share calculation</string>
+    <string name="report_title_wb">Weight &amp; Balance</string>
+    <string name="report_title_takeoff">Take-off</string>
+    <string name="report_title_landing">Landing</string>
+    <string name="report_title_sleepvlucht">Glider tow</string>
+    <string name="report_title_format">%1$s — %2$s</string>
+    <string name="report_section_input">Input</string>
+    <string name="report_section_weather">Weather and airfield</string>
+    <string name="report_section_result">Result</string>
+    <string name="report_section_runways">Results per runway</string>
+    <string name="report_section_notes">Notes</string>
+    <string name="report_airfield_label">Airfield</string>
+    <string name="report_mode_manual">Manual (no airfield selected)</string>
+    <string name="report_metar_label">METAR</string>
+    <string name="report_crosswind_label">Crosswind</string>
+    <string name="report_crosswind_exceeded">above demonstrated value</string>
+    <string name="report_runway_not_calculable">Not calculable (tailwind)</string>
+    <string name="report_grass_condition_label">Grass condition</string>
+    <string name="report_registration_label">Registration</string>
+    <string name="report_wb_total_mass">Total mass</string>
+    <string name="report_wb_cg">Centre of gravity (CG)</string>
+    <string name="report_wb_margin_mtow">Margin to MTOW</string>
+    <string name="report_footer">Generated by HK36TTC Calc. Not a certified EFB — the flight manual always remains authoritative. Verify the values before use.</string>
 
     <!-- Take-off -->
     <string name="takeoff_title_format">Take-off — %1$s</string>

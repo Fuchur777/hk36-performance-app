@@ -34,6 +34,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.glcillustrious.hk36ttc.data.catalog.AirportCatalogRepository
+import nl.glcillustrious.hk36ttc.data.export.UserDataRepository
 import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 import nl.glcillustrious.hk36ttc.data.local.AppCalculationData
@@ -110,6 +111,7 @@ class MainActivity : ComponentActivity() {
         val repository = app.repository
         val airportCatalog = app.airportCatalogRepository
         val metarRepository = app.metarRepository
+        val userDataRepository = app.userDataRepository
         val dataStore = app.calculationDataStore
 
         setContent {
@@ -121,6 +123,7 @@ class MainActivity : ComponentActivity() {
                         repository,
                         airportCatalog,
                         metarRepository,
+                        userDataRepository,
                         appData,
                         onLanguageChanged = { recreate() }
                     )
@@ -187,6 +190,7 @@ private fun Hk36NavHost(
     repository: AircraftProfileRepository,
     airportCatalog: AirportCatalogRepository,
     metarRepository: MetarRepository,
+    userDataRepository: UserDataRepository,
     appData: AppCalculationData,
     onLanguageChanged: () -> Unit
 ) {
@@ -204,7 +208,11 @@ private fun Hk36NavHost(
             )
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { navController.popBackStack() }, onLanguageChanged = onLanguageChanged)
+            SettingsScreen(
+                userDataRepository = userDataRepository,
+                onBack = { navController.popBackStack() },
+                onLanguageChanged = onLanguageChanged
+            )
         }
         composable(Routes.ABOUT) {
             AboutScreen(onBack = { navController.popBackStack() })

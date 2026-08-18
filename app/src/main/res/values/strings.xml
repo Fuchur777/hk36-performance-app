@@ -8,12 +8,29 @@
     <string name="common_delete">Verwijderen</string>
     <string name="common_save">Opslaan</string>
     <string name="common_ok">OK</string>
+    <string name="common_yes">Ja</string>
+    <string name="common_no">Nee</string>
 
     <!-- Instellingen -->
     <string name="settings_title">Instellingen</string>
     <string name="settings_language_heading">Taal</string>
     <string name="settings_language_explanation">Android toont de app standaard in het Nederlands als het toestel op Nederlands staat, anders in het Engels. Hier kun je dat handmatig overschrijven.</string>
     <string name="settings_language_system">Systeemtaal (automatisch)</string>
+    <string name="settings_data_heading">Gegevens</string>
+    <string name="settings_data_explanation">Maak een back-up van alles wat je zelf hebt ingevoerd: kisten, vliegvelden met banen, favorieten, je laatst ingevulde rekenwaarden en je taalkeuze. Handig bij een nieuw toestel of vóór een herinstallatie.</string>
+    <string name="settings_data_export">Gegevens exporteren</string>
+    <string name="settings_data_export_detail">Deel of bewaar één JSON-bestand</string>
+    <string name="settings_data_import">Gegevens importeren</string>
+    <string name="settings_data_import_detail">Vervangt alles wat er nu in staat</string>
+    <string name="settings_data_import_chooser">Back-upbestand kiezen</string>
+    <string name="settings_data_export_chooser">Back-up delen</string>
+    <string name="settings_data_import_confirm_title">Alles vervangen?</string>
+    <string name="settings_data_import_confirm_body_format">Dit bestand bevat %1$d kisten en %2$d vliegvelden.\n\nAlles wat nu in de app staat — kisten, vliegvelden, banen, favorieten en opgeslagen rekenwaarden — wordt verwijderd en vervangen. Dit kan niet ongedaan worden gemaakt.</string>
+    <string name="settings_data_import_confirm_button">Vervangen</string>
+    <string name="settings_data_import_done">Gegevens geïmporteerd.</string>
+    <string name="settings_data_import_failed_unreadable">Dit bestand kon niet gelezen worden als back-up. Klopt het gekozen bestand?</string>
+    <string name="settings_data_import_failed_too_new_format">Dit bestand komt uit een nieuwere versie van de app (formaat %1$d, deze app kent %2$d). Werk de app eerst bij.</string>
+    <string name="settings_data_export_failed">Exporteren mislukt.</string>
 
     <!-- Documenten -->
     <string name="documents_open_content_description">Openen</string>
@@ -122,8 +139,12 @@
     <string name="perf_margin_factor_label">[AIC P173] Marge-factor (aanbevolen)</string>
     <string name="perf_ground_run_label">Grondrol</string>
     <string name="perf_obstacle_15m_label">Over 15m obstakel</string>
+    <!-- Alleen nog in gebruik in het PDF-rapport: daar staat elke regel los, zonder groepskopje,
+         en is een zelfverklarend label beter. Op het scherm dragen de kopjes hieronder dat. -->
     <string name="perf_ground_run_raw_label">Grondrol (zonder marge)</string>
     <string name="perf_obstacle_15m_raw_label">Over 15m obstakel (zonder marge)</string>
+    <string name="perf_with_margin_heading_format">Met marge %1$s×</string>
+    <string name="perf_without_margin_heading">Zonder marge</string>
     <string name="perf_result_section_title">Resultaat</string>
     <string name="perf_result_surface_format">Ondergrond: %1$s</string>
     <string name="perf_margin_included_format">Incl. marge %1$sx</string>
@@ -131,6 +152,32 @@
     <string name="perf_no_correction_table_note">Geen correctietabel voor andere gewichten/hoogtes/temperaturen beschikbaar.</string>
     <string name="perf_warning_heading">Waarschuwing</string>
     <string name="perf_tailwind_not_supported">Rugwind wordt niet ondersteund — AFM geeft hiervoor geen data.</string>
+
+    <!-- PDF-rapport van een berekening -->
+    <string name="report_share_pdf">Delen als PDF</string>
+    <string name="report_share_chooser_title">Berekening delen</string>
+    <string name="report_title_wb">Weight &amp; Balance</string>
+    <string name="report_title_takeoff">Take-off</string>
+    <string name="report_title_landing">Landing</string>
+    <string name="report_title_sleepvlucht">Sleepvlucht</string>
+    <string name="report_title_format">%1$s — %2$s</string>
+    <string name="report_section_input">Invoer</string>
+    <string name="report_section_weather">Weer en vliegveld</string>
+    <string name="report_section_result">Resultaat</string>
+    <string name="report_section_runways">Resultaten per baan</string>
+    <string name="report_section_notes">Toelichting</string>
+    <string name="report_airfield_label">Vliegveld</string>
+    <string name="report_mode_manual">Handmatig (geen vliegveld gekozen)</string>
+    <string name="report_metar_label">METAR</string>
+    <string name="report_crosswind_label">Zijwind</string>
+    <string name="report_crosswind_exceeded">boven gedemonstreerde waarde</string>
+    <string name="report_runway_not_calculable">Niet te berekenen (rugwind)</string>
+    <string name="report_grass_condition_label">Grasconditie</string>
+    <string name="report_registration_label">Registratie</string>
+    <string name="report_wb_total_mass">Totaalgewicht</string>
+    <string name="report_wb_cg">Zwaartepunt (CG)</string>
+    <string name="report_wb_margin_mtow">Marge tot MTOW</string>
+    <string name="report_footer">Gegenereerd door HK36TTC Calc. Geen gecertificeerd EFB — het vlieghandboek blijft altijd leidend. Controleer de waarden vóór gebruik.</string>
 
     <!-- Take-off -->
     <string name="takeoff_title_format">Take-off — %1$s</string>

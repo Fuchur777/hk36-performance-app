@@ -46,8 +46,15 @@ import nl.glcillustrious.hk36ttc.ui.common.ResettableIntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.RunwayResultCard
 import nl.glcillustrious.hk36ttc.ui.common.WeatherInputMode
 import nl.glcillustrious.hk36ttc.ui.common.WeatherModeSelector
+import nl.glcillustrious.hk36ttc.ui.common.grassConditionLabel
 import nl.glcillustrious.hk36ttc.ui.common.runwayStatusPresentation
 import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
+import nl.glcillustrious.hk36ttc.ui.report.PerformanceReportContext
+import nl.glcillustrious.hk36ttc.ui.report.PerformanceReportResult
+import nl.glcillustrious.hk36ttc.ui.report.ReportDocument
+import nl.glcillustrious.hk36ttc.ui.report.RunwayReportEntry
+import nl.glcillustrious.hk36ttc.ui.report.SharePdfButton
+import nl.glcillustrious.hk36ttc.ui.report.buildPerformanceReport
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -255,7 +262,8 @@ fun SleepvluchtScreen(
                         obstacleWithMarginM = row.fullResult?.s2WithMarginM,
                         obstacleRawM = row.fullResult?.s2M,
                         remainingM = row.advice.remainingWithMarginM,
-                        surfaceLabel = sleepvluchtSurfaceLabel(row.surfaceType)
+                        surfaceLabel = sleepvluchtSurfaceLabel(row.surfaceType),
+                        marginFactor = state.marginFactorPct / 100.0
                     )
                 }
             } else {
@@ -269,6 +277,90 @@ fun SleepvluchtScreen(
             }
 
             SleepClimbReferenceCard(performanceTow)
+
+            val reportTitle = stringResource(
+                R.string.report_title_format,
+                stringResource(R.string.report_title_sleepvlucht),
+                state.registration ?: ""
+            )
+            val labels = performanceReportLabels()
+            val grassLabel = if (state.showGrassCondition) grassConditionLabel(state.grassCondition) else null
+            val runwayEntries = state.runwayResults.map { row ->
+                RunwayReportEntry(
+                    label = row.advice.candidate.label,
+                    statusLabel = runwayStatusPresentation(row.advice.status).label,
+                    surfaceLabel = sleepvluchtSurfaceLabel(row.surfaceType),
+                    headwindKts = row.advice.headwindKts,
+                    crosswindKts = row.advice.crosswindKts,
+                    crosswindExceeded = row.advice.crosswindExceeded,
+                    groundRunWithMarginM = row.fullResult?.s1WithMarginM,
+                    obstacleWithMarginM = row.fullResult?.s2WithMarginM,
+                    remainingM = row.advice.remainingWithMarginM
+                )
+            }
+            val singleResult = state.result?.takeIf { !state.showRunwayResults }
+            val manualEntry = state.windNeedsManualEntry
+            // All hoisted out of buildDocument: it runs on tap, outside composable context.
+            val manualSurfaceLabel = sleepvluchtSurfaceLabel(state.surfaceType)
+            val sailplaneLabel = stringResource(R.string.sleepvlucht_glider_weight_label)
+            val ldLabel = stringResource(R.string.sleepvlucht_ld_label)
+            val instructionLabel = stringResource(R.string.sleepvlucht_instruction_flight_label)
+            val towplaneLabel = stringResource(R.string.sleepvlucht_towplane_weight_label)
+            val yes = stringResource(R.string.common_yes)
+            val no = stringResource(R.string.common_no)
+            val classNote = state.result?.selectedClassId?.let {
+                stringResource(R.string.sleepvlucht_class_format, it)
+            }
+            // A blocked tow is exactly what a saved report should record, so the reasons come
+            // along rather than the button simply being unavailable.
+            val blockNotes = state.result?.blockReasons.orEmpty().map { towBlockReasonText(it) }
+
+            SharePdfButton(
+                kind = "sleepvlucht",
+                registration = state.registration,
+                enabled = state.showRunwayResults || singleResult != null,
+                buildDocument = { timestamp ->
+                    buildPerformanceReport(
+                        title = reportTitle,
+                        timestamp = timestamp,
+                        labels = labels,
+                        context = PerformanceReportContext(
+                            registration = state.registration,
+                            airfieldName = state.selectedAirfield?.name,
+                            metarRaw = state.selectedAirfield?.metarRaw,
+                            grassConditionLabel = grassLabel,
+                            oatC = state.effectiveOatC,
+                            pressureAltM = state.effectivePressureAltM,
+                            headwindKts = if (state.showRunwayResults) null else state.headwindKts,
+                            windDirectionDeg = if (manualEntry) state.windDirectionDeg else null,
+                            windSpeedKts = if (manualEntry) state.windSpeedKts else null,
+                            surfaceLabel = if (state.showRunwayResults) null else manualSurfaceLabel,
+                            slopePct = if (state.showRunwayResults) null else state.slopePct,
+                            marginFactorPct = state.marginFactorPct
+                        ),
+                        result = singleResult?.let {
+                            PerformanceReportResult(
+                                groundRunWithMarginM = it.s1WithMarginM,
+                                obstacleWithMarginM = it.s2WithMarginM,
+                                groundRunRawM = it.s1M,
+                                obstacleRawM = it.s2M,
+                                outOfRange = it.outOfRangeWarning,
+                                tailwindBlocked = false
+                            )
+                        },
+                        runways = runwayEntries,
+                        // The tow-specific inputs the shared context has no field for — they
+                        // exist on no other screen.
+                        extraInputRows = listOf(
+                            ReportDocument.Row(sailplaneLabel, "${state.sailplaneMassKg} kg"),
+                            ReportDocument.Row(ldLabel, if (state.ldRatioKnown) "${state.ldRatio}" else "—"),
+                            ReportDocument.Row(instructionLabel, if (state.instructionFlight) yes else no),
+                            ReportDocument.Row(towplaneLabel, "${state.effectiveTowplaneMassKg} kg")
+                        ),
+                        extraNotes = listOfNotNull(classNote) + blockNotes
+                    )
+                }
+            )
         }
     }
 }

@@ -26,6 +26,22 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            Lets the share sheet read a generated export (a calculation PDF, or the user-data
+            JSON backup) out of the app's own cache. Android forbids handing a raw file:// URI
+            to another app, so this is the required route. Not exported: only apps the user
+            explicitly picks from the share sheet get a temporary, per-file read grant.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

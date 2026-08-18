@@ -4,6 +4,10 @@ import java.time.format.DateTimeFormatter
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    // Needed for the user-data export/import DTOs in data/export/. The JSON library itself
+    // already comes in transitively via :core's api(...) dependency, but the compiler plugin
+    // that generates serializers only applies to the module it's declared in.
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
 }
 
@@ -15,8 +19,8 @@ android {
         applicationId = "nl.glcillustrious.hk36ttc"
         minSdk = 26
         targetSdk = 37
-        versionCode = 16
-        versionName = "0.7.3"
+        versionCode = 17
+        versionName = "0.8.0"
 
         // Generated fresh at build configuration time - shown alongside versionName/versionCode
         // in the About screen so a specific build can still be pinned down within a day even

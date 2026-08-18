@@ -6,7 +6,9 @@ import nl.glcillustrious.hk36ttc.data.catalog.AirportCatalogDatabase
 import nl.glcillustrious.hk36ttc.data.catalog.AirportCatalogRepository
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 import nl.glcillustrious.hk36ttc.data.local.AppDatabase
+import nl.glcillustrious.hk36ttc.data.export.UserDataRepository
 import nl.glcillustrious.hk36ttc.data.local.CalculationDataStore
+import nl.glcillustrious.hk36ttc.data.local.LanguagePreference
 import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
 
 class Hk36Application : Application() {
@@ -22,6 +24,10 @@ class Hk36Application : Application() {
 
     /** Online METAR lookup. Purely additive: everything keeps working offline without it. */
     lateinit var metarRepository: MetarRepository
+        private set
+
+    /** Backup/restore of everything the pilot entered themselves — see [UserDataRepository]. */
+    lateinit var userDataRepository: UserDataRepository
         private set
 
     lateinit var calculationDataStore: CalculationDataStore
@@ -53,6 +59,14 @@ class Hk36Application : Application() {
             transaction = { block -> catalogDatabase.withTransaction { block() } }
         )
         metarRepository = MetarRepository(repository)
+        val languagePreference = LanguagePreference(this)
+        userDataRepository = UserDataRepository(
+            dao = database.userDataDao(),
+            languageTag = { languagePreference.get() },
+            setLanguageTag = { languagePreference.set(it) },
+            transaction = { block -> database.withTransaction { block() } },
+            appVersionName = BuildConfig.VERSION_NAME
+        )
         calculationDataStore = CalculationDataStore(this)
     }
 }

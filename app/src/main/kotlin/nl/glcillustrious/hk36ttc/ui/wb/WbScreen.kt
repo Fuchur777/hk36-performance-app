@@ -40,6 +40,9 @@ import nl.glcillustrious.hk36ttc.core.wb.WBWarning
 import nl.glcillustrious.hk36ttc.core.wb.WbConstantsData
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
+import nl.glcillustrious.hk36ttc.ui.report.SharePdfButton
+import nl.glcillustrious.hk36ttc.ui.report.WbReportLabels
+import nl.glcillustrious.hk36ttc.ui.report.buildWbReport
 import nl.glcillustrious.hk36ttc.ui.theme.status
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -136,9 +139,61 @@ fun WbScreen(
             state.result?.let { result ->
                 WbResultCard(result)
             }
+
+            val registration = state.profile?.registration
+            val reportTitle = stringResource(
+                R.string.report_title_format,
+                stringResource(R.string.report_title_wb),
+                registration ?: ""
+            )
+            val labels = wbReportLabels()
+            val violationTexts = state.result?.violations?.map { violationText(it) }.orEmpty()
+            val warningTexts = state.result?.warnings?.map { warningText(it) }.orEmpty()
+            val result = state.result
+
+            SharePdfButton(
+                kind = "wb",
+                registration = registration,
+                enabled = result != null,
+                buildDocument = { timestamp ->
+                    buildWbReport(
+                        title = reportTitle,
+                        timestamp = timestamp,
+                        labels = labels,
+                        registration = registration,
+                        pilotKg = state.pilotKg,
+                        copilotKg = state.copilotKg,
+                        fuelLiters = state.fuelLiters,
+                        baggageKg = state.baggageKg,
+                        result = result,
+                        violationTexts = violationTexts,
+                        warningTexts = warningTexts
+                    )
+                }
+            )
         }
     }
 }
+
+/** All translated strings the W&B report needs, resolved here where `stringResource` works so
+ * [buildWbReport] itself stays a pure, testable function. */
+@Composable
+private fun wbReportLabels() = WbReportLabels(
+    registration = stringResource(R.string.report_registration_label),
+    sectionInput = stringResource(R.string.report_section_input),
+    sectionResult = stringResource(R.string.report_section_result),
+    sectionNotes = stringResource(R.string.report_section_notes),
+    pilot = stringResource(R.string.wb_pilot_label),
+    copilot = stringResource(R.string.wb_copilot_label),
+    fuel = stringResource(R.string.wb_fuel_label),
+    baggage = stringResource(R.string.wb_baggage_label),
+    totalMass = stringResource(R.string.report_wb_total_mass),
+    cg = stringResource(R.string.report_wb_cg),
+    marginToMtow = stringResource(R.string.report_wb_margin_mtow),
+    withinEnvelope = stringResource(R.string.wb_result_ok_heading),
+    warningHeading = stringResource(R.string.wb_result_warning_heading),
+    footer = stringResource(R.string.report_footer)
+)
 
 @Composable
 private fun violationText(violation: WBViolation): String = when (violation) {

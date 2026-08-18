@@ -30,6 +30,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun flightContextDao(): FlightContextDao
     abstract fun favoriteAirfieldDao(): FavoriteAirfieldDao
 
+    /** Bulk access across all user tables, for export/import only — see [UserDataDao]. Adds no
+     * entity and no schema change, so [version] stays where it is. */
+    abstract fun userDataDao(): UserDataDao
+
     companion object {
         @Volatile
         private var instance: AppDatabase? = null

@@ -40,8 +40,10 @@ import nl.glcillustrious.hk36ttc.core.perf.TakeoffResult
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 import nl.glcillustrious.hk36ttc.data.local.FlightContextMode
 import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
+import nl.glcillustrious.hk36ttc.ui.common.DistanceResultBlock
 import nl.glcillustrious.hk36ttc.ui.common.FlightContextCard
 import nl.glcillustrious.hk36ttc.ui.common.GrassConditionSelector
+import nl.glcillustrious.hk36ttc.ui.common.grassConditionLabel
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.MetarSummary
 import nl.glcillustrious.hk36ttc.ui.common.ResettableIntStepperField
@@ -51,6 +53,13 @@ import nl.glcillustrious.hk36ttc.ui.common.WeatherInputMode
 import nl.glcillustrious.hk36ttc.ui.common.WeatherModeSelector
 import nl.glcillustrious.hk36ttc.ui.common.runwayStatusPresentation
 import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
+import nl.glcillustrious.hk36ttc.ui.report.PerformanceReportContext
+import nl.glcillustrious.hk36ttc.ui.report.PerformanceReportLabels
+import nl.glcillustrious.hk36ttc.ui.report.PerformanceReportResult
+import nl.glcillustrious.hk36ttc.ui.report.RunwayReportEntry
+import nl.glcillustrious.hk36ttc.ui.report.RunwayRowLabels
+import nl.glcillustrious.hk36ttc.ui.report.SharePdfButton
+import nl.glcillustrious.hk36ttc.ui.report.buildPerformanceReport
 import nl.glcillustrious.hk36ttc.ui.theme.status
 import kotlin.math.roundToInt
 
@@ -231,7 +240,8 @@ fun TakeoffScreen(
                         obstacleWithMarginM = row.fullResult?.s2WithMarginM,
                         obstacleRawM = row.fullResult?.s2M,
                         remainingM = row.advice.remainingWithMarginM,
-                        surfaceLabel = takeoffSurfaceLabel(row.surfaceType)
+                        surfaceLabel = takeoffSurfaceLabel(row.surfaceType),
+                        marginFactor = state.marginFactorPct / 100.0
                     )
                 }
             } else {
@@ -243,9 +253,116 @@ fun TakeoffScreen(
                 maxRateOfClimbMs = performanceNormal.climb.maxRateOfClimbMs,
                 serviceCeilingM = performanceNormal.climb.serviceCeilingM
             )
+
+            val reportTitle = stringResource(
+                R.string.report_title_format,
+                stringResource(R.string.report_title_takeoff),
+                state.registration ?: ""
+            )
+            val labels = performanceReportLabels()
+            val grassLabel = if (state.showGrassCondition) grassConditionLabel(state.grassCondition) else null
+            val runwayEntries = state.runwayResults.map { row ->
+                RunwayReportEntry(
+                    label = row.advice.candidate.label,
+                    statusLabel = runwayStatusPresentation(row.advice.status).label,
+                    surfaceLabel = takeoffSurfaceLabel(row.surfaceType),
+                    headwindKts = row.advice.headwindKts,
+                    crosswindKts = row.advice.crosswindKts,
+                    crosswindExceeded = row.advice.crosswindExceeded,
+                    groundRunWithMarginM = row.fullResult?.s1WithMarginM,
+                    obstacleWithMarginM = row.fullResult?.s2WithMarginM,
+                    remainingM = row.advice.remainingWithMarginM
+                )
+            }
+            val singleResult = state.result?.takeIf { !state.showRunwayResults }
+            val manualEntry = state.windNeedsManualEntry
+            // Resolved here, not inside buildDocument: that lambda runs on tap, outside any
+            // composable context, so every @Composable label lookup has to be hoisted.
+            val manualSurfaceLabel = takeoffSurfaceLabel(state.surfaceType)
+
+            SharePdfButton(
+                kind = "takeoff",
+                registration = state.registration,
+                enabled = state.showRunwayResults || singleResult != null,
+                buildDocument = { timestamp ->
+                    buildPerformanceReport(
+                        title = reportTitle,
+                        timestamp = timestamp,
+                        labels = labels,
+                        context = PerformanceReportContext(
+                            registration = state.registration,
+                            airfieldName = state.selectedAirfield?.name,
+                            metarRaw = state.selectedAirfield?.metarRaw,
+                            grassConditionLabel = grassLabel,
+                            oatC = state.effectiveOatC,
+                            pressureAltM = state.effectivePressureAltM,
+                            // In airfield mode the headwind is per runway (it's in the runway
+                            // rows), so repeating a single figure here would be meaningless.
+                            headwindKts = if (state.showRunwayResults) null else state.headwindKts,
+                            windDirectionDeg = if (manualEntry) state.windDirectionDeg else null,
+                            windSpeedKts = if (manualEntry) state.windSpeedKts else null,
+                            surfaceLabel = if (state.showRunwayResults) null else manualSurfaceLabel,
+                            slopePct = if (state.showRunwayResults) null else state.slopePct,
+                            marginFactorPct = state.marginFactorPct
+                        ),
+                        result = singleResult?.let {
+                            PerformanceReportResult(
+                                groundRunWithMarginM = it.s1WithMarginM,
+                                obstacleWithMarginM = it.s2WithMarginM,
+                                groundRunRawM = it.s1M,
+                                obstacleRawM = it.s2M,
+                                outOfRange = it.outOfRangeWarning,
+                                tailwindBlocked = it.tailwindBlocked
+                            )
+                        },
+                        runways = runwayEntries
+                    )
+                }
+            )
         }
     }
 }
+
+/** Resolves every string the performance reports need, here where `stringResource` works, so
+ * [buildPerformanceReport] stays a pure function. Shared by Take-off, Landing and Sleepvlucht. */
+@Composable
+internal fun performanceReportLabels() = PerformanceReportLabels(
+    registration = stringResource(R.string.report_registration_label),
+    sectionInput = stringResource(R.string.report_section_input),
+    sectionWeather = stringResource(R.string.report_section_weather),
+    sectionResult = stringResource(R.string.report_section_result),
+    sectionRunways = stringResource(R.string.report_section_runways),
+    sectionNotes = stringResource(R.string.report_section_notes),
+    airfield = stringResource(R.string.report_airfield_label),
+    manualMode = stringResource(R.string.report_mode_manual),
+    metar = stringResource(R.string.report_metar_label),
+    grassCondition = stringResource(R.string.report_grass_condition_label),
+    oat = stringResource(R.string.perf_oat_label),
+    pressureAlt = stringResource(R.string.perf_pressure_alt_label),
+    headwind = stringResource(R.string.perf_headwind_label),
+    windDirection = stringResource(R.string.perf_wind_direction_label),
+    windSpeed = stringResource(R.string.perf_wind_speed_label),
+    surface = stringResource(R.string.perf_surface_label),
+    slope = stringResource(R.string.perf_slope_label),
+    marginFactor = stringResource(R.string.perf_margin_factor_label),
+    groundRun = stringResource(R.string.perf_ground_run_label),
+    obstacle = stringResource(R.string.perf_obstacle_15m_label),
+    groundRunRaw = stringResource(R.string.perf_ground_run_raw_label),
+    obstacleRaw = stringResource(R.string.perf_obstacle_15m_raw_label),
+    outOfRangeWarning = stringResource(R.string.perf_out_of_range_warning),
+    tailwindNotSupported = stringResource(R.string.perf_tailwind_not_supported),
+    runwayRows = RunwayRowLabels(
+        surface = stringResource(R.string.perf_surface_label),
+        headwind = stringResource(R.string.perf_headwind_label),
+        crosswind = stringResource(R.string.report_crosswind_label),
+        crosswindExceeded = stringResource(R.string.report_crosswind_exceeded),
+        groundRun = stringResource(R.string.perf_ground_run_label),
+        obstacle = stringResource(R.string.perf_obstacle_15m_label),
+        remaining = stringResource(R.string.flight_context_runway_remaining_label),
+        notCalculable = stringResource(R.string.report_runway_not_calculable)
+    ),
+    footer = stringResource(R.string.report_footer)
+)
 
 @Composable
 internal fun takeoffSurfaceLabel(type: TakeoffSurfaceType): String = when (type) {
@@ -327,13 +444,17 @@ private fun TakeoffResultCard(result: TakeoffResult, surfaceType: TakeoffSurface
                 stringResource(R.string.perf_result_surface_format, takeoffSurfaceLabel(surfaceType)),
                 style = MaterialTheme.typography.bodyMedium
             )
-            ResultRow(stringResource(R.string.perf_ground_run_label), fmt(result.s1WithMarginM), "m")
-            ResultRow(stringResource(R.string.perf_obstacle_15m_label), fmt(result.s2WithMarginM), "m")
-            // Not bold: the raw figures are reference values next to the two above, which are
-            // what the pilot actually plans on. Their own labels already say "zonder marge",
-            // and the margin factor itself is set in the stepper right above this card.
-            ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmt(result.s1M), "m", emphasized = false)
-            ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmt(result.s2M), "m", emphasized = false)
+            DistanceResultBlock(
+                marginFactor = result.marginFactor,
+                groundRunLabel = stringResource(R.string.perf_ground_run_label),
+                obstacleLabel = stringResource(R.string.perf_obstacle_15m_label),
+                withMarginHeading = stringResource(R.string.perf_with_margin_heading_format, fmt(result.marginFactor)),
+                withoutMarginHeading = stringResource(R.string.perf_without_margin_heading),
+                groundRunWithMarginM = result.s1WithMarginM,
+                obstacleWithMarginM = result.s2WithMarginM,
+                groundRunRawM = result.s1M,
+                obstacleRawM = result.s2M
+            )
             if (result.surfaceFactorApplied) {
                 val tag = if (surfaceType == TakeoffSurfaceType.DROOG_GRAS) "[AFM]" else "[AIC P173]"
                 Text(

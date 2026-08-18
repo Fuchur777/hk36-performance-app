@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Paths the FileProvider is allowed to hand out to other apps. Deliberately only the one cache
+    subfolder that generated exports are written to (PDF reports and user-data JSON) — never the
+    app's databases or the on-device calculation JSON, which no other app has any business
+    reading.
+-->
+<paths>
+    <cache-path name="exports" path="exports/" />
+</paths>

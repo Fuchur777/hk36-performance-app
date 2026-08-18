@@ -206,17 +206,20 @@ fun GrassConditionSelector(selected: GrassCondition, onSelect: (GrassCondition) 
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = GrassCondition.entries.size),
                     modifier = Modifier.fillMaxHeight()
                 ) {
-                    Text(
-                        when (condition) {
-                            GrassCondition.DRY -> stringResource(R.string.flight_context_grass_dry)
-                            GrassCondition.WET -> stringResource(R.string.flight_context_grass_wet)
-                            GrassCondition.SOFT -> stringResource(R.string.flight_context_grass_soft)
-                        }
-                    )
+                    Text(grassConditionLabel(condition))
                 }
             }
         }
     }
+}
+
+/** The pilot-facing name of a grass condition. Extracted from [GrassConditionSelector] so the
+ * PDF reports name it exactly as the selector does rather than keeping a second copy. */
+@Composable
+fun grassConditionLabel(condition: GrassCondition): String = when (condition) {
+    GrassCondition.DRY -> stringResource(R.string.flight_context_grass_dry)
+    GrassCondition.WET -> stringResource(R.string.flight_context_grass_wet)
+    GrassCondition.SOFT -> stringResource(R.string.flight_context_grass_soft)
 }
 
 data class RunwayStatusPresentation(val label: String, val containerColor: Color, val contentColor: Color)
@@ -270,7 +273,10 @@ fun RunwayResultCard(
     obstacleWithMarginM: Double?,
     obstacleRawM: Double?,
     remainingM: Double?,
-    surfaceLabel: String
+    surfaceLabel: String,
+    /** e.g. 1.33. Shown as a heading above the distances — until now the per-runway cards never
+     * showed which margin produced their numbers. */
+    marginFactor: Double
 ) {
     Card(colors = CardDefaults.cardColors(containerColor = containerColor, contentColor = contentColor)) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -298,15 +304,28 @@ fun RunwayResultCard(
             if (groundRunWithMarginM != null && obstacleWithMarginM != null &&
                 groundRunRawM != null && obstacleRawM != null
             ) {
-                ResultRow(stringResource(R.string.perf_ground_run_label), fmtDistance(groundRunWithMarginM), "m")
-                ResultRow(stringResource(R.string.perf_obstacle_15m_label), fmtDistance(obstacleWithMarginM), "m")
-                // Not bold: reference figures beside the two above, which are what the pilot
-                // actually plans on — same treatment as the single-result cards.
-                ResultRow(stringResource(R.string.perf_ground_run_raw_label), fmtDistance(groundRunRawM), "m", emphasized = false)
-                ResultRow(stringResource(R.string.perf_obstacle_15m_raw_label), fmtDistance(obstacleRawM), "m", emphasized = false)
-                remainingM?.let {
-                    ResultRow(stringResource(R.string.flight_context_runway_remaining_label), fmtSignedDistance(it), "m")
-                }
+                DistanceResultBlock(
+                    marginFactor = marginFactor,
+                    groundRunLabel = stringResource(R.string.perf_ground_run_label),
+                    obstacleLabel = stringResource(R.string.perf_obstacle_15m_label),
+                    withMarginHeading = stringResource(R.string.perf_with_margin_heading_format, fmtDistance(marginFactor)),
+                    withoutMarginHeading = stringResource(R.string.perf_without_margin_heading),
+                    groundRunWithMarginM = groundRunWithMarginM,
+                    obstacleWithMarginM = obstacleWithMarginM,
+                    groundRunRawM = groundRunRawM,
+                    obstacleRawM = obstacleRawM,
+                    // Closes the with-margin group: this is what's left over *after* the margin
+                    // is applied, so it belongs to those figures, not to the raw ones.
+                    withMarginTrailing = {
+                        remainingM?.let {
+                            ResultRow(
+                                stringResource(R.string.flight_context_runway_remaining_label),
+                                fmtSignedDistance(it),
+                                "m"
+                            )
+                        }
+                    }
+                )
             } else {
                 Text(
                     stringResource(R.string.flight_context_runway_status_tailwind),
@@ -317,5 +336,7 @@ fun RunwayResultCard(
     }
 }
 
-private fun fmtDistance(value: Double): String = "%.1f".format(value)
-private fun fmtSignedDistance(value: Double): String = "%+.1f".format(value)
+// Formatting now lives in ResultRow.kt alongside the row that renders it — see
+// formatDistance/formatSignedDistance there.
+private fun fmtDistance(value: Double): String = formatDistance(value)
+private fun fmtSignedDistance(value: Double): String = formatSignedDistance(value)

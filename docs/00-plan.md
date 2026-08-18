@@ -785,3 +785,60 @@ al bestaande afleiding van richting B's koers/helling uit A:
   bestaande "02 gras"-naamgevingsconventie voor twee gelijknummerde stroken.
 
 Geen Room-migratie. Versie 0.7.3 (versionCode 16).
+
+## 20. PDF-export en gegevens-back-up (2026-08-17)
+
+Twee losse wensen die dezelfde infrastructuur delen: het bestand naar de Android-deelmenu
+brengen.
+
+### PDF per berekening
+
+De rekenschermen herberekenen continu (sinds ronde 3 geen bevestigingsstap), dus er was geen
+enkele manier om een uitgevoerde berekening vast te leggen. Onderaan elk van de vier
+rekenschermen staat nu "Delen als PDF", mét datum-/tijdstempel in zowel de inhoud als de
+bestandsnaam.
+
+**Een geschiedenis-tabel komt er bewust niet.** Frank: "dat regelt de gebruiker maar door
+exports te maken van wat hij belangrijk vindt." De PDF-bestanden zíjn de geschiedenis, buiten
+de app — geen extra Room-tabel, geen geschiedenisscherm, geen opruimbeleid.
+
+Gebouwd op Android's eigen `android.graphics.pdf.PdfDocument`; geen nieuwe dependency. iText
+zou AGPL zijn tenzij betaald, en het project draagt buiten AndroidX/Compose/Room niets externs.
+
+Architectuur: `ui/report/` bevat een plat, al-vertaald `ReportDocument` dat de *schermen*
+opbouwen (daar werkt `stringResource`, en zo hergebruikt het rapport exact de labels die de
+piloot net las), plus een renderer die alleen tekst hoeft te plaatsen. Paginabreuken zijn een
+harde eis, geen luxe: zes baanrichtingen op Terlet lopen gegarandeerd over één A4 heen. De
+per-baan-expansie zit daarom in een pure, geteste functie — inclusief het geval "rugwind: niet
+te berekenen", dat wél een regel krijgt zodat het rapport laat zien dát die richting is
+overwogen.
+
+### Export/import van gebruikersgegevens
+
+Onder Instellingen, als tweede sectie (dit scherm had er nog maar één). Eén JSON-bestand met
+alles wat de piloot zelf invoerde: kisten, favoriete zweeftypes, vliegvelden met banen,
+favoriete vliegvelden, de laatst ingevulde rekenwaarden per registratie, en de taalkeuze.
+
+Bewust **niet** erin: de OurAirports-catalogus (herbouwbaar, en 7 MB hoort niet in een back-up)
+en de JSON-rekenconfiguratie (dat is instelbare configuratie met een eigen herstelknop).
+
+**Import vervangt alles**, met een bevestigingsdialoog die de aantallen uit het bestand noemt.
+Die keuze maakt de implementatie ook fundamenteel veiliger: omdat alles wordt gewist en opnieuw
+gevuld, kunnen de rijen terug onder hun *oorspronkelijke id's*, waardoor elke verwijzing
+(baanstrook → vliegveld, rekeninvoer → registratie) per definitie blijft kloppen. Samenvoegen
+had id-hermapping vereist — precies het soort werk dat stil fout gaat. De hele wipe-en-vul
+draait in één transactie.
+
+Een DTO-laag in plaats van de Room-entities annoteren: een back-up wordt jaren bewaard, dus het
+bestandsformaat hoort een beslissing te zijn en geen bijwerking van een toekomstige
+schemawijziging. Bovendien is de export sowieso geen 1-op-1 spiegel — de taalinstelling zit in
+SharedPreferences.
+
+Nieuwe `UserDataDao` met bulk lees/leeg/vul-methodes, apart gehouden van de elf bestaande DAO's
+zodat een tabel-leegmaken niet binnen handbereik ligt van code die daar niets te zoeken heeft.
+Alleen nieuwe queries op bestaande tabellen: **geen Room-migratie.**
+
+`FileProvider` toegevoegd (bestond nog niet), met toegang tot uitsluitend één cachemap — niet
+tot de databases. Gedeeld door beide functies via `ui/common/FileSharing.kt`.
+
+Versie 0.8.0 (versionCode 17).
