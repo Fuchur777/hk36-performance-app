@@ -14,12 +14,12 @@
     <!-- Instellingen -->
     <string name="settings_title">Instellingen</string>
     <string name="settings_language_heading">Taal</string>
-    <string name="settings_language_explanation">Android toont de app standaard in het Nederlands als het toestel op Nederlands staat, anders in het Engels. Hier kun je dat handmatig overschrijven.</string>
+    <string name="settings_language_explanation">Als de systeemtaal op Nederlands staat dan de app automatisch ook, bij een andere systeemtaal wordt de app Engels. Dat kun je hier handmatig overschrijven.</string>
     <string name="settings_language_system">Systeemtaal (automatisch)</string>
     <string name="settings_data_heading">Gegevens</string>
-    <string name="settings_data_explanation">Maak een back-up van alles wat je zelf hebt ingevoerd: kisten, vliegvelden met banen, favorieten, je laatst ingevulde rekenwaarden en je taalkeuze. Handig bij een nieuw toestel of vóór een herinstallatie.</string>
+    <string name="settings_data_explanation">Maak een back-up van alles wat je zelf hebt ingevoerd: kisten, vliegvelden met banen, favorieten, je laatst ingevulde rekenwaarden en je taalkeuze.</string>
     <string name="settings_data_export">Gegevens exporteren</string>
-    <string name="settings_data_export_detail">Deel of bewaar één JSON-bestand</string>
+    <string name="settings_data_export_detail">Deel of bewaar dit bestand</string>
     <string name="settings_data_import">Gegevens importeren</string>
     <string name="settings_data_import_detail">Vervangt alles wat er nu in staat</string>
     <string name="settings_data_import_chooser">Back-upbestand kiezen</string>
@@ -42,7 +42,7 @@
     <string name="about_app_description">Preflight W&amp;B- en prestatieberekeningen voor de HK36 TTC Super Dimona. Geen gecertificeerd EFB — het vlieghandboek blijft altijd leidend.</string>
     <string name="about_data_sources_heading">Rekengegevens en bronnen</string>
     <string name="about_libraries_heading">Gebruikte open-source software</string>
-    <string name="about_source_afm_detail">Vlieghandboek, aangeleverd door de club</string>
+    <string name="about_source_afm_detail">Vlieghandboek</string>
     <string name="about_source_proprietary_license">Eigendom Diamond Aircraft — niet vrij herdistribueerbaar</string>
     <string name="about_source_sup1_detail">Sleepvlucht-prestatiegegevens</string>
     <string name="about_source_sup11_detail">Aanvullende landingsprestatiegegevens</string>
@@ -56,7 +56,7 @@
     <string name="about_contact_body">Vragen, fouten of wensen? Mail me gerust.</string>
 
     <!-- Zweeftypes -->
-    <string name="sailplane_types_title">Zweeftypes</string>
+    <string name="sailplane_types_title">Zweefvliegtuigen</string>
     <string name="sailplane_types_search_label">Zoeken</string>
     <string name="sailplane_types_row_detail_format">Leeggewicht %1$d kg · MTOW %2$d kg · L/D %3$s</string>
     <string name="sailplane_types_favorite_remove">Favoriet verwijderen</string>
@@ -67,7 +67,7 @@
     <string name="profile_list_menu_content_description">Menu</string>
     <string name="profile_list_add_content_description">Nieuwe registratie</string>
     <string name="profile_list_empty_title">Nog geen registratie toegevoegd.</string>
-    <string name="profile_list_empty_body">Voeg een HK36 TTC-registratie toe met de gegevens uit je eigen Weighing Report / Mass and Balance Form.</string>
+    <string name="profile_list_empty_body">Voeg een HK36 TTC-registratie toe met de gegevens uit je eigen Weeg- en Zwaartepuntsrapport.</string>
     <string name="profile_list_mtow_format">MTOW %1$d kg</string>
     <string name="profile_list_edit_content_description">Bewerken</string>
     <string name="profile_list_delete_content_description">Registratie verwijderen</string>
@@ -83,12 +83,12 @@
     <string name="profile_edit_title_new">Nieuwe kist</string>
     <string name="profile_edit_title_existing">Registratie bewerken</string>
     <string name="profile_edit_intro">Vul hier de informatie in zoals je deze kan vinden in het laatste Weeg- en Zwaartepuntsrapport van de kist.</string>
-    <string name="profile_edit_registration_label">Registratie (bijv. PH-XXX)</string>
-    <string name="profile_edit_empty_mass_label">Empty mass</string>
+    <string name="profile_edit_registration_label">Registratie (bv. PH-XXX)</string>
+    <string name="profile_edit_empty_mass_label">Leeg gewicht</string>
     <string name="profile_edit_mtow_label">MTOW</string>
-    <string name="profile_edit_empty_mass_cg_label">Empty mass CG-positie</string>
-    <string name="profile_edit_cg_forward_label">CG-envelope voorgrens</string>
-    <string name="profile_edit_cg_aft_label">CG-envelope achtergrens</string>
+    <string name="profile_edit_empty_mass_cg_label">Leeg gewicht CG-positie</string>
+    <string name="profile_edit_cg_forward_label">CG-envelop voorgrens</string>
+    <string name="profile_edit_cg_aft_label">CG-envelop achtergrens</string>
     <string name="profile_edit_fuel_tank_label">Brandstoftank</string>
     <string name="profile_edit_fuel_tank_standard">Standaard (55 L)</string>
     <string name="profile_edit_fuel_tank_long_range">Long range (79 L)</string>
@@ -97,8 +97,8 @@
     <string name="profile_edit_error_aft_limit">Achtergrens moet groter zijn dan voorgrens</string>
 
     <!-- Weight &amp; Balance -->
-    <string name="wb_title_format">Weight &amp; Balance — %1$s</string>
-    <string name="wb_title_default">Weight &amp; Balance</string>
+    <string name="wb_title_format">Weeg en Zwaartepunt — %1$s</string>
+    <string name="wb_title_default">Weeg en Zwaartepunt</string>
     <string name="wb_profile_not_found">Registratie niet gevonden.</string>
     <string name="wb_pilot_label">Piloot</string>
     <string name="wb_copilot_label">Copiloot (0 = solo)</string>
@@ -130,13 +130,13 @@
     <string name="perf_wind_direction_label">Windrichting (ware koers)</string>
     <string name="perf_wind_speed_label">Windsnelheid</string>
     <string name="perf_wind_direction_unknown_warning">Richting onbekend — vul deze handmatig in.</string>
-    <string name="perf_surface_label">Ondergrond</string>
+    <string name="perf_surface_label">Baantype en conditie</string>
     <string name="perf_surface_asfalt">Asfalt</string>
     <string name="perf_surface_droog_gras">Droog gras</string>
     <string name="perf_surface_nat_gras">Nat gras</string>
     <string name="perf_surface_zacht">Zacht</string>
-    <string name="perf_slope_label">[AIC P173] Hellingshoek (positief = oplopend)</string>
-    <string name="perf_margin_factor_label">[AIC P173] Marge-factor (aanbevolen)</string>
+    <string name="perf_slope_label">[AIC P173] Hellingshoek (negatief = aflopend)</string>
+    <string name="perf_margin_factor_label">[AIC P173] Marge-factor</string>
     <string name="perf_ground_run_label">Grondrol</string>
     <string name="perf_obstacle_15m_label">Over 15m obstakel</string>
     <!-- Alleen nog in gebruik in het PDF-rapport: daar staat elke regel los, zonder groepskopje,
@@ -146,23 +146,23 @@
     <string name="perf_with_margin_heading_format">Met marge %1$s×</string>
     <string name="perf_without_margin_heading">Zonder marge</string>
     <string name="perf_result_section_title">Resultaat</string>
-    <string name="perf_result_surface_format">Ondergrond: %1$s</string>
+    <string name="perf_result_surface_format">Baantype: %1$s</string>
     <string name="perf_margin_included_format">Incl. marge %1$sx</string>
     <string name="perf_out_of_range_warning">Let op: invoer buiten gepubliceerd bereik — resultaat is een benadering, niet gebruiken zonder marge.</string>
     <string name="perf_no_correction_table_note">Geen correctietabel voor andere gewichten/hoogtes/temperaturen beschikbaar.</string>
     <string name="perf_warning_heading">Waarschuwing</string>
-    <string name="perf_tailwind_not_supported">Rugwind wordt niet ondersteund — AFM geeft hiervoor geen data.</string>
+    <string name="perf_tailwind_not_supported">Rugwind! Geen ondersteuning, AFM geeft hiervoor geen data.</string>
 
     <!-- PDF-rapport van een berekening -->
-    <string name="report_share_pdf">Delen als PDF</string>
+    <string name="report_share_pdf">Delen</string>
     <string name="report_share_chooser_title">Berekening delen</string>
-    <string name="report_title_wb">Weight &amp; Balance</string>
-    <string name="report_title_takeoff">Take-off</string>
-    <string name="report_title_landing">Landing</string>
-    <string name="report_title_sleepvlucht">Sleepvlucht</string>
+    <string name="report_title_wb">Weeg &amp; Zwaartepunt</string>
+    <string name="report_title_takeoff">Starten</string>
+    <string name="report_title_landing">Landen</string>
+    <string name="report_title_sleepvlucht">Slepen</string>
     <string name="report_title_format">%1$s — %2$s</string>
     <string name="report_section_input">Invoer</string>
-    <string name="report_section_weather">Weer en vliegveld</string>
+    <string name="report_section_weather">Weer &amp; vliegveld</string>
     <string name="report_section_result">Resultaat</string>
     <string name="report_section_runways">Resultaten per baan</string>
     <string name="report_section_notes">Toelichting</string>
@@ -214,7 +214,7 @@
     <string name="sleepvlucht_glider_weight_label">Sleepgewicht (zweefvliegtuig)</string>
     <string name="sleepvlucht_ld_known_label">Glijgetal (L/D) bekend</string>
     <string name="sleepvlucht_ld_label">Glijgetal (L/D)</string>
-    <string name="sleepvlucht_favorite_type_label">Favoriet zweeftype</string>
+    <string name="sleepvlucht_favorite_type_label">Zweefvliegtuigtypes (favoriet)</string>
     <string name="sleepvlucht_favorite_type_placeholder">Kies een type</string>
     <string name="sleepvlucht_favorite_type_option_format">%1$s (%2$d kg MTOW, L/D %3$s)</string>
     <string name="sleepvlucht_instruction_flight_label">Instructie TMG Glidertow (DBO)</string>
@@ -223,8 +223,8 @@
     <string name="sleepvlucht_towplane_reset_to_wb_format">Terug naar W&amp;B-waarde (%1$d kg)</string>
     <string name="sleepvlucht_class_format">Klasse: %1$s</string>
     <string name="sleepvlucht_class_bumped_up_note">Glijgetal onvoldoende voor de gewichtsklasse — eerstvolgende zwaardere klasse gebruikt.</string>
-    <string name="sleepvlucht_surface_toeslag_format">%1$s Ondergrond-toeslag %2$s%%</string>
-    <string name="sleepvlucht_slope_correction_format">[AIC P173] Inclusief hellingscorrectie voor %1$s%% oplopend</string>
+    <string name="sleepvlucht_surface_toeslag_format">%1$s Baantype-toeslag %2$s%%</string>
+    <string name="sleepvlucht_slope_correction_format">[AIC P173] Inclusief hellingscorrectie voor %1$s%% </string>
     <string name="sleepvlucht_climb_heading">Klimprestatie tijdens sleep (referentie)</string>
     <string name="sleepvlucht_climb_point_format">%1$s kg sleepgewicht: %2$s m/s</string>
 
@@ -242,7 +242,7 @@
     <string name="startup_reset_to_defaults">Standaardwaarden herstellen</string>
 
     <!-- Hoe de app rekent (uitlegscherm) -->
-    <string name="explainer_title">Hoe de app rekent</string>
+    <string name="explainer_title">Berekeningen in deze app</string>
     <string name="explainer_intro">Dit scherm legt in gewone taal uit wat de app berekent en op basis waarvan — geen kopie van het vlieghandboek, wel dezelfde bronlabels als in de rekenschermen zelf, zodat je ziet wat een gecertificeerd cijfer is en wat een externe vuistregel.</string>
     <string name="explainer_labels_legend_heading">Wat de bronlabels betekenen</string>
     <string name="explainer_labels_legend_body">[AFM] en [AFM Sup 1]/[AFM Sup 11] komen rechtstreeks uit het gecertificeerde vlieghandboek en de bijbehorende supplementen — dit zijn harde, gecertificeerde cijfers. [AIC P173] is een externe, niet-verplichte richtlijn van de Britse UK CAA, alleen gebruikt waar het vlieghandboek zelf niets voorschrijft.</string>
@@ -274,7 +274,7 @@
     <string name="airfield_edit_icao_label">ICAO-code (optioneel)</string>
     <string name="airfield_edit_metar_station_label">METAR-station (optioneel, standaard = ICAO-code)</string>
     <string name="airfield_edit_elevation_label">Veldhoogte</string>
-    <string name="airfield_edit_elevation_unknown_warning">De catalogus kent de veldhoogte van dit veld niet; 0 m is een plaatshouder. Vul de juiste hoogte in — hij bepaalt de drukhoogte en daarmee elke afstand.</string>
+    <string name="airfield_edit_elevation_unknown_warning">De catalogus kent de veldhoogte van dit veld niet; 0 m is een plaatshouder. Vul de juiste hoogte in!</string>
     <string name="airfield_edit_save">Vliegveld opslaan</string>
     <string name="airfield_edit_metar_section_title">METAR</string>
     <string name="airfield_edit_metar_auto_hint">De METAR wordt automatisch opgehaald voor het METAR-station hierboven, of anders voor de ICAO-code van dit vliegveld. Zonder internet blijft de laatst opgehaalde melding staan.</string>
@@ -298,7 +298,7 @@
     <string name="airfield_edit_metar_summary_no_qnh">Geen QNH in deze METAR — drukhoogte moet handmatig ingevuld worden.</string>
     <string name="airfield_edit_metar_summary_pressure_altitude_format">Drukhoogte ≈ %1$d m</string>
     <string name="airfield_edit_metar_summary_age_format">%1$d minuten oud</string>
-    <string name="airfield_edit_metar_summary_age_stale_format">%1$d minuten oud — mogelijk verouderd</string>
+    <string name="airfield_edit_metar_summary_age_stale_format">%1$d minuten oud — mogelijk verouderd!</string>
     <!-- Wereldwijde vliegvelddatabase (OurAirports) -->
     <string name="airport_catalog_title">Wereldwijde vliegvelden</string>
     <string name="airport_catalog_open">Zoek in wereldwijde database</string>
@@ -346,7 +346,7 @@
     <string name="airfield_edit_runway_slope_label">Helling richting A</string>
 
     <!-- Vlucht-context (Vliegveld/Handmatig toggle, gedeeld door Take-off/Landing/Sleepvlucht) -->
-    <string name="flight_context_mode_label">Weer &amp; baan</string>
+    <string name="flight_context_mode_label">Weerbron</string>
     <string name="flight_context_mode_airfield">Vliegveld</string>
     <string name="flight_context_mode_manual">Handmatig</string>
     <string name="flight_context_no_airfields_hint">Nog geen vliegvelden opgeslagen. Voeg er een toe via het menu \'Vliegvelden\'.</string>
@@ -361,10 +361,10 @@
     <string name="weather_mode_manual">Handmatig</string>
     <string name="flight_context_runway_section_title">Resultaten per baan</string>
     <string name="flight_context_runway_status_recommended">Aanbevolen</string>
-    <string name="flight_context_runway_status_fits">Past</string>
+    <string name="flight_context_runway_status_fits">Mogelijk</string>
     <string name="flight_context_runway_status_fits_without_margin">Past zonder veiligheidsmarge</string>
-    <string name="flight_context_runway_status_does_not_fit">Past niet</string>
-    <string name="flight_context_runway_status_tailwind">Rugwind — niet beschikbaar</string>
+    <string name="flight_context_runway_status_does_not_fit">Niet mogelijk</string>
+    <string name="flight_context_runway_status_tailwind">Rugwind!</string>
     <string name="flight_context_runway_detail_format">Tegenwind %1$d kt · zijwind %2$d kt</string>
     <string name="flight_context_runway_detail_gust_format">Tegenwind %1$d kt (%2$d) · zijwind %3$d kt (%4$d)</string>
     <string name="flight_context_runway_remaining_label">Resterende lengte</string>
