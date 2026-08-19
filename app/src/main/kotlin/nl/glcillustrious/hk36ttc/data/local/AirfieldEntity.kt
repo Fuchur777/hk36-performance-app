@@ -30,6 +30,12 @@ data class AirfieldEntity(
     val icao: String?,
     val metarStationIcao: String?,
     val elevationM: Double,
+    /** False when the elevation is a placeholder rather than a known value — set by the
+     * catalogue import when `elevation_ft` was empty. A plain 0.0 cannot carry this by itself:
+     * several Dutch fields really do sit at or below sea level, so "0 m" is indistinguishable
+     * from "not recorded" without this flag, and the difference feeds straight into the
+     * pressure-altitude derivation and from there into every distance. */
+    val elevationKnown: Boolean = true,
     val metarRaw: String?,
     val metarEnteredAtEpochMs: Long?
 )

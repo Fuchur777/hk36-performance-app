@@ -153,4 +153,33 @@ class MetarParserTest {
         assertApprox(21.0, metar.temperatureC)
         assertApprox(1016.0, requireNotNull(metar.qnhHpa))
     }
+
+    /**
+     * A corrected report. `COR` sits between the report type and the station, and the station
+     * check is position-strict, so before this was handled the whole report failed as
+     * MissingStation and the pilot simply got no weather for that field.
+     */
+    @Test
+    fun `a COR modifier before the station is skipped`() {
+        val metar = parseOrFail("METAR COR EHGR 170655Z 24008KT 9999 SCT025 09/04 Q1015")
+
+        assertEquals("EHGR", metar.stationIcao)
+        assertEquals(240.0, metar.windDirectionDeg)
+        assertApprox(8.0, metar.windSpeedKts)
+    }
+
+    @Test
+    fun `several stacked leading modifiers are all skipped`() {
+        val metar = parseOrFail("SPECI COR AUTO EHGR 170655Z 24008KT 9999 SCT025 09/04 Q1015")
+
+        assertEquals("EHGR", metar.stationIcao)
+    }
+
+    @Test
+    fun `a gust group is read alongside the steady wind`() {
+        val metar = parseOrFail("EHGR 161350Z 24012G20KT 9999 SCT025 18/12 Q1013")
+
+        assertApprox(12.0, metar.windSpeedKts)
+        assertApprox(20.0, requireNotNull(metar.windGustKts))
+    }
 }

@@ -125,6 +125,20 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+/** v7 -> v8: `airfields.elevationKnown`, so an elevation the catalogue didn't publish stops
+ * being indistinguishable from a real 0 m field (several Dutch fields sit at or below sea
+ * level). Additive with a SQL-level `DEFAULT 1`: every airfield that already exists was either
+ * typed by the pilot or imported with a published elevation, so "known" is the right answer for
+ * all of them — there is no way to tell retroactively which imports guessed, which is exactly
+ * why the flag has to be stored from now on. */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `airfields` ADD COLUMN `elevationKnown` INTEGER NOT NULL DEFAULT 1")
+    }
+}
+
 /** Every migration `AppDatabase` currently ships, in order. Add the next one here (and never
  * remove an old one) whenever `AppDatabase.version` is bumped again. */
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+val ALL_MIGRATIONS = arrayOf(
+    MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8
+)

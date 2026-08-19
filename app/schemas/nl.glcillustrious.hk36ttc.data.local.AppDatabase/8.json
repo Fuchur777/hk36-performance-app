@@ -1,0 +1,562 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 8,
+    "identityHash": "80c913195c681944de6beb44d83ee42c",
+    "entities": [
+      {
+        "tableName": "aircraft_profiles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `registration` TEXT NOT NULL, `emptyMassKg` REAL NOT NULL, `emptyMassCgPositionMm` REAL NOT NULL, `mtowKg` REAL NOT NULL, `cgEnvelopeForwardLimitMm` REAL NOT NULL, `cgEnvelopeAftLimitMm` REAL NOT NULL, `fuelTankType` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "registration",
+            "columnName": "registration",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "emptyMassKg",
+            "columnName": "emptyMassKg",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "emptyMassCgPositionMm",
+            "columnName": "emptyMassCgPositionMm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mtowKg",
+            "columnName": "mtowKg",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cgEnvelopeForwardLimitMm",
+            "columnName": "cgEnvelopeForwardLimitMm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cgEnvelopeAftLimitMm",
+            "columnName": "cgEnvelopeAftLimitMm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fuelTankType",
+            "columnName": "fuelTankType",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "last_wb_results",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `totalMassKg` REAL NOT NULL, `computedAtEpochMs` INTEGER NOT NULL, PRIMARY KEY(`profileId`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalMassKg",
+            "columnName": "totalMassKg",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "computedAtEpochMs",
+            "columnName": "computedAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId"
+          ]
+        }
+      },
+      {
+        "tableName": "favorite_sailplane_types",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`name` TEXT NOT NULL, PRIMARY KEY(`name`))",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "name"
+          ]
+        }
+      },
+      {
+        "tableName": "wb_inputs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `pilotKg` INTEGER NOT NULL, `copilotKg` INTEGER NOT NULL, `fuelLiters` INTEGER NOT NULL, `baggageKg` INTEGER NOT NULL, PRIMARY KEY(`profileId`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pilotKg",
+            "columnName": "pilotKg",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "copilotKg",
+            "columnName": "copilotKg",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fuelLiters",
+            "columnName": "fuelLiters",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baggageKg",
+            "columnName": "baggageKg",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId"
+          ]
+        }
+      },
+      {
+        "tableName": "takeoff_inputs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `oatC` INTEGER NOT NULL, `pressureAltM` INTEGER NOT NULL, `headwindKts` INTEGER NOT NULL, `surfaceType` TEXT NOT NULL, `slopePct` INTEGER NOT NULL, `marginFactorPct` INTEGER NOT NULL, `chosenRunwayDesignator` TEXT, PRIMARY KEY(`profileId`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "oatC",
+            "columnName": "oatC",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pressureAltM",
+            "columnName": "pressureAltM",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "headwindKts",
+            "columnName": "headwindKts",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "surfaceType",
+            "columnName": "surfaceType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slopePct",
+            "columnName": "slopePct",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "marginFactorPct",
+            "columnName": "marginFactorPct",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chosenRunwayDesignator",
+            "columnName": "chosenRunwayDesignator",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId"
+          ]
+        }
+      },
+      {
+        "tableName": "landing_inputs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `oatC` INTEGER NOT NULL, `pressureAltM` INTEGER NOT NULL, `surfaceType` TEXT NOT NULL, `customSurfaceFactorPct` INTEGER NOT NULL, `slopePct` INTEGER NOT NULL, `marginFactorPct` INTEGER NOT NULL, `chosenRunwayDesignator` TEXT, PRIMARY KEY(`profileId`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "oatC",
+            "columnName": "oatC",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pressureAltM",
+            "columnName": "pressureAltM",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "surfaceType",
+            "columnName": "surfaceType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customSurfaceFactorPct",
+            "columnName": "customSurfaceFactorPct",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slopePct",
+            "columnName": "slopePct",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "marginFactorPct",
+            "columnName": "marginFactorPct",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chosenRunwayDesignator",
+            "columnName": "chosenRunwayDesignator",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId"
+          ]
+        }
+      },
+      {
+        "tableName": "sleepvlucht_inputs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `oatC` INTEGER NOT NULL, `pressureAltM` INTEGER NOT NULL, `headwindKts` INTEGER NOT NULL, `slopePct` INTEGER NOT NULL, `marginFactorPct` INTEGER NOT NULL, `sailplaneMassKg` INTEGER NOT NULL, `ldRatioKnown` INTEGER NOT NULL, `ldRatio` INTEGER NOT NULL, `instructionFlight` INTEGER NOT NULL, `surfaceType` TEXT NOT NULL, `selectedSailplaneTypeName` TEXT, `selectedSailplaneTypeUsedFallback` INTEGER NOT NULL, `towplaneMassManualOverride` INTEGER NOT NULL, `towplaneMassManualKg` INTEGER NOT NULL, `chosenRunwayDesignator` TEXT, PRIMARY KEY(`profileId`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "oatC",
+            "columnName": "oatC",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pressureAltM",
+            "columnName": "pressureAltM",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "headwindKts",
+            "columnName": "headwindKts",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slopePct",
+            "columnName": "slopePct",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "marginFactorPct",
+            "columnName": "marginFactorPct",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sailplaneMassKg",
+            "columnName": "sailplaneMassKg",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ldRatioKnown",
+            "columnName": "ldRatioKnown",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ldRatio",
+            "columnName": "ldRatio",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "instructionFlight",
+            "columnName": "instructionFlight",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "surfaceType",
+            "columnName": "surfaceType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "selectedSailplaneTypeName",
+            "columnName": "selectedSailplaneTypeName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "selectedSailplaneTypeUsedFallback",
+            "columnName": "selectedSailplaneTypeUsedFallback",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "towplaneMassManualOverride",
+            "columnName": "towplaneMassManualOverride",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "towplaneMassManualKg",
+            "columnName": "towplaneMassManualKg",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chosenRunwayDesignator",
+            "columnName": "chosenRunwayDesignator",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId"
+          ]
+        }
+      },
+      {
+        "tableName": "airfields",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `icao` TEXT, `metarStationIcao` TEXT, `elevationM` REAL NOT NULL, `elevationKnown` INTEGER NOT NULL, `metarRaw` TEXT, `metarEnteredAtEpochMs` INTEGER)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "icao",
+            "columnName": "icao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "metarStationIcao",
+            "columnName": "metarStationIcao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "elevationM",
+            "columnName": "elevationM",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "elevationKnown",
+            "columnName": "elevationKnown",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "metarRaw",
+            "columnName": "metarRaw",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "metarEnteredAtEpochMs",
+            "columnName": "metarEnteredAtEpochMs",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "runway_strips",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `airfieldId` INTEGER NOT NULL, `designatorA` TEXT NOT NULL, `designatorB` TEXT NOT NULL, `headingDegTrueA` REAL NOT NULL, `lengthM` REAL NOT NULL, `surface` TEXT NOT NULL, `slopePctA` REAL NOT NULL, `oneWay` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "airfieldId",
+            "columnName": "airfieldId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "designatorA",
+            "columnName": "designatorA",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "designatorB",
+            "columnName": "designatorB",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "headingDegTrueA",
+            "columnName": "headingDegTrueA",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lengthM",
+            "columnName": "lengthM",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "surface",
+            "columnName": "surface",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slopePctA",
+            "columnName": "slopePctA",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "oneWay",
+            "columnName": "oneWay",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "flight_contexts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `mode` TEXT NOT NULL, `airfieldId` INTEGER, `grassCondition` TEXT NOT NULL, PRIMARY KEY(`profileId`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mode",
+            "columnName": "mode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "airfieldId",
+            "columnName": "airfieldId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "grassCondition",
+            "columnName": "grassCondition",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId"
+          ]
+        }
+      },
+      {
+        "tableName": "favorite_airfields",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`airfieldId` INTEGER NOT NULL, PRIMARY KEY(`airfieldId`))",
+        "fields": [
+          {
+            "fieldPath": "airfieldId",
+            "columnName": "airfieldId",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "airfieldId"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '80c913195c681944de6beb44d83ee42c')"
+    ]
+  }
+}

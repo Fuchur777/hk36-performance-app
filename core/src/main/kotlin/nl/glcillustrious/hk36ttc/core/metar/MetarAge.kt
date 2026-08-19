@@ -25,6 +25,9 @@ object MetarAge {
         if (observed.isAfter(now.plusHours(1))) {
             observed = observed.minusMonths(1)
         }
-        return Duration.between(observed, now).toMinutes()
+        // Floored at zero: a device clock a few minutes behind UTC, or a station reporting
+        // slightly ahead, lands inside the one-hour tolerance above and would otherwise produce a
+        // negative age — rendered as "-4 minuten" and never able to trip the staleness threshold.
+        return Duration.between(observed, now).toMinutes().coerceAtLeast(0)
     }
 }

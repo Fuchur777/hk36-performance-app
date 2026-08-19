@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import nl.glcillustrious.hk36ttc.core.metar.MetarParseResult
 import nl.glcillustrious.hk36ttc.core.metar.MetarParser
-import nl.glcillustrious.hk36ttc.core.metar.PressureAltitude
 import nl.glcillustrious.hk36ttc.core.metar.RequiredDistances
 import nl.glcillustrious.hk36ttc.core.metar.RunwayAdvice
 import nl.glcillustrious.hk36ttc.core.metar.RunwayAdvisor
@@ -36,6 +35,9 @@ import nl.glcillustrious.hk36ttc.data.local.LandingInputEntity
 import nl.glcillustrious.hk36ttc.data.local.RunwayStripEntity
 import nl.glcillustrious.hk36ttc.data.local.RunwaySurfaceType
 import nl.glcillustrious.hk36ttc.ui.common.LoadGuard
+import nl.glcillustrious.hk36ttc.ui.common.anyGrass
+import nl.glcillustrious.hk36ttc.ui.common.deriveWeather
+import nl.glcillustrious.hk36ttc.ui.common.surfaceType
 import nl.glcillustrious.hk36ttc.ui.common.RunwayDirectionOption
 import nl.glcillustrious.hk36ttc.ui.common.WeatherInputMode
 import nl.glcillustrious.hk36ttc.ui.common.directionOptions
@@ -96,7 +98,7 @@ data class LandingFormState(
     val effectivePressureAltM: Int = 0
 ) {
     val hasGrassRunway: Boolean
-        get() = runwayStrips.any { RunwaySurfaceType.valueOf(it.surface) == RunwaySurfaceType.GRASS }
+        get() = runwayStrips.anyGrass()
 
     /** See [TakeoffFormState.showGrassCondition]. */
     val showGrassCondition: Boolean
@@ -260,7 +262,7 @@ class LandingViewModel(
      * to Aangepast at the AIC P173 upper bound, the closest published figure, still fully
      * overridable. */
     private fun deriveSurfaceType(strip: RunwayStripEntity, grassCondition: GrassCondition): LandingSurfaceType =
-        when (RunwaySurfaceType.valueOf(strip.surface)) {
+        when (strip.surfaceType()) {
             RunwaySurfaceType.ASPHALT -> LandingSurfaceType.ASFALT
             RunwaySurfaceType.GRASS -> when (grassCondition) {
                 GrassCondition.DRY -> LandingSurfaceType.DROOG_GRAS
@@ -283,37 +285,20 @@ class LandingViewModel(
     private fun recalculate() {
         val s = _state.value
 
-        val parsedMetar = s.selectedAirfield?.metarRaw
-            ?.let { raw -> (MetarParser.parse(raw) as? MetarParseResult.Success)?.metar }
-
-        val airfieldContextActive = s.flightContextMode == FlightContextMode.AIRFIELD && s.selectedAirfield != null
-        // See TakeoffViewModel.recalculate — OAT/QNH parse independently of the wind group.
-        val weatherDerivable = airfieldContextActive && parsedMetar != null
-        val pressureAltDerivable = weatherDerivable && parsedMetar.qnhHpa != null
-        val metarWindDirection = parsedMetar?.windDirectionDeg
-        val metarWindUsable = airfieldContextActive && parsedMetar != null && metarWindDirection != null
-
-        val manualWeather = s.weatherMode == WeatherInputMode.MANUAL
-        val effOat = if (!weatherDerivable || manualWeather) s.oatC else parsedMetar.temperatureC.roundToInt()
-        // Floored at 0 m: the AFM tables start there, and a sub-sea-level pressure altitude is
-        // the most favourable case there is — see rekenlogica.md §8b.
-        val effPressureAlt = if (!pressureAltDerivable || manualWeather) {
-            s.pressureAltM
-        } else {
-            PressureAltitude.fromElevationAndQnh(s.selectedAirfield.elevationM, parsedMetar.qnhHpa!!)
-                .roundToInt()
-                .coerceAtLeast(0)
-        }
-
-        val windDirectionDeg: Double?
-        val windSpeedKts: Double
-        if (airfieldContextActive && (manualWeather || !metarWindUsable)) {
-            windDirectionDeg = if (s.windManuallySet) s.windDirectionDeg.toDouble() else null
-            windSpeedKts = s.windSpeedKts.toDouble()
-        } else {
-            windDirectionDeg = metarWindDirection
-            windSpeedKts = parsedMetar?.windSpeedKts ?: 0.0
-        }
+        val weather = deriveWeather(
+            selectedAirfield = s.selectedAirfield,
+            airfieldContextActive = s.flightContextMode == FlightContextMode.AIRFIELD,
+            manualWeather = s.weatherMode == WeatherInputMode.MANUAL,
+            manualOatC = s.oatC,
+            manualPressureAltM = s.pressureAltM,
+            manualWindDirectionDeg = s.windDirectionDeg,
+            manualWindSpeedKts = s.windSpeedKts,
+            windManuallySet = s.windManuallySet
+        )
+        val effOat = weather.oatC
+        val effPressureAlt = weather.pressureAltM
+        val windDirectionDeg = weather.windDirectionDeg
+        val windSpeedKts = weather.windSpeedKts
 
         val directions: List<RunwayDirectionOption> = s.runwayStrips.flatMap { it.directionOptions() }
         val runwayResults: List<LandingRunwayResult> = if (windDirectionDeg != null && directions.isNotEmpty()) {
@@ -323,6 +308,7 @@ class LandingViewModel(
                 windDirectionDeg = windDirectionDeg,
                 windSpeedKts = windSpeedKts,
                 demonstratedCrosswindKts = kmhToKts(performanceNormal.demonstratedCrosswindKmh),
+                windGustKts = weather.windGustKts,
                 requiredDistances = { _, candidate ->
                     val direction = directions.first { it.id == candidate.designator }
                     val surfaceType = deriveSurfaceType(direction.strip, s.grassCondition)
@@ -363,9 +349,9 @@ class LandingViewModel(
             it.copy(
                 result = result,
                 runwayResults = runwayResults,
-                weatherDerivable = weatherDerivable,
-                pressureAltDerivable = pressureAltDerivable,
-                metarWindUsable = metarWindUsable,
+                weatherDerivable = weather.weatherDerivable,
+                pressureAltDerivable = weather.pressureAltDerivable,
+                metarWindUsable = weather.metarWindUsable,
                 effectiveOatC = effOat,
                 effectivePressureAltM = effPressureAlt
             )

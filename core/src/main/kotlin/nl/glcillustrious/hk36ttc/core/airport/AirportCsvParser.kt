@@ -31,9 +31,12 @@ data class ParsedAirport(
 )
 
 /**
- * Parses OurAirports `airports.csv`. [lines] is a sequence so the caller can stream a 12 MB
- * file straight off disk or the network without ever holding it whole in memory; the first
- * element must be the header row.
+ * Parses OurAirports `airports.csv` into a list. [lines] is a sequence and the first element
+ * must be the header row.
+ *
+ * This form **does** hold every parsed row at once — roughly 80,000 of them for the real file —
+ * which is fine for a test but not for a device. Anything loading the real catalogue should use
+ * [forEachAirport] instead and insert as it reads.
  *
  * Closed airports are dropped — they cannot be flown to, and leaving them in would only pad
  * the search results the pilot has to scan past.
@@ -42,35 +45,48 @@ data class ParsedAirport(
  * throwing: this is a third-party file regenerated daily, and one malformed row should never
  * cost the pilot the entire catalogue.
  */
-fun parseAirportsCsv(lines: Sequence<String>): List<ParsedAirport> {
+fun parseAirportsCsv(lines: Sequence<String>): List<ParsedAirport> =
+    buildList { forEachAirport(lines) { add(it) } }
+
+/**
+ * Streaming form of [parseAirportsCsv]: hands each row to [action] as it is read, so a caller
+ * inserting into a database never has to hold the whole 80,000-row result in memory. `inline`
+ * so [action] may suspend — the database insert on the other side of it does.
+ *
+ * The List-returning [parseAirportsCsv] is a thin wrapper over this and stays the convenient
+ * form for tests.
+ */
+inline fun forEachAirport(lines: Sequence<String>, action: (ParsedAirport) -> Unit) {
     val iterator = lines.iterator()
-    if (!iterator.hasNext()) return emptyList()
+    if (!iterator.hasNext()) return
     val header = CsvHeader.parse(iterator.next())
-
-    val airports = mutableListOf<ParsedAirport>()
     while (iterator.hasNext()) {
-        val line = iterator.next()
-        if (line.isBlank()) continue
-        val fields = CsvReader.splitLine(line)
-
-        val ident = header.value(fields, "ident") ?: continue
-        val name = header.value(fields, "name") ?: continue
-        val type = header.value(fields, "type") ?: "unknown"
-        if (type == "closed") continue
-
-        airports += ParsedAirport(
-            ident = ident,
-            type = type,
-            name = name,
-            elevationM = header.value(fields, "elevation_ft")?.toDoubleOrNull()?.times(FEET_TO_METRES),
-            isoCountry = header.value(fields, "iso_country"),
-            municipality = header.value(fields, "municipality"),
-            icaoCode = header.value(fields, "icao_code")?.uppercase(),
-            gpsCode = header.value(fields, "gps_code")?.uppercase(),
-            localCode = header.value(fields, "local_code")?.uppercase(),
-            latitudeDeg = header.value(fields, "latitude_deg")?.toDoubleOrNull(),
-            longitudeDeg = header.value(fields, "longitude_deg")?.toDoubleOrNull()
-        )
+        val airport = parseAirportRow(header, iterator.next()) ?: continue
+        action(airport)
     }
-    return airports
+}
+
+/** One data row, or null when it is blank, closed, or missing the fields that make it usable. */
+fun parseAirportRow(header: CsvHeader, line: String): ParsedAirport? {
+    if (line.isBlank()) return null
+    val fields = CsvReader.splitLine(line)
+
+    val ident = header.value(fields, "ident") ?: return null
+    val name = header.value(fields, "name") ?: return null
+    val type = header.value(fields, "type") ?: "unknown"
+    if (type == "closed") return null
+
+    return ParsedAirport(
+        ident = ident,
+        type = type,
+        name = name,
+        elevationM = header.value(fields, "elevation_ft")?.toDoubleOrNull()?.times(FEET_TO_METRES),
+        isoCountry = header.value(fields, "iso_country"),
+        municipality = header.value(fields, "municipality"),
+        icaoCode = header.value(fields, "icao_code")?.uppercase(),
+        gpsCode = header.value(fields, "gps_code")?.uppercase(),
+        localCode = header.value(fields, "local_code")?.uppercase(),
+        latitudeDeg = header.value(fields, "latitude_deg")?.toDoubleOrNull(),
+        longitudeDeg = header.value(fields, "longitude_deg")?.toDoubleOrNull()
+    )
 }

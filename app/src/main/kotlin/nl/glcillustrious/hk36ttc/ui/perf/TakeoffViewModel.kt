@@ -19,7 +19,6 @@ import kotlinx.coroutines.launch
 import nl.glcillustrious.hk36ttc.core.metar.MetarConfigData
 import nl.glcillustrious.hk36ttc.core.metar.MetarParseResult
 import nl.glcillustrious.hk36ttc.core.metar.MetarParser
-import nl.glcillustrious.hk36ttc.core.metar.PressureAltitude
 import nl.glcillustrious.hk36ttc.core.metar.RequiredDistances
 import nl.glcillustrious.hk36ttc.core.metar.RunwayAdvice
 import nl.glcillustrious.hk36ttc.core.metar.RunwayAdvisor
@@ -40,7 +39,10 @@ import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
 import nl.glcillustrious.hk36ttc.ui.common.LoadGuard
 import nl.glcillustrious.hk36ttc.ui.common.RunwayDirectionOption
 import nl.glcillustrious.hk36ttc.ui.common.WeatherInputMode
+import nl.glcillustrious.hk36ttc.ui.common.anyGrass
+import nl.glcillustrious.hk36ttc.ui.common.deriveWeather
 import nl.glcillustrious.hk36ttc.ui.common.directionOptions
+import nl.glcillustrious.hk36ttc.ui.common.surfaceType
 import nl.glcillustrious.hk36ttc.ui.common.toCandidate
 
 /**
@@ -125,7 +127,7 @@ data class TakeoffFormState(
     val effectivePressureAltM: Int = 0
 ) {
     val hasGrassRunway: Boolean
-        get() = runwayStrips.any { RunwaySurfaceType.valueOf(it.surface) == RunwaySurfaceType.GRASS }
+        get() = runwayStrips.anyGrass()
 
     /** The "gras vandaag" (droog/nat/zacht) choice only feeds the per-runway calculation, which
      * derives each runway's surface from its own strip. In [FlightContextMode.MANUAL] the pilot
@@ -358,7 +360,7 @@ class TakeoffViewModel(
     }
 
     private fun deriveSurfaceType(strip: RunwayStripEntity, grassCondition: GrassCondition): TakeoffSurfaceType =
-        when (RunwaySurfaceType.valueOf(strip.surface)) {
+        when (strip.surfaceType()) {
             RunwaySurfaceType.ASPHALT -> TakeoffSurfaceType.ASFALT
             RunwaySurfaceType.GRASS -> when (grassCondition) {
                 GrassCondition.DRY -> TakeoffSurfaceType.DROOG_GRAS
@@ -381,47 +383,20 @@ class TakeoffViewModel(
     private fun recalculate() {
         val s = _state.value
 
-        val parsedMetar = s.selectedAirfield?.metarRaw
-            ?.let { raw -> (MetarParser.parse(raw) as? MetarParseResult.Success)?.metar }
-
-        val airfieldContextActive = s.flightContextMode == FlightContextMode.AIRFIELD && s.selectedAirfield != null
-        // OAT/pressure-alt derivability no longer depends on the wind group being usable —
-        // temperature and QNH parse independently of whether the wind is VRB/missing.
-        val weatherDerivable = airfieldContextActive && parsedMetar != null
-        val pressureAltDerivable = weatherDerivable && parsedMetar.qnhHpa != null
-        val metarWindDirection = parsedMetar?.windDirectionDeg
-        val metarWindUsable = airfieldContextActive && parsedMetar != null && metarWindDirection != null
-
-        val manualWeather = s.weatherMode == WeatherInputMode.MANUAL
-        val effOat = if (!weatherDerivable || manualWeather) s.oatC else parsedMetar.temperatureC.roundToInt()
-        // A high QNH puts the pressure altitude below sea level, but the AFM's tables start at
-        // 0 m — extrapolating below that would trip the out-of-range warning for what is in
-        // fact the *easiest* case (denser air, shorter distances). Clamping to 0 keeps the
-        // figures on the conservative side (it under-reports the available performance, never
-        // over-reports it) and leaves the warning for genuine extrapolation. The METAR card
-        // still shows the true derived value; only the calculation floors it.
-        val effPressureAlt = if (!pressureAltDerivable || manualWeather) {
-            s.pressureAltM
-        } else {
-            PressureAltitude.fromElevationAndQnh(s.selectedAirfield.elevationM, parsedMetar.qnhHpa!!)
-                .roundToInt()
-                .coerceAtLeast(0)
-        }
-
-        // The wind actually fed to the advisor: the pilot's own typed direction+speed either
-        // when they chose Handmatig weather, or when they're still in METAR mode but the
-        // METAR's own wind isn't usable (variable/missing) — either way, null until they've
-        // actually touched those fields (windManuallySet), since 0°/0kt is a real calm wind,
-        // not a safe stand-in for "nothing entered yet". Otherwise, the METAR's own wind.
-        val windDirectionDeg: Double?
-        val windSpeedKts: Double
-        if (airfieldContextActive && (manualWeather || !metarWindUsable)) {
-            windDirectionDeg = if (s.windManuallySet) s.windDirectionDeg.toDouble() else null
-            windSpeedKts = s.windSpeedKts.toDouble()
-        } else {
-            windDirectionDeg = metarWindDirection
-            windSpeedKts = parsedMetar?.windSpeedKts ?: 0.0
-        }
+        val weather = deriveWeather(
+            selectedAirfield = s.selectedAirfield,
+            airfieldContextActive = s.flightContextMode == FlightContextMode.AIRFIELD,
+            manualWeather = s.weatherMode == WeatherInputMode.MANUAL,
+            manualOatC = s.oatC,
+            manualPressureAltM = s.pressureAltM,
+            manualWindDirectionDeg = s.windDirectionDeg,
+            manualWindSpeedKts = s.windSpeedKts,
+            windManuallySet = s.windManuallySet
+        )
+        val effOat = weather.oatC
+        val effPressureAlt = weather.pressureAltM
+        val windDirectionDeg = weather.windDirectionDeg
+        val windSpeedKts = weather.windSpeedKts
 
         val directions: List<RunwayDirectionOption> = s.runwayStrips.flatMap { it.directionOptions() }
         val runwayResults: List<TakeoffRunwayResult> = if (windDirectionDeg != null && directions.isNotEmpty()) {
@@ -431,6 +406,7 @@ class TakeoffViewModel(
                 windDirectionDeg = windDirectionDeg,
                 windSpeedKts = windSpeedKts,
                 demonstratedCrosswindKts = kmhToKts(performanceNormal.demonstratedCrosswindKmh),
+                windGustKts = weather.windGustKts,
                 requiredDistances = { headwindKts, candidate ->
                     val direction = directions.first { it.id == candidate.designator }
                     val surfaceType = deriveSurfaceType(direction.strip, s.grassCondition)
@@ -473,9 +449,9 @@ class TakeoffViewModel(
             it.copy(
                 result = result,
                 runwayResults = runwayResults,
-                weatherDerivable = weatherDerivable,
-                pressureAltDerivable = pressureAltDerivable,
-                metarWindUsable = metarWindUsable,
+                weatherDerivable = weather.weatherDerivable,
+                pressureAltDerivable = weather.pressureAltDerivable,
+                metarWindUsable = weather.metarWindUsable,
                 effectiveOatC = effOat,
                 effectivePressureAltM = effPressureAlt
             )

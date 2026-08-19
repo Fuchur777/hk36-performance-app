@@ -84,8 +84,9 @@ internal fun headingFromDesignator(designator: String): Double? {
 
 /**
  * Parses OurAirports `runways.csv` into strips this app can store directly. [lines] must start
- * with the header row; see [parseAirportsCsv] for the streaming/robustness reasoning, which is
- * identical here.
+ * with the header row; see [parseAirportsCsv] for the robustness reasoning, which is identical
+ * here — including that this list-returning form is the convenient one, not the one to load the
+ * real catalogue with. Use [forEachRunway] for that.
  *
  * **On the derived heading.** The advisor needs a *true* heading to resolve head- and crosswind
  * (rekenlogica.md §8), but `le_heading_degT` is empty for most rows in this dataset. Rather than
@@ -99,51 +100,60 @@ internal fun headingFromDesignator(designator: String): Double? {
  * neither a true heading nor a numeric designator to reconstruct one from — in that last case
  * storing 0° would be a silent lie the app would then quietly calculate with.
  */
-fun parseRunwaysCsv(lines: Sequence<String>): List<ParsedRunway> {
+fun parseRunwaysCsv(lines: Sequence<String>): List<ParsedRunway> =
+    buildList { forEachRunway(lines) { add(it) } }
+
+/**
+ * Streaming form of [parseRunwaysCsv] — see [forEachAirport] for why this shape exists and why
+ * it is `inline`.
+ */
+inline fun forEachRunway(lines: Sequence<String>, action: (ParsedRunway) -> Unit) {
     val iterator = lines.iterator()
-    if (!iterator.hasNext()) return emptyList()
+    if (!iterator.hasNext()) return
     val header = CsvHeader.parse(iterator.next())
-
-    val runways = mutableListOf<ParsedRunway>()
     while (iterator.hasNext()) {
-        val line = iterator.next()
-        if (line.isBlank()) continue
-        val fields = CsvReader.splitLine(line)
-
-        if (header.value(fields, "closed") == "1") continue
-
-        val airportIdent = header.value(fields, "airport_ident") ?: continue
-        val designatorA = header.value(fields, "le_ident") ?: continue
-
-        val lengthM = header.value(fields, "length_ft")?.toDoubleOrNull()?.times(FEET_TO_METRES)
-        if (lengthM == null || lengthM <= 0.0) continue
-
-        val surface = surfaceFor(header.value(fields, "surface")) ?: continue
-
-        val trueHeading = header.value(fields, "le_heading_degT")?.toDoubleOrNull()
-        val heading: Double
-        val derived: Boolean
-        if (trueHeading != null) {
-            heading = trueHeading.mod(360.0)
-            derived = false
-        } else {
-            heading = headingFromDesignator(designatorA) ?: continue
-            derived = true
-        }
-
-        val designatorB = header.value(fields, "he_ident")
-        runways += ParsedRunway(
-            airportIdent = airportIdent,
-            designatorA = designatorA,
-            designatorB = designatorB,
-            headingDegTrueA = heading,
-            headingDerived = derived,
-            lengthM = lengthM,
-            surface = surface,
-            // The app's strip model already supports one-way strips; a missing high end is
-            // exactly that case.
-            oneWay = designatorB == null
-        )
+        val runway = parseRunwayRow(header, iterator.next()) ?: continue
+        action(runway)
     }
-    return runways
+}
+
+/** One data row, or null when it is blank, closed, or fails any of the drop rules above. */
+fun parseRunwayRow(header: CsvHeader, line: String): ParsedRunway? {
+    if (line.isBlank()) return null
+    val fields = CsvReader.splitLine(line)
+
+    if (header.value(fields, "closed") == "1") return null
+
+    val airportIdent = header.value(fields, "airport_ident") ?: return null
+    val designatorA = header.value(fields, "le_ident") ?: return null
+
+    val lengthM = header.value(fields, "length_ft")?.toDoubleOrNull()?.times(FEET_TO_METRES)
+    if (lengthM == null || lengthM <= 0.0) return null
+
+    val surface = surfaceFor(header.value(fields, "surface")) ?: return null
+
+    val trueHeading = header.value(fields, "le_heading_degT")?.toDoubleOrNull()
+    val heading: Double
+    val derived: Boolean
+    if (trueHeading != null) {
+        heading = trueHeading.mod(360.0)
+        derived = false
+    } else {
+        heading = headingFromDesignator(designatorA) ?: return null
+        derived = true
+    }
+
+    val designatorB = header.value(fields, "he_ident")
+    return ParsedRunway(
+        airportIdent = airportIdent,
+        designatorA = designatorA,
+        designatorB = designatorB,
+        headingDegTrueA = heading,
+        headingDerived = derived,
+        lengthM = lengthM,
+        surface = surface,
+        // The app's strip model already supports one-way strips; a missing high end is
+        // exactly that case.
+        oneWay = designatorB == null
+    )
 }

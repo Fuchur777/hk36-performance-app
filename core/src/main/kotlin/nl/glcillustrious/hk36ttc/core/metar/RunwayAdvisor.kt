@@ -49,14 +49,25 @@ enum class RunwayAdviceStatus {
     TAILWIND_NOT_SUPPORTED
 }
 
-/** [requiredDistanceWithMarginM]/[requiredDistanceWithoutMarginM]/[remainingWithMarginM]/
+/**
+ * [requiredDistanceWithMarginM]/[requiredDistanceWithoutMarginM]/[remainingWithMarginM]/
  * [remainingWithoutMarginM] are null exactly when [status] is
  * [RunwayAdviceStatus.TAILWIND_NOT_SUPPORTED] — there's nothing to compare against a tailwind
- * heading the AFM doesn't cover. */
+ * heading the AFM doesn't cover.
+ *
+ * [headwindGustKts]/[crosswindGustKts] are the same decomposition run against the METAR's gust
+ * speed instead of its steady speed, and are non-null only when the report carried a gust group
+ * *and* the wind came from that report rather than being typed by hand. They are for display
+ * only: every judgement this advisor makes — [status], the ranking, and [crosswindExceeded] —
+ * stays on the steady wind, so the recommendation does not move when a gust is present. The
+ * pilot sees the gust figure in brackets beside the steady one and weighs it themselves.
+ */
 data class RunwayAdvice(
     val candidate: RunwayCandidate,
     val headwindKts: Double,
     val crosswindKts: Double,
+    val headwindGustKts: Double?,
+    val crosswindGustKts: Double?,
     val crosswindExceeded: Boolean,
     val requiredDistanceWithMarginM: Double?,
     val requiredDistanceWithoutMarginM: Double?,
@@ -90,15 +101,22 @@ object RunwayAdvisor {
         windDirectionDeg: Double,
         windSpeedKts: Double,
         demonstratedCrosswindKts: Double,
+        /** The report's gust speed, when it had one. Display only — see [RunwayAdvice]. */
+        windGustKts: Double? = null,
         requiredDistances: (headwindKts: Double, candidate: RunwayCandidate) -> RequiredDistances
     ): List<RunwayAdvice> {
         val evaluated = candidates.map { candidate ->
             val wind = WindComponents.compute(windDirectionDeg, windSpeedKts, candidate.headingDegTrue)
+            // Same decomposition at gust strength, carried alongside for display. Never fed
+            // into any comparison below: the ranking must not shift when a gust appears.
+            val gust = windGustKts?.let { WindComponents.compute(windDirectionDeg, it, candidate.headingDegTrue) }
             if (wind.headwindKts < 0.0) {
                 RunwayAdvice(
                     candidate = candidate,
                     headwindKts = wind.headwindKts,
                     crosswindKts = wind.crosswindKts,
+                    headwindGustKts = gust?.headwindKts,
+                    crosswindGustKts = gust?.crosswindKts,
                     crosswindExceeded = wind.crosswindKts > demonstratedCrosswindKts,
                     requiredDistanceWithMarginM = null,
                     requiredDistanceWithoutMarginM = null,
@@ -119,6 +137,8 @@ object RunwayAdvisor {
                     candidate = candidate,
                     headwindKts = wind.headwindKts,
                     crosswindKts = wind.crosswindKts,
+                    headwindGustKts = gust?.headwindKts,
+                    crosswindGustKts = gust?.crosswindKts,
                     crosswindExceeded = wind.crosswindKts > demonstratedCrosswindKts,
                     requiredDistanceWithMarginM = required.withMarginM,
                     requiredDistanceWithoutMarginM = required.withoutMarginM,

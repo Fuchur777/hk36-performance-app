@@ -274,6 +274,7 @@
     <string name="airfield_edit_icao_label">ICAO code (optional)</string>
     <string name="airfield_edit_metar_station_label">METAR station (optional, defaults to ICAO code)</string>
     <string name="airfield_edit_elevation_label">Field elevation</string>
+    <string name="airfield_edit_elevation_unknown_warning">The catalogue has no elevation for this field; 0 m is a placeholder. Enter the correct elevation — it drives the pressure altitude and with it every distance.</string>
     <string name="airfield_edit_save">Save airfield</string>
     <string name="airfield_edit_metar_section_title">METAR</string>
     <string name="airfield_edit_metar_auto_hint">The METAR is fetched automatically for the METAR station above, or otherwise for this airfield\'s ICAO code. Without an internet connection the last fetched report stays in place.</string>
@@ -366,6 +367,7 @@
     <string name="flight_context_runway_status_does_not_fit">Doesn\'t fit</string>
     <string name="flight_context_runway_status_tailwind">Tailwind — not available</string>
     <string name="flight_context_runway_detail_format">Headwind %1$d kt · Crosswind %2$d kt</string>
+    <string name="flight_context_runway_detail_gust_format">Headwind %1$d kt (%2$d) · Crosswind %3$d kt (%4$d)</string>
     <string name="flight_context_runway_remaining_label">Runway remaining</string>
     <string name="flight_context_crosswind_exceeded_warning">Crosswind above the demonstrated limit</string>
 </resources>

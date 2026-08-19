@@ -33,7 +33,8 @@ class AirportCatalogRepositoryTest {
         metaDao = FakeCatalogMetaDao(),
         userRepository = userRepository,
         openAsset = { error("no assets in this test") },
-        transaction = { block -> block() }
+        transaction = { block -> block() },
+        newTempFile = { error("no downloads in this test") }
     )
 
     private fun seedCatalogGilzeRijen() {

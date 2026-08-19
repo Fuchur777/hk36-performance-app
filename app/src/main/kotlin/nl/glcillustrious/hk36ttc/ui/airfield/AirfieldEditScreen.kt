@@ -192,12 +192,25 @@ fun AirfieldEditScreen(
             IntStepperField(
                 label = stringResource(R.string.airfield_edit_elevation_label),
                 value = state.elevationM,
-                onValueChange = { v -> viewModel.update { it.copy(elevationM = v) } },
+                // Touching the stepper at all is the pilot confirming the value, which is what
+                // clears the catalogue's "not recorded" placeholder marking.
+                onValueChange = { v -> viewModel.update { it.copy(elevationM = v, elevationKnown = true) } },
                 min = -50,
                 max = 3000,
                 suffix = "m"
             )
-
+            if (!state.elevationKnown) {
+                // Not a blocking error: the pilot may genuinely know the field is at 0 m, and
+                // confirming it on the stepper is enough to clear this.
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                    Text(
+                        stringResource(R.string.airfield_edit_elevation_unknown_warning),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
             HorizontalDivider()
             Text(stringResource(R.string.airfield_edit_metar_section_title), style = MaterialTheme.typography.titleMedium)
             Text(

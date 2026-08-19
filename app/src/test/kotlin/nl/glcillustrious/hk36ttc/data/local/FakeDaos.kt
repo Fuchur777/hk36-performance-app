@@ -184,9 +184,12 @@ fun fakeAircraftProfileRepository(
     airfieldDao: FakeAirfieldDao = FakeAirfieldDao(),
     runwayStripDao: FakeRunwayStripDao = FakeRunwayStripDao(),
     flightContextDao: FakeFlightContextDao = FakeFlightContextDao(),
-    favoriteAirfieldDao: FakeFavoriteAirfieldDao = FakeFavoriteAirfieldDao()
+    favoriteAirfieldDao: FakeFavoriteAirfieldDao = FakeFavoriteAirfieldDao(),
+    /** Straight pass-through: the fakes are plain in-memory lists, so there is nothing to roll
+     * back. Production supplies a real Room transaction (see Hk36Application). */
+    transaction: suspend (suspend () -> Unit) -> Unit = { block -> block() }
 ): AircraftProfileRepository = AircraftProfileRepository(
     profileDao, lastWbResultDao, favoriteSailplaneTypeDao,
     wbInputDao, takeoffInputDao, landingInputDao, sleepvluchtInputDao,
-    airfieldDao, runwayStripDao, flightContextDao, favoriteAirfieldDao
+    airfieldDao, runwayStripDao, flightContextDao, favoriteAirfieldDao, transaction
 )

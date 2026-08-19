@@ -139,4 +139,54 @@ class RunwayAdvisorTest {
 
         assertEquals(listOf(2.0, -2.0), seenSlopes)
     }
+
+    /**
+     * Gusts are carried for display only. The pilot sees the gust-strength components beside the
+     * steady ones, but nothing the advisor decides may move because of them — otherwise a gusty
+     * report would quietly re-rank the runways between one refresh and the next.
+     */
+    @Test
+    fun `a gust adds display components without changing the advice`() {
+        val runway03 = RunwayCandidate("03", headingDegTrue = 30.0, lengthM = 1000.0)
+        val runway09 = RunwayCandidate("09", headingDegTrue = 90.0, lengthM = 1000.0)
+        val candidates = listOf(runway09, runway03)
+        val distances = { headwindKts: Double, _: RunwayCandidate -> flat(500.0 - headwindKts * 10.0) }
+
+        val steady = RunwayAdvisor.advise(
+            candidates = candidates,
+            windDirectionDeg = 30.0,
+            windSpeedKts = 15.0,
+            demonstratedCrosswindKts = demonstratedCrosswindKts,
+            requiredDistances = distances
+        )
+        val gusting = RunwayAdvisor.advise(
+            candidates = candidates,
+            windDirectionDeg = 30.0,
+            windSpeedKts = 15.0,
+            demonstratedCrosswindKts = demonstratedCrosswindKts,
+            windGustKts = 30.0,
+            requiredDistances = distances
+        )
+
+        // Order, status, required distances and the crosswind verdict are all untouched.
+        assertEquals(steady.map { it.candidate.designator }, gusting.map { it.candidate.designator })
+        assertEquals(steady.map { it.status }, gusting.map { it.status })
+        assertEquals(steady.map { it.remainingWithMarginM }, gusting.map { it.remainingWithMarginM })
+        assertEquals(steady.map { it.crosswindExceeded }, gusting.map { it.crosswindExceeded })
+
+        // Only the extra display fields appear, and they scale with the gust speed.
+        assertEquals(listOf(null, null), steady.map { it.crosswindGustKts })
+        val gustingRunway09 = gusting.first { it.candidate.designator == "09" }
+        val steadyRunway09 = steady.first { it.candidate.designator == "09" }
+        assertEquals(
+            steadyRunway09.crosswindKts * 2.0,
+            requireNotNull(gustingRunway09.crosswindGustKts),
+            0.0001
+        )
+        assertEquals(
+            steadyRunway09.headwindKts * 2.0,
+            requireNotNull(gustingRunway09.headwindGustKts),
+            0.0001
+        )
+    }
 }

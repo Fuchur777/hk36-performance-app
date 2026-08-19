@@ -92,6 +92,9 @@ data class AirfieldFormState(
     val icao: String = "",
     val metarStationIcao: String = "",
     val elevationM: Int = 0,
+    /** Mirrors [nl.glcillustrious.hk36ttc.data.local.AirfieldEntity.elevationKnown]. False puts
+     * a warning on the elevation field and is cleared the moment the pilot sets a value. */
+    val elevationKnown: Boolean = true,
     val metarRaw: String = "",
     val metarEnteredAtEpochMs: Long? = null,
     /** True once a save has been attempted while [name] was blank — pressing "opslaan" on an
@@ -178,6 +181,7 @@ class AirfieldEditViewModel(
                             icao = airfield.icao.orEmpty(),
                             metarStationIcao = airfield.metarStationIcao.orEmpty(),
                             elevationM = airfield.elevationM.roundToInt(),
+                            elevationKnown = airfield.elevationKnown,
                             metarRaw = airfield.metarRaw.orEmpty(),
                             metarEnteredAtEpochMs = airfield.metarEnteredAtEpochMs
                         )
@@ -225,6 +229,7 @@ class AirfieldEditViewModel(
                 icao = s.icao.trim().uppercase().ifBlank { null },
                 metarStationIcao = s.metarStationIcao.trim().uppercase().ifBlank { null },
                 elevationM = s.elevationM.toDouble(),
+                elevationKnown = s.elevationKnown,
                 metarRaw = s.metarRaw.ifBlank { null },
                 metarEnteredAtEpochMs = enteredAt
             )
@@ -316,6 +321,7 @@ class AirfieldEditViewModel(
             icao = s.icao.trim().uppercase().ifBlank { null },
             metarStationIcao = s.metarStationIcao.trim().uppercase().ifBlank { null },
             elevationM = s.elevationM.toDouble(),
+            elevationKnown = s.elevationKnown,
             metarRaw = s.metarRaw.ifBlank { null },
             metarEnteredAtEpochMs = s.metarEnteredAtEpochMs
         )

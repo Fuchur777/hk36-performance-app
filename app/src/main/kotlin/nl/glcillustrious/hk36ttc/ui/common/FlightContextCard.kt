@@ -267,6 +267,11 @@ fun RunwayResultCard(
     contentColor: Color,
     headwindKts: Double,
     crosswindKts: Double,
+    /** Gust-strength components, shown in brackets after the steady ones. Null when the report
+     * carried no gust group. The advice itself never uses these: status, ranking and
+     * [crosswindExceeded] all stay on the steady wind (see RunwayAdvice). */
+    headwindGustKts: Double? = null,
+    crosswindGustKts: Double? = null,
     crosswindExceeded: Boolean,
     groundRunWithMarginM: Double?,
     groundRunRawM: Double?,
@@ -288,7 +293,18 @@ fun RunwayResultCard(
                 Text(statusLabel, style = MaterialTheme.typography.labelLarge)
             }
             Text(
-                stringResource(R.string.flight_context_runway_detail_format, headwindKts.roundToInt(), crosswindKts.roundToInt()),
+                if (headwindGustKts != null && crosswindGustKts != null) {
+                    stringResource(
+                        R.string.flight_context_runway_detail_gust_format,
+                        headwindKts.roundToInt(), headwindGustKts.roundToInt(),
+                        crosswindKts.roundToInt(), crosswindGustKts.roundToInt()
+                    )
+                } else {
+                    stringResource(
+                        R.string.flight_context_runway_detail_format,
+                        headwindKts.roundToInt(), crosswindKts.roundToInt()
+                    )
+                },
                 style = MaterialTheme.typography.bodySmall
             )
             if (crosswindExceeded) {

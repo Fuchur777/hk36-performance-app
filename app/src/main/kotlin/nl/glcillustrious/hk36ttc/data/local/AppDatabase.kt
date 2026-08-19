@@ -12,7 +12,7 @@ import androidx.room.TypeConverters
         WbInputEntity::class, TakeoffInputEntity::class, LandingInputEntity::class, SleepvluchtInputEntity::class,
         AirfieldEntity::class, RunwayStripEntity::class, FlightContextEntity::class, FavoriteAirfieldEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

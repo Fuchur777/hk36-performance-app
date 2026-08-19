@@ -127,7 +127,10 @@ class UserDataRepositoryTest {
             mtowKg = 750.0, cgEnvelopeForwardLimitMm = 350.0, cgEnvelopeAftLimitMm = 410.0,
             fuelTankType = FuelTankType.STANDARD_55L
         )
-        target.airfields += AirfieldEntity(99, "Oud veld", null, null, 0.0, null, null)
+        target.airfields += AirfieldEntity(
+            id = 99, name = "Oud veld", icao = null, metarStationIcao = null,
+            elevationM = 0.0, metarRaw = null, metarEnteredAtEpochMs = null
+        )
         val (importRepo, _) = repository(target)
 
         importRepo.replaceAll((importRepo.parse(json) as ImportParseResult.Ok).data)
@@ -224,5 +227,40 @@ class UserDataRepositoryTest {
         assertEquals(1, export.airfieldCount)
         assertEquals(UserDataExport.CURRENT_SCHEMA_VERSION, export.schemaVersion)
         assertEquals("0.8.0", export.appVersionName)
+    }
+
+    /**
+     * Several columns hold an enum's `name` and are read back with `valueOf`, which throws on
+     * anything unexpected. Since importing wipes every table before it inserts, a bad value
+     * caught only at read time would cost the pilot their data *and* leave a screen that crashes
+     * on open — so the file has to be refused before the wipe, while refusing still costs
+     * nothing.
+     */
+    @Test
+    fun `a backup naming an unknown enum value is refused without touching the database`() = runTest {
+        val dao = FakeUserDataDao()
+        val (repo, _) = repository(dao)
+        seedRealisticData(dao)
+        val before = repo.buildExport()
+
+        val json = repo.serialize(before).replace("\"GRASS\"", "\"GRAVEL\"")
+        val result = repo.parse(json)
+
+        assertTrue(result is ImportParseResult.Unreadable, "expected Unreadable, got $result")
+        assertTrue(result.reason.contains("GRAVEL"), "the message should name the value: ${result.reason}")
+        // Nothing was written: parse() must never reach the database.
+        assertEquals(before.airfields.size, dao.airfields.size)
+        assertEquals(before.runwayStrips.size, dao.runwayStrips.size)
+    }
+
+    @Test
+    fun `a backup whose every enum value is known still parses`() = runTest {
+        val dao = FakeUserDataDao()
+        val (repo, _) = repository(dao)
+        seedRealisticData(dao)
+
+        val result = repo.parse(repo.serialize(repo.buildExport()))
+
+        assertTrue(result is ImportParseResult.Ok, "expected Ok, got $result")
     }
 }

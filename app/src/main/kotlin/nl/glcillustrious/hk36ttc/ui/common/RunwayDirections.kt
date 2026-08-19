@@ -1,6 +1,7 @@
 package nl.glcillustrious.hk36ttc.ui.common
 
 import nl.glcillustrious.hk36ttc.core.metar.RunwayCandidate
+import nl.glcillustrious.hk36ttc.data.local.RunwaySurfaceType
 import nl.glcillustrious.hk36ttc.data.local.RunwayStripEntity
 
 /**
@@ -84,3 +85,21 @@ fun padDesignatorNumber(designator: String): String {
     val number = digits.toIntOrNull()?.takeIf { it in 1..9 } ?: return trimmed
     return "0$number" + trimmed.drop(digits.length)
 }
+
+/**
+ * The strip's surface as the enum, rather than the raw string Room stores.
+ *
+ * Centralised because the three calculation ViewModels each had their own
+ * `RunwaySurfaceType.valueOf(strip.surface)` call. Unrecognised text falls back to GRASS, never
+ * ASPHALT — grass costs at least 20% extra distance (AFM §5.3.3), so guessing grass can only
+ * over-state the runway a pilot needs, which is the same rule
+ * [nl.glcillustrious.hk36ttc.core.airport.surfaceFor] applies at the catalogue import boundary.
+ * A bad value should never reach here (the backup importer rejects unknown surfaces outright),
+ * but if one ever does, it must not silently shorten a distance.
+ */
+fun RunwayStripEntity.surfaceType(): RunwaySurfaceType =
+    runCatching { RunwaySurfaceType.valueOf(surface) }.getOrDefault(RunwaySurfaceType.GRASS)
+
+/** True when any strip at the field is grass, which is what makes the grass-condition picker
+ * relevant on a calculation screen. */
+fun List<RunwayStripEntity>.anyGrass(): Boolean = any { it.surfaceType() == RunwaySurfaceType.GRASS }

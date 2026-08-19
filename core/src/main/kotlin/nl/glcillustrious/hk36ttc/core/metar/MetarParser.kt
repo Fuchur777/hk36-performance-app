@@ -61,9 +61,15 @@ object MetarParser {
     private const val INHG_TO_HPA = 33.8639
     private const val MPS_TO_KT = 1.94384
 
-    /** Optional leading report-type keywords: a routine observation and a special (off-cycle)
-     * one respectively. Neither changes how anything below is read. */
-    private val REPORT_TYPE_TOKENS = setOf("METAR", "SPECI")
+    /**
+     * Modifier keywords that may sit in front of the station code, in any combination: the two
+     * report types (routine and off-cycle special), a correction to a report already issued, a
+     * fully automated observation, and a delayed one. None of them changes how anything below is
+     * read, but the station check further down is deliberately strict about position, so every
+     * one of them has to be stripped first — a real "METAR COR EHGR ..." used to fail outright as
+     * MissingStation and leave the pilot with no weather for that field.
+     */
+    private val LEADING_MODIFIER_TOKENS = setOf("METAR", "SPECI", "COR", "AUTO", "RTD")
 
     fun parse(raw: String): MetarParseResult {
         val allTokens = raw.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
@@ -74,7 +80,7 @@ object MetarParser {
         // Dropping it here keeps the station check below — which is deliberately strict about
         // position, to avoid matching some four-letter group later in the report — working for
         // both shapes.
-        val tokens = if (allTokens.first() in REPORT_TYPE_TOKENS) allTokens.drop(1) else allTokens
+        val tokens = allTokens.dropWhile { it in LEADING_MODIFIER_TOKENS }
         if (tokens.isEmpty()) return MetarParseResult.Failure(MetarParseError.MissingStation)
 
         val station = tokens.getOrNull(0)?.takeIf { STATION_REGEX.matches(it) }

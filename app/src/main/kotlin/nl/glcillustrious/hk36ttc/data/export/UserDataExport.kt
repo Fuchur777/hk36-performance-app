@@ -80,6 +80,9 @@ data class AirfieldDto(
     val icao: String? = null,
     @SerialName("metar_station_icao") val metarStationIcao: String? = null,
     @SerialName("elevation_m") val elevationM: Double,
+    /** Defaults to true so a backup written before this field existed restores as "known" —
+     * matching MIGRATION_7_8, which makes the same assumption for rows already in the database. */
+    @SerialName("elevation_known") val elevationKnown: Boolean = true,
     @SerialName("metar_raw") val metarRaw: String? = null,
     @SerialName("metar_entered_at_epoch_ms") val metarEnteredAtEpochMs: Long? = null
 )
@@ -188,10 +191,18 @@ fun AircraftProfileDto.toEntity() = AircraftProfileEntity(
 )
 
 fun AirfieldEntity.toDto() =
-    AirfieldDto(id, name, icao, metarStationIcao, elevationM, metarRaw, metarEnteredAtEpochMs)
+    AirfieldDto(
+        id = id, name = name, icao = icao, metarStationIcao = metarStationIcao,
+        elevationM = elevationM, elevationKnown = elevationKnown,
+        metarRaw = metarRaw, metarEnteredAtEpochMs = metarEnteredAtEpochMs
+    )
 
 fun AirfieldDto.toEntity() =
-    AirfieldEntity(id, name, icao, metarStationIcao, elevationM, metarRaw, metarEnteredAtEpochMs)
+    AirfieldEntity(
+        id = id, name = name, icao = icao, metarStationIcao = metarStationIcao,
+        elevationM = elevationM, elevationKnown = elevationKnown,
+        metarRaw = metarRaw, metarEnteredAtEpochMs = metarEnteredAtEpochMs
+    )
 
 fun RunwayStripEntity.toDto() =
     RunwayStripDto(id, airfieldId, designatorA, designatorB, headingDegTrueA, lengthM, surface, slopePctA, oneWay)

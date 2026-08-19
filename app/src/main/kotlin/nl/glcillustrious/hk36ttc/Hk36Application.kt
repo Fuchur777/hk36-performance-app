@@ -47,7 +47,8 @@ class Hk36Application : Application() {
             database.airfieldDao(),
             database.runwayStripDao(),
             database.flightContextDao(),
-            database.favoriteAirfieldDao()
+            database.favoriteAirfieldDao(),
+            transaction = { block -> database.withTransaction { block() } }
         )
         val catalogDatabase = AirportCatalogDatabase.getInstance(this)
         airportCatalogRepository = AirportCatalogRepository(
@@ -56,7 +57,8 @@ class Hk36Application : Application() {
             metaDao = catalogDatabase.catalogMetaDao(),
             userRepository = repository,
             openAsset = { path -> assets.open(path) },
-            transaction = { block -> catalogDatabase.withTransaction { block() } }
+            transaction = { block -> catalogDatabase.withTransaction { block() } },
+            newTempFile = { name -> java.io.File(cacheDir, name) }
         )
         metarRepository = MetarRepository(repository)
         val languagePreference = LanguagePreference(this)

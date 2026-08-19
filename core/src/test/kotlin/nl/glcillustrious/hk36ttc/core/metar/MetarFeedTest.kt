@@ -49,4 +49,22 @@ class MetarFeedTest {
     fun `an empty response yields an empty map`() {
         assertEquals(emptyMap(), MetarFeed.splitByStation("   \n  \n"))
     }
+
+    /**
+     * A feed can answer with more than one observation for the same station, newest first.
+     * Building the map with a plain `toMap` kept whichever line came last — the *oldest* — and
+     * MetarRepository would then stamp that stale report with a fresh "fetched at" time.
+     */
+    @Test
+    fun `several reports for one station keep the first`() {
+        val response = """
+            EHGR 170655Z 24008KT 9999 SCT025 09/04 Q1015
+            EHGR 170555Z 20004KT 9999 SCT030 08/05 Q1014
+        """.trimIndent()
+
+        val byStation = MetarFeed.splitByStation(response)
+
+        assertEquals(1, byStation.size)
+        assertEquals("EHGR 170655Z 24008KT 9999 SCT025 09/04 Q1015", byStation["EHGR"])
+    }
 }

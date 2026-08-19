@@ -15,7 +15,11 @@ class AircraftProfileRepository(
     private val airfieldDao: AirfieldDao,
     private val runwayStripDao: RunwayStripDao,
     private val flightContextDao: FlightContextDao,
-    private val favoriteAirfieldDao: FavoriteAirfieldDao
+    private val favoriteAirfieldDao: FavoriteAirfieldDao,
+    /** Runs [block] in one database transaction. A lambda rather than the `AppDatabase` itself
+     * so this class stays testable on the JVM — the same shape [nl.glcillustrious.hk36ttc.data.export.UserDataRepository]
+     * and [nl.glcillustrious.hk36ttc.data.catalog.AirportCatalogRepository] already take. */
+    private val transaction: suspend (suspend () -> Unit) -> Unit
 ) {
 
     fun observeAll(): Flow<List<AircraftProfileEntity>> = dao.observeAll()
@@ -37,8 +41,12 @@ class AircraftProfileRepository(
      * Take-off, Landing, Sleepvlucht, last W&B result, flight context), so removing a
      * registration doesn't leave orphaned rows behind under a profileId that will never be
      * reused. Saved airfields themselves are NOT touched — they belong to no single
-     * registration. */
-    suspend fun deleteProfileCascade(profile: AircraftProfileEntity) {
+     * registration.
+     *
+     * One transaction: a process kill part-way through used to leave the profile gone but its
+     * saved inputs behind, under a profileId that is never reused — invisible to the pilot, and
+     * carried along in every backup from then on. */
+    suspend fun deleteProfileCascade(profile: AircraftProfileEntity) = transaction {
         dao.delete(profile)
         lastWbResultDao.deleteByProfileId(profile.id)
         wbInputDao.deleteByProfileId(profile.id)
@@ -92,8 +100,10 @@ class AircraftProfileRepository(
     /** Deletes an airfield and every runway strip that belongs to it — a strip has no meaning
      * without its airfield. Registrations whose [FlightContextEntity] pointed at this airfield
      * are left as-is (their `airfieldId` becomes dangling); the calculation screens fall back
-     * to Handmatig when the referenced airfield can no longer be found. */
-    suspend fun deleteAirfieldCascade(airfield: AirfieldEntity) {
+     * to Handmatig when the referenced airfield can no longer be found.
+     *
+     * One transaction, for the same reason as [deleteProfileCascade]. */
+    suspend fun deleteAirfieldCascade(airfield: AirfieldEntity) = transaction {
         runwayStripDao.deleteByAirfieldId(airfield.id)
         favoriteAirfieldDao.deleteByAirfieldId(airfield.id)
         airfieldDao.delete(airfield)

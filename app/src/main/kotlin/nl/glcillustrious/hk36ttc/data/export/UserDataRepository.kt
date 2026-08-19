@@ -2,9 +2,16 @@ package nl.glcillustrious.hk36ttc.data.export
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import nl.glcillustrious.hk36ttc.core.wb.FuelTankType
 import nl.glcillustrious.hk36ttc.data.local.FavoriteAirfieldEntity
 import nl.glcillustrious.hk36ttc.data.local.FavoriteSailplaneTypeEntity
+import nl.glcillustrious.hk36ttc.data.local.FlightContextMode
+import nl.glcillustrious.hk36ttc.data.local.GrassCondition
+import nl.glcillustrious.hk36ttc.data.local.RunwaySurfaceType
 import nl.glcillustrious.hk36ttc.data.local.UserDataDao
+import nl.glcillustrious.hk36ttc.ui.perf.LandingSurfaceType
+import nl.glcillustrious.hk36ttc.ui.perf.SleepvluchtSurfaceType
+import nl.glcillustrious.hk36ttc.ui.perf.TakeoffSurfaceType
 
 /** What reading a backup file produced, before anything is written to the database. */
 sealed interface ImportParseResult {
@@ -64,18 +71,54 @@ class UserDataRepository(
     /**
      * Reads and validates a backup **without touching the database** — the confirmation dialog
      * needs to show what is in the file before the pilot agrees to lose what they have.
+     *
+     * Validation covers more than the JSON shape. Several columns hold an enum's `name`, and the
+     * app reads them back with `valueOf`, which throws on anything unexpected. Because
+     * [replaceAll] wipes every table before it inserts, a bad value found *after* the import has
+     * started would cost the pilot their data and leave a screen that crashes on open. So every
+     * enum-valued string is checked here, while refusing the file still costs nothing.
      */
     fun parse(json: String): ImportParseResult = try {
         val data = userDataJson.decodeFromString<UserDataExport>(json)
-        if (data.schemaVersion > UserDataExport.CURRENT_SCHEMA_VERSION) {
-            ImportParseResult.TooNew(data.schemaVersion, UserDataExport.CURRENT_SCHEMA_VERSION)
-        } else {
-            ImportParseResult.Ok(data)
+        val badValue = data.firstUnknownEnumValue()
+        when {
+            data.schemaVersion > UserDataExport.CURRENT_SCHEMA_VERSION ->
+                ImportParseResult.TooNew(data.schemaVersion, UserDataExport.CURRENT_SCHEMA_VERSION)
+            badValue != null -> ImportParseResult.Unreadable(badValue)
+            else -> ImportParseResult.Ok(data)
         }
     } catch (e: Exception) {
         // Deliberately broad: kotlinx-serialization throws several unrelated types for a
         // malformed file, and every one of them means the same thing to the pilot.
         ImportParseResult.Unreadable(e.message ?: "onbekende fout")
+    }
+
+    /**
+     * The first enum-valued string in [this] that no enum in this build knows, described well
+     * enough to put in front of the pilot — or null when every one of them is recognised.
+     *
+     * Ordered the same way [replaceAll] inserts, so the message names whichever table the pilot
+     * would hit first.
+     */
+    private fun UserDataExport.firstUnknownEnumValue(): String? {
+        fun check(field: String, value: String, allowed: Array<out Enum<*>>): String? =
+            if (allowed.none { it.name == value }) "$field: \"$value\"" else null
+
+        return aircraftProfiles.firstNotNullOfOrNull { check("fuel_tank_type", it.fuelTankType, FuelTankType.values()) }
+            ?: runwayStrips.firstNotNullOfOrNull { check("surface", it.surface, RunwaySurfaceType.values()) }
+            ?: flightContexts.firstNotNullOfOrNull { check("mode", it.mode, FlightContextMode.values()) }
+            ?: flightContexts.firstNotNullOfOrNull {
+                check("grass_condition", it.grassCondition, GrassCondition.values())
+            }
+            ?: takeoffInputs.firstNotNullOfOrNull {
+                check("takeoff surface_type", it.surfaceType, TakeoffSurfaceType.values())
+            }
+            ?: landingInputs.firstNotNullOfOrNull {
+                check("landing surface_type", it.surfaceType, LandingSurfaceType.values())
+            }
+            ?: sleepvluchtInputs.firstNotNullOfOrNull {
+                check("sleepvlucht surface_type", it.surfaceType, SleepvluchtSurfaceType.values())
+            }
     }
 
     /**

@@ -132,7 +132,36 @@ class MigrationTest {
     }
 
     @Test
-    fun migrateAllTheWayFrom1To7_succeedsAndKeepsSeededProfile() {
+    fun migrate7To8_marksEveryExistingAirfieldElevationAsKnown() {
+        helper.createDatabase(testDbName, 7).apply {
+            execSQL(
+                "INSERT INTO airfields (id, name, icao, metarStationIcao, elevationM, metarRaw, metarEnteredAtEpochMs) " +
+                    "VALUES (1, 'Vliegbasis Gilze-Rijen', 'EHGR', NULL, 15.0, NULL, NULL)"
+            )
+            // A field that genuinely sits at sea level: the migration must not mistake it for a
+            // placeholder, which is exactly why the flag defaults to 1 rather than being
+            // inferred from elevationM == 0.
+            execSQL(
+                "INSERT INTO airfields (id, name, icao, metarStationIcao, elevationM, metarRaw, metarEnteredAtEpochMs) " +
+                    "VALUES (2, 'Lelystad', 'EHLE', NULL, 0.0, NULL, NULL)"
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(testDbName, 8, true, MIGRATION_7_8)
+
+        val cursor = db.query("SELECT id, elevationM, elevationKnown FROM airfields ORDER BY id ASC")
+        assertTrue(cursor.moveToFirst())
+        assertEquals(15.0, cursor.getDouble(1), 0.0001)
+        assertEquals(1, cursor.getInt(2))
+        assertTrue(cursor.moveToNext())
+        assertEquals(0.0, cursor.getDouble(1), 0.0001)
+        assertEquals(1, cursor.getInt(2))
+        cursor.close()
+    }
+
+    @Test
+    fun migrateAllTheWayFrom1To8_succeedsAndKeepsSeededProfile() {
         helper.createDatabase(testDbName, 1).apply {
             execSQL(
                 "INSERT INTO aircraft_profiles (id, registration, serialNumber, emptyMassKg, " +
@@ -142,7 +171,7 @@ class MigrationTest {
             close()
         }
 
-        val db = helper.runMigrationsAndValidate(testDbName, 7, true, *ALL_MIGRATIONS)
+        val db = helper.runMigrationsAndValidate(testDbName, 8, true, *ALL_MIGRATIONS)
 
         val cursor = db.query("SELECT registration FROM aircraft_profiles WHERE id = 1")
         assertTrue(cursor.moveToFirst())

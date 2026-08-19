@@ -55,6 +55,10 @@ data class RunwayReportEntry(
     val surfaceLabel: String,
     val headwindKts: Double,
     val crosswindKts: Double,
+    /** Gust-strength components, appended in brackets. Null when the report had no gust group;
+     * the advice itself is always the steady-wind one. */
+    val headwindGustKts: Double? = null,
+    val crosswindGustKts: Double? = null,
     val crosswindExceeded: Boolean,
     val groundRunWithMarginM: Double?,
     val obstacleWithMarginM: Double?,
@@ -89,11 +93,16 @@ fun runwayReportRows(
     entries.forEach { entry ->
         add(ReportDocument.Row("${entry.label} — ${entry.statusLabel}", null, emphasized = true))
         add(ReportDocument.Row("    ${labels.surface}", entry.surfaceLabel))
-        add(ReportDocument.Row("    ${labels.headwind}", formatOneDecimal(entry.headwindKts) + " kt"))
+        add(
+            ReportDocument.Row(
+                "    ${labels.headwind}",
+                formatOneDecimal(entry.headwindKts) + " kt" + gustSuffix(entry.headwindGustKts)
+            )
+        )
         add(
             ReportDocument.Row(
                 "    ${labels.crosswind}",
-                formatOneDecimal(entry.crosswindKts) + " kt" +
+                formatOneDecimal(entry.crosswindKts) + " kt" + gustSuffix(entry.crosswindGustKts) +
                     if (entry.crosswindExceeded) " — ${labels.crosswindExceeded}" else "",
                 emphasized = entry.crosswindExceeded
             )
@@ -122,3 +131,8 @@ fun formatOneDecimal(value: Double): String = "%.1f".format(value)
  * is the whole point of that figure. */
 fun formatSigned(value: Double): String =
     if (value >= 0) "+" + formatOneDecimal(value) else formatOneDecimal(value)
+
+/** " (18.0)" for a gust component, or "" when the report carried no gust group. Matches the
+ * on-screen runway cards, which put the same figure in brackets after the steady one. */
+private fun gustSuffix(gustKts: Double?): String =
+    if (gustKts == null) "" else " (" + formatOneDecimal(gustKts) + ")"

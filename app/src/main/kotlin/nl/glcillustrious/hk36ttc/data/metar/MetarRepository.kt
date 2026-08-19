@@ -60,7 +60,13 @@ class MetarRepository(
 
             val response = try {
                 fetch(url)
-            } catch (e: IOException) {
+            } catch (e: Exception) {
+                // Broad on purpose. The offline-first guarantee this class documents is that a
+                // failed lookup leaves the stored METARs untouched and reports Failed — not that
+                // it takes the screen down. `fetch` is injectable, and even the default httpGet
+                // raises more than IOException: a repointed non-HTTP endpoint throws
+                // ClassCastException on the openConnection cast. Narrowing to IOException let
+                // those escape.
                 return@withContext MetarFetchResult.Failed(e.message ?: "onbekende netwerkfout")
             }
 
@@ -92,6 +98,10 @@ class MetarRepository(
         refresh(listOf(airfield), config)
 
     companion object {
+
+        /** The same shape MetarParser requires of the station group it reads back out. */
+        private val STATION_CODE_REGEX = Regex("^[A-Z]{4}$")
+
         /**
          * The station to read weather from: the explicitly chosen one where set, otherwise the
          * field's own ICAO. Most Dutch gliding sites have no station of their own and borrow a
@@ -101,7 +111,10 @@ class MetarRepository(
         fun AirfieldEntity.stationCode(): String? =
             (metarStationIcao?.trim()?.ifBlank { null } ?: icao?.trim()?.ifBlank { null })
                 ?.uppercase()
-                ?.takeIf { it.length == 4 }
+                // Four *letters*, not merely four characters. This goes straight into a query
+                // string, so a typed "EH&x" would otherwise open a stray query parameter and
+                // fetch the wrong station, or nothing at all.
+                ?.takeIf { STATION_CODE_REGEX.matches(it) }
 
         /**
          * True when [airfield]'s stored METAR is old enough (or missing) that a calculation

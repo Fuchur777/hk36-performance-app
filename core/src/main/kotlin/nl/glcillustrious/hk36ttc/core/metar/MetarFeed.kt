@@ -14,7 +14,7 @@ package nl.glcillustrious.hk36ttc.core.metar
 object MetarFeed {
 
     /**
-     * Maps station ICAO to its raw report line. Lines that don't parse are dropped rather than
+     * Maps station ICAO to its raw report line. Lines that do not parse are dropped rather than
      * guessed at; a report the app can't read is of no use to a calculation anyway.
      *
      * The keys come from the parsed report, so a response line is only ever filed under the
@@ -28,5 +28,10 @@ object MetarFeed {
                 val parsed = MetarParser.parse(line) as? MetarParseResult.Success ?: return@mapNotNull null
                 parsed.metar.stationIcao to line
             }
+            // First wins, not last. A feed asked for one station can answer with several
+            // observations for it, newest first; `toMap` on its own would silently keep whichever
+            // came last — the *oldest* — and MetarRepository would then stamp that stale report as
+            // freshly fetched. Dropping later duplicates keeps the current observation.
+            .distinctBy { (station, _) -> station }
             .toMap()
 }

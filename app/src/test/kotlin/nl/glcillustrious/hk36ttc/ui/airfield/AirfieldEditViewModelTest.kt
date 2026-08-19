@@ -49,7 +49,8 @@ class AirfieldEditViewModelTest {
             metaDao = FakeCatalogMetaDao(),
             userRepository = repository,
             openAsset = { error("no assets in this test") },
-            transaction = { block -> block() }
+            transaction = { block -> block() },
+            newTempFile = { error("no downloads in this test") }
         )
         val metarRepository = MetarRepository(repository, fetch = { error("no network in this test") })
         return AirfieldEditViewModel(repository, catalog, metarRepository, MetarConfigData.DEFAULT, airfieldId)

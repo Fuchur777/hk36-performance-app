@@ -8,8 +8,8 @@ import kotlinx.coroutines.withContext
 import nl.glcillustrious.hk36ttc.core.airport.ParsedAirport
 import nl.glcillustrious.hk36ttc.core.airport.ParsedRunway
 import nl.glcillustrious.hk36ttc.core.airport.ParsedRunwaySurface
-import nl.glcillustrious.hk36ttc.core.airport.parseAirportsCsv
-import nl.glcillustrious.hk36ttc.core.airport.parseRunwaysCsv
+import nl.glcillustrious.hk36ttc.core.airport.forEachAirport
+import nl.glcillustrious.hk36ttc.core.airport.forEachRunway
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileRepository
 import nl.glcillustrious.hk36ttc.data.local.AirfieldEntity
 import nl.glcillustrious.hk36ttc.data.local.RunwayStripEntity
@@ -60,7 +60,10 @@ class AirportCatalogRepository(
      * class stays testable on the JVM — the rule this class enforces is worth a real test. */
     private val openAsset: (String) -> InputStream,
     /** Runs [block] in one catalogue-database transaction. Injected for the same reason. */
-    private val transaction: suspend (suspend () -> Unit) -> Unit
+    private val transaction: suspend (suspend () -> Unit) -> Unit,
+    /** A scratch file in the app's cache, by name. Used to stage a download before it is parsed;
+     * injected for the same JVM-testability reason as [openAsset]. */
+    private val newTempFile: (String) -> java.io.File
 ) {
 
     // --- Loading -----------------------------------------------------------------------
@@ -81,8 +84,8 @@ class AirportCatalogRepository(
         withContext(Dispatchers.IO) {
             if (airportDao.count() > 0) return@withContext false
             replaceCatalog(
-                airports = { openAsset(ASSET_AIRPORTS).bufferedReader().useLines(::parseAirportsCsv) },
-                runways = { openAsset(ASSET_RUNWAYS).bufferedReader().useLines(::parseRunwaysCsv) },
+                openAirports = { openAsset(ASSET_AIRPORTS) },
+                openRunways = { openAsset(ASSET_RUNWAYS) },
                 source = CatalogSource.BUNDLED,
                 onProgress = onProgress
             )
@@ -90,23 +93,37 @@ class AirportCatalogRepository(
         }
 
     /**
-     * Replaces the catalogue with today's data from OurAirports. Both files are fully parsed
-     * *before* anything is cleared, so a dropped connection halfway through leaves the existing
-     * catalogue exactly as it was rather than half-erased.
+     * Replaces the catalogue with today's data from OurAirports.
+     *
+     * Both files are downloaded to cache **before** the transaction opens. That ordering matters
+     * twice over: a dropped connection halfway through leaves the existing catalogue untouched
+     * rather than half-erased, and a slow mobile signal never holds a write transaction open for
+     * minutes on end. Parsing then streams off local disk straight into the insert.
      */
     suspend fun refreshFromNetwork(onProgress: (CatalogProgress) -> Unit = {}) =
         withContext(Dispatchers.IO) {
-            val airports = downloadLines(URL_AIRPORTS) { parseAirportsCsv(it) }
-            val runways = downloadLines(URL_RUNWAYS) { parseRunwaysCsv(it) }
-            replaceCatalog(
-                airports = { airports },
-                runways = { runways },
-                source = CatalogSource.DOWNLOADED,
-                onProgress = onProgress
-            )
+            val airportsFile = downloadToCache(URL_AIRPORTS, TEMP_AIRPORTS)
+            val runwaysFile = try {
+                downloadToCache(URL_RUNWAYS, TEMP_RUNWAYS)
+            } catch (e: Throwable) {
+                airportsFile.delete()
+                throw e
+            }
+            try {
+                replaceCatalog(
+                    openAirports = { airportsFile.inputStream() },
+                    openRunways = { runwaysFile.inputStream() },
+                    source = CatalogSource.DOWNLOADED,
+                    onProgress = onProgress
+                )
+            } finally {
+                airportsFile.delete()
+                runwaysFile.delete()
+            }
         }
 
-    private fun <T> downloadLines(url: String, parse: (Sequence<String>) -> T): T {
+    private fun downloadToCache(url: String, fileName: String): java.io.File {
+        val target = newTempFile(fileName)
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 20_000
             readTimeout = 60_000
@@ -116,45 +133,81 @@ class AirportCatalogRepository(
             if (connection.responseCode != HttpURLConnection.HTTP_OK) {
                 throw java.io.IOException("HTTP ${connection.responseCode} bij $url")
             }
-            return connection.inputStream.bufferedReader().useLines(parse)
+            connection.inputStream.use { input ->
+                target.outputStream().use { output -> input.copyTo(output) }
+            }
+        } catch (e: Throwable) {
+            target.delete()
+            throw e
         } finally {
             connection.disconnect()
         }
+        return target
     }
 
     /**
      * Swaps in a new catalogue. The clear-and-insert runs inside one transaction so the app can
      * never observe a half-populated catalogue, and the meta row is written last so its counts
      * always describe what is actually stored.
+     *
+     * Rows are parsed and inserted in [INSERT_CHUNK]-sized batches as they stream off disk, so
+     * peak memory is one chunk rather than all ~127,000 parsed rows at once — the whole reason
+     * the core parsers expose a streaming form.
      */
     private suspend fun replaceCatalog(
-        airports: () -> List<ParsedAirport>,
-        runways: () -> List<ParsedRunway>,
+        openAirports: () -> InputStream,
+        openRunways: () -> InputStream,
         source: CatalogSource,
         onProgress: (CatalogProgress) -> Unit
     ) {
-        val parsedAirports = airports()
-        onProgress(CatalogProgress(parsedAirports.size, 0))
-        val parsedRunways = runways()
-        onProgress(CatalogProgress(parsedAirports.size, parsedRunways.size))
-
-        // One transaction: the old catalogue stays queryable until this whole block commits, so
-        // a failure part-way through rolls back rather than leaving a half-empty catalogue.
+        var airportsDone = 0
+        var runwaysDone = 0
         transaction {
             airportDao.clear()
             runwayDao.clear()
-            parsedAirports.chunked(INSERT_CHUNK).forEach { chunk ->
-                airportDao.insertAll(chunk.map { it.toEntity() })
+
+            val airportBuffer = ArrayList<AirportCatalogEntity>(INSERT_CHUNK)
+            openAirports().bufferedReader().use { reader ->
+                forEachAirport(reader.lineSequence()) { parsed ->
+                    airportBuffer += parsed.toEntity()
+                    if (airportBuffer.size >= INSERT_CHUNK) {
+                        airportDao.insertAll(airportBuffer)
+                        airportsDone += airportBuffer.size
+                        airportBuffer.clear()
+                        onProgress(CatalogProgress(airportsDone, runwaysDone))
+                    }
+                }
             }
-            parsedRunways.chunked(INSERT_CHUNK).forEach { chunk ->
-                runwayDao.insertAll(chunk.map { it.toEntity() })
+            if (airportBuffer.isNotEmpty()) {
+                airportDao.insertAll(airportBuffer)
+                airportsDone += airportBuffer.size
             }
+            onProgress(CatalogProgress(airportsDone, runwaysDone))
+
+            val runwayBuffer = ArrayList<RunwayCatalogEntity>(INSERT_CHUNK)
+            openRunways().bufferedReader().use { reader ->
+                forEachRunway(reader.lineSequence()) { parsed ->
+                    runwayBuffer += parsed.toEntity()
+                    if (runwayBuffer.size >= INSERT_CHUNK) {
+                        runwayDao.insertAll(runwayBuffer)
+                        runwaysDone += runwayBuffer.size
+                        runwayBuffer.clear()
+                        onProgress(CatalogProgress(airportsDone, runwaysDone))
+                    }
+                }
+            }
+            if (runwayBuffer.isNotEmpty()) {
+                runwayDao.insertAll(runwayBuffer)
+                runwaysDone += runwayBuffer.size
+            }
+            onProgress(CatalogProgress(airportsDone, runwaysDone))
+
             metaDao.upsert(
                 CatalogMetaEntity(
                     source = source.name,
                     loadedAtEpochMs = System.currentTimeMillis(),
-                    airportCount = parsedAirports.size,
-                    runwayCount = parsedRunways.size
+                    airportCount = airportsDone,
+                    runwayCount = runwaysDone
                 )
             )
         }
@@ -193,6 +246,9 @@ class AirportCatalogRepository(
             icao = entry.icaoCode ?: entry.gpsCode ?: entry.localCode,
             metarStationIcao = null,
             elevationM = entry.elevationM ?: 0.0,
+            // A field the source has no elevation for keeps the 0.0 placeholder, but is marked
+            // so the editor can insist on a real value before it reaches a calculation.
+            elevationKnown = entry.elevationM != null,
             metarRaw = null,
             metarEnteredAtEpochMs = null
         )
@@ -263,10 +319,23 @@ class AirportCatalogRepository(
                 val code = airfield.icao?.trim()?.uppercase()?.ifBlank { null } ?: return@forEach
                 checked++
                 val entry = airportDao.findByCode(code) ?: return@forEach
-                val newElevation = entry.elevationM ?: airfield.elevationM
-                if (entry.name == airfield.name && newElevation == airfield.elevationM) return@forEach
+                val catalogElevation = entry.elevationM
+                val newElevation = catalogElevation ?: airfield.elevationM
+                // A published elevation also settles the "is this a placeholder?" question; an
+                // airfield the pilot already filled in stays known either way.
+                val newElevationKnown = airfield.elevationKnown || catalogElevation != null
+                if (entry.name == airfield.name &&
+                    newElevation == airfield.elevationM &&
+                    newElevationKnown == airfield.elevationKnown
+                ) {
+                    return@forEach
+                }
                 userRepository.saveAirfield(
-                    airfield.copy(name = entry.name, elevationM = newElevation)
+                    airfield.copy(
+                        name = entry.name,
+                        elevationM = newElevation,
+                        elevationKnown = newElevationKnown
+                    )
                 )
                 updated++
             }
@@ -309,5 +378,9 @@ class AirportCatalogRepository(
 
         /** Room binds every row's arguments in one statement; chunking keeps that bounded. */
         const val INSERT_CHUNK = 2_000
+
+        /** Staging names for a network refresh; deleted again as soon as the swap commits. */
+        const val TEMP_AIRPORTS = "catalog-airports.csv"
+        const val TEMP_RUNWAYS = "catalog-runways.csv"
     }
 }
