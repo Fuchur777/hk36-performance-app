@@ -2,13 +2,21 @@ package nl.glcillustrious.hk36ttc.ui.common
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,13 +47,26 @@ fun MetarParseError.toStringRes(): Int = when (this) {
  * screens for "this METAR decoded fine, but the wind can't be used, type it yourself"
  * (rekenlogica.md §5). It belongs *in* the card rather than beside it because it's a statement
  * about this METAR's contents, not about the form below it.
+ *
+ * [onRefresh] adds a manual "check for a new METAR" action, shown only once the report is
+ * already stale (the same [MetarConfigData.staleAfterMinutes] threshold that turns the age line
+ * red) — a fresh report needs no button. Left null by the airfield editor, which already
+ * refreshes on its own whenever the station changes or the screen is saved; the calculation
+ * screens pass it because their own background auto-refresh only ever tries once per airfield
+ * per time the screen is opened (see `TakeoffViewModel.autoRefreshMetarIfStale`), so a pilot who
+ * leaves a screen open through a report's staleness window needs an explicit way to ask again.
+ * [refreshing] disables the button and shows a small spinner in its place while that request is
+ * in flight; the METAR card underneath stays exactly as it was throughout, since the pilot is
+ * still meant to read the last-known weather while waiting on the new one.
  */
 @Composable
 fun MetarSummary(
     parsed: MetarParseResult?,
     elevationM: Int,
     metarConfig: MetarConfigData,
-    warning: String? = null
+    warning: String? = null,
+    onRefresh: (() -> Unit)? = null,
+    refreshing: Boolean = false
 ) {
     if (parsed == null) {
         Text(
@@ -115,6 +136,23 @@ fun MetarSummary(
                         ageText,
                         color = if (stale) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (stale && onRefresh != null) {
+                        if (refreshing) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    stringResource(R.string.airfield_edit_metar_fetching),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            TextButton(onClick = onRefresh, contentPadding = PaddingValues(0.dp)) {
+                                Text(stringResource(R.string.metar_summary_refresh_action))
+                            }
+                        }
+                    }
                     if (warning != null) {
                         Text(
                             warning,

@@ -34,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.math.roundToInt
 import nl.glcillustrious.hk36ttc.R
 import nl.glcillustrious.hk36ttc.core.metar.MetarConfigData
+import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
 import nl.glcillustrious.hk36ttc.core.metar.MetarParser
 import nl.glcillustrious.hk36ttc.core.perf.LandingResult
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceCorrectionsData
@@ -64,6 +65,7 @@ import nl.glcillustrious.hk36ttc.ui.theme.status
 @Composable
 fun LandingScreen(
     repository: AircraftProfileRepository,
+    metarRepository: MetarRepository,
     performanceNormal: PerformanceNormalData,
     performanceCorrections: PerformanceCorrectionsData,
     metarConfig: MetarConfigData,
@@ -71,7 +73,9 @@ fun LandingScreen(
     onBack: () -> Unit
 ) {
     val viewModel: LandingViewModel = viewModel(
-        factory = LandingViewModel.factory(repository, profileId, performanceNormal, performanceCorrections)
+        factory = LandingViewModel.factory(
+            repository, profileId, performanceNormal, performanceCorrections, metarRepository, metarConfig
+        )
     )
     val state by viewModel.state.collectAsState()
     val airfields by viewModel.airfields.collectAsState()
@@ -129,7 +133,9 @@ fun LandingScreen(
                         stringResource(R.string.perf_wind_direction_unknown_warning)
                     } else {
                         null
-                    }
+                    },
+                    onRefresh = { viewModel.refreshMetarNow() },
+                    refreshing = state.metarRefreshing
                 )
             }
             val metarWeather = state.weatherDerivable && state.weatherMode == WeatherInputMode.METAR

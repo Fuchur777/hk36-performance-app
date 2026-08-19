@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import nl.glcillustrious.hk36ttc.core.metar.MetarConfigData
 import nl.glcillustrious.hk36ttc.core.metar.MetarParseResult
 import nl.glcillustrious.hk36ttc.core.metar.MetarParser
 import nl.glcillustrious.hk36ttc.core.metar.RequiredDistances
@@ -34,13 +35,15 @@ import nl.glcillustrious.hk36ttc.data.local.GrassCondition
 import nl.glcillustrious.hk36ttc.data.local.LandingInputEntity
 import nl.glcillustrious.hk36ttc.data.local.RunwayStripEntity
 import nl.glcillustrious.hk36ttc.data.local.RunwaySurfaceType
+import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
 import nl.glcillustrious.hk36ttc.ui.common.LoadGuard
-import nl.glcillustrious.hk36ttc.ui.common.anyGrass
-import nl.glcillustrious.hk36ttc.ui.common.deriveWeather
-import nl.glcillustrious.hk36ttc.ui.common.surfaceType
+import nl.glcillustrious.hk36ttc.ui.common.MetarAutoRefresher
 import nl.glcillustrious.hk36ttc.ui.common.RunwayDirectionOption
 import nl.glcillustrious.hk36ttc.ui.common.WeatherInputMode
+import nl.glcillustrious.hk36ttc.ui.common.anyGrass
+import nl.glcillustrious.hk36ttc.ui.common.deriveWeather
 import nl.glcillustrious.hk36ttc.ui.common.directionOptions
+import nl.glcillustrious.hk36ttc.ui.common.surfaceType
 import nl.glcillustrious.hk36ttc.ui.common.toCandidate
 
 /** Supplement 11 publishes no landing correction for anything but a paved runway — the grass
@@ -95,7 +98,9 @@ data class LandingFormState(
     val pressureAltDerivable: Boolean = false,
     val metarWindUsable: Boolean = false,
     val effectiveOatC: Int = 15,
-    val effectivePressureAltM: Int = 0
+    val effectivePressureAltM: Int = 0,
+    /** See [TakeoffFormState.metarRefreshing]. */
+    val metarRefreshing: Boolean = false
 ) {
     val hasGrassRunway: Boolean
         get() = runwayStrips.anyGrass()
@@ -124,7 +129,9 @@ class LandingViewModel(
     private val repository: AircraftProfileRepository,
     private val profileId: Long,
     private val performanceNormal: PerformanceNormalData,
-    private val corrections: PerformanceCorrectionsData
+    private val corrections: PerformanceCorrectionsData,
+    private val metarRepository: MetarRepository? = null,
+    private val metarConfig: MetarConfigData = MetarConfigData.DEFAULT
 ) : ViewModel() {
 
     val marginFactorDefaultPct: Int = (corrections.marginFactorDefaults.landingDefaultFactor * 100).roundToInt()
@@ -189,7 +196,32 @@ class LandingViewModel(
             }.collect { (airfield, strips) ->
                 _state.update { it.copy(selectedAirfield = airfield, runwayStrips = strips) }
                 recalculate()
+                autoRefreshMetarIfStale(airfield)
             }
+        }
+    }
+
+    /** See [TakeoffViewModel.autoRefreshMetarIfStale]. */
+    private fun autoRefreshMetarIfStale(airfield: AirfieldEntity?) {
+        val repositoryForMetar = metarRepository ?: return
+        if (airfield == null || _state.value.flightContextMode != FlightContextMode.AIRFIELD) return
+        if (!metarRefresher.shouldAutoRefresh(airfield, metarConfig)) return
+
+        viewModelScope.launch {
+            runCatching { repositoryForMetar.refreshOne(airfield, metarConfig) }
+        }
+    }
+
+    private val metarRefresher = MetarAutoRefresher()
+
+    /** See [TakeoffViewModel.refreshMetarNow]. */
+    fun refreshMetarNow() {
+        val repositoryForMetar = metarRepository ?: return
+        val airfield = _state.value.selectedAirfield ?: return
+        viewModelScope.launch {
+            _state.update { it.copy(metarRefreshing = true) }
+            runCatching { repositoryForMetar.refreshOne(airfield, metarConfig) }
+            _state.update { it.copy(metarRefreshing = false) }
         }
     }
 
@@ -377,11 +409,15 @@ class LandingViewModel(
             repository: AircraftProfileRepository,
             profileId: Long,
             performanceNormal: PerformanceNormalData,
-            corrections: PerformanceCorrectionsData
+            corrections: PerformanceCorrectionsData,
+            metarRepository: MetarRepository? = null,
+            metarConfig: MetarConfigData = MetarConfigData.DEFAULT
         ) = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
                 @Suppress("UNCHECKED_CAST")
-                return LandingViewModel(repository, profileId, performanceNormal, corrections) as T
+                return LandingViewModel(
+                    repository, profileId, performanceNormal, corrections, metarRepository, metarConfig
+                ) as T
             }
         }
     }

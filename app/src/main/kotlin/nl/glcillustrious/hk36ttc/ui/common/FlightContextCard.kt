@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import nl.glcillustrious.hk36ttc.R
@@ -290,7 +291,11 @@ fun RunwayResultCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(label, style = MaterialTheme.typography.titleMedium)
-                Text(statusLabel, style = MaterialTheme.typography.labelLarge)
+                // "Past zonder veiligheidsmarge" is long enough to wrap to two lines on a
+                // narrow phone. Text defaults to start-aligned, so without this the wrapped
+                // second line hugs the *left* edge of its own box instead of sitting flush
+                // with the row's right edge like every other (single-line) status does.
+                Text(statusLabel, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.End)
             }
             Text(
                 if (headwindGustKts != null && crosswindGustKts != null) {
@@ -343,8 +348,11 @@ fun RunwayResultCard(
                     }
                 )
             } else {
+                // Not the same string as the status badge above (which already says "Rugwind!")
+                // — repeating that word here read as the app stuttering. This line instead
+                // states the reason: the AFM simply has no tailwind data for any direction.
                 Text(
-                    stringResource(R.string.flight_context_runway_status_tailwind),
+                    stringResource(R.string.flight_context_runway_tailwind_detail),
                     style = MaterialTheme.typography.bodySmall
                 )
             }

@@ -32,7 +32,11 @@ data class RunwayCandidate(
 data class RequiredDistances(val withMarginM: Double, val withoutMarginM: Double)
 
 enum class RunwayAdviceStatus {
-    /** Fits with margin, and has the most remaining metres among the directions that do. */
+    /** Fits with margin, and has the strongest headwind component among the directions that
+     * do — remaining metres only break a tie in headwind, never outrank it. Airmanship: a
+     * runway more aligned into wind is preferred over one with merely more spare length,
+     * since crosswind carries handling risk (directional control, wingtip clearance) that a
+     * distance-only comparison doesn't capture. */
     RECOMMENDED,
 
     /** Fits with margin, but isn't the best of the directions that do. */
@@ -90,6 +94,13 @@ data class RunwayAdvice(
  * Fase 2c ronde 3: there is no longer a single "the" runway this returns — every candidate is
  * shown to the pilot at once (rekenlogica.md §5), so this ranks and tiers all of them instead
  * of the caller picking one.
+ *
+ * **Ranking within a tier**: by headwind component, strongest first, remaining metres as the
+ * tiebreak — not by remaining metres first. For a single wind vector, more headwind and less
+ * crosswind are the same direction of travel (they're complementary components of one vector),
+ * so this is equivalently "least crosswind first"; it is deliberately not "most spare runway
+ * first", which could recommend a long runway well off the wind over a shorter one nearly
+ * straight down it.
  *
  * Known limitation: only runway *length* is compared — TODA/stopway aren't modeled, since the
  * saved airfield profile doesn't capture them (see docs/data/airfield_profile_schema.json).
@@ -149,16 +160,17 @@ object RunwayAdvisor {
             }
         }
 
+        // Headwind first, remaining metres only to break a tie — see the KDoc above for why.
+        val intraTierOrder = compareByDescending<RunwayAdvice> { it.headwindKts }
+            .thenByDescending { it.remainingWithMarginM ?: it.remainingWithoutMarginM ?: Double.NEGATIVE_INFINITY }
+
         val recommended = evaluated
             .filter { it.status == RunwayAdviceStatus.FITS }
-            .maxByOrNull { it.remainingWithMarginM!! }
+            .minWithOrNull(intraTierOrder)
 
         return evaluated
             .map { if (it === recommended) it.copy(status = RunwayAdviceStatus.RECOMMENDED) else it }
-            .sortedWith(
-                compareBy<RunwayAdvice> { statusRank(it.status) }
-                    .thenByDescending { it.remainingWithMarginM ?: it.remainingWithoutMarginM ?: Double.NEGATIVE_INFINITY }
-            )
+            .sortedWith(compareBy<RunwayAdvice> { statusRank(it.status) }.then(intraTierOrder))
     }
 
     private fun statusRank(status: RunwayAdviceStatus): Int = when (status) {

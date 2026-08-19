@@ -138,7 +138,9 @@ fun TakeoffScreen(
                         stringResource(R.string.perf_wind_direction_unknown_warning)
                     } else {
                         null
-                    }
+                    },
+                    onRefresh = { viewModel.refreshMetarNow() },
+                    refreshing = state.metarRefreshing
                 )
             }
             val metarWeather = state.weatherDerivable && state.weatherMode == WeatherInputMode.METAR

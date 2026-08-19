@@ -313,6 +313,7 @@ private fun Hk36NavHost(
             val profileId = backStackEntry.arguments?.getString("profileId")?.toLongOrNull() ?: 0L
             SleepvluchtScreen(
                 repository = repository,
+                metarRepository = metarRepository,
                 performanceTow = appData.performanceTow,
                 performanceNormal = appData.performanceNormal,
                 performanceCorrections = appData.performanceCorrections,
@@ -326,6 +327,7 @@ private fun Hk36NavHost(
             val profileId = backStackEntry.arguments?.getString("profileId")?.toLongOrNull() ?: 0L
             LandingScreen(
                 repository = repository,
+                metarRepository = metarRepository,
                 performanceNormal = appData.performanceNormal,
                 performanceCorrections = appData.performanceCorrections,
                 metarConfig = appData.metarConfig,

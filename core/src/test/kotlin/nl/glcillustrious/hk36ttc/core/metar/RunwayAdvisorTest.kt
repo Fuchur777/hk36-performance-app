@@ -30,6 +30,36 @@ class RunwayAdvisorTest {
         assertEquals(RunwayAdviceStatus.RECOMMENDED, advice.first().status)
     }
 
+    /**
+     * The test above doesn't actually distinguish the ranking rule from a simpler "most spare
+     * metres wins" rule, because its strongest-headwind runway also happens to have the most
+     * remaining metres. This one sets up a genuine conflict: a long runway well off the wind
+     * (lots of spare length despite mediocre headwind) against a short one nearly straight down
+     * it (far less spare length, but by far the strongest headwind). Headwind must win.
+     */
+    @Test
+    fun `headwind ranks above remaining metres, even when the longer runway has far more spare length`() {
+        val nearlyIntoWind = RunwayCandidate("27", headingDegTrue = 0.0, lengthM = 800.0)
+        val mostlyCrosswind = RunwayCandidate("18", headingDegTrue = 80.0, lengthM = 2000.0)
+
+        val advice = RunwayAdvisor.advise(
+            candidates = listOf(mostlyCrosswind, nearlyIntoWind),
+            windDirectionDeg = 0.0,
+            windSpeedKts = 15.0,
+            demonstratedCrosswindKts = demonstratedCrosswindKts,
+            requiredDistances = { headwindKts, _ -> flat(500.0 - headwindKts * 10.0) }
+        )
+
+        val byDesignator = advice.associateBy { it.candidate.designator }
+        // "18" has far more remaining metres despite its weak headwind — confirms this scenario
+        // actually exercises the conflict, rather than both runways happening to agree.
+        assertEquals(true, byDesignator.getValue("18").remainingWithMarginM!! > byDesignator.getValue("27").remainingWithMarginM!!)
+
+        assertEquals(listOf("27", "18"), advice.map { it.candidate.designator })
+        assertEquals(RunwayAdviceStatus.RECOMMENDED, advice.first().status)
+        assertEquals("27", advice.first().candidate.designator)
+    }
+
     @Test
     fun `a tailwind heading is excluded from recommended and never fits`() {
         val downwind = RunwayCandidate("21", headingDegTrue = 210.0, lengthM = 5000.0)

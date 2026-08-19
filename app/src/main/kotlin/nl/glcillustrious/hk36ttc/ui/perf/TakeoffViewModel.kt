@@ -37,6 +37,7 @@ import nl.glcillustrious.hk36ttc.data.local.RunwaySurfaceType
 import nl.glcillustrious.hk36ttc.data.local.TakeoffInputEntity
 import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
 import nl.glcillustrious.hk36ttc.ui.common.LoadGuard
+import nl.glcillustrious.hk36ttc.ui.common.MetarAutoRefresher
 import nl.glcillustrious.hk36ttc.ui.common.RunwayDirectionOption
 import nl.glcillustrious.hk36ttc.ui.common.WeatherInputMode
 import nl.glcillustrious.hk36ttc.ui.common.anyGrass
@@ -124,7 +125,12 @@ data class TakeoffFormState(
      * component can't be computed without it. */
     val metarWindUsable: Boolean = false,
     val effectiveOatC: Int = 15,
-    val effectivePressureAltM: Int = 0
+    val effectivePressureAltM: Int = 0,
+    /** True while a pilot-requested METAR refresh (the "Controleer op nieuwe METAR" button on
+     * [nl.glcillustrious.hk36ttc.ui.common.MetarSummary]) is in flight — the background
+     * auto-refresh never touches this, since it's meant to stay silent (see
+     * [TakeoffViewModel.autoRefreshMetarIfStale]). */
+    val metarRefreshing: Boolean = false
 ) {
     val hasGrassRunway: Boolean
         get() = runwayStrips.anyGrass()
@@ -268,23 +274,36 @@ class TakeoffViewModel(
      *
      * Failure is silent on purpose — a pilot on a field with no signal should see the screen keep
      * working with the previous or hand-entered weather, not an error they can do nothing about.
-     * The airfield editor's explicit "fetch" button is where failures are reported.
+     * This only ever tries once per airfield per screen visit (see [MetarAutoRefresher]) — a
+     * pilot who leaves the screen open longer than that has [refreshMetarNow] instead.
      */
     private fun autoRefreshMetarIfStale(airfield: AirfieldEntity?) {
         val repositoryForMetar = metarRepository ?: return
         if (airfield == null || _state.value.flightContextMode != FlightContextMode.AIRFIELD) return
-        if (!MetarRepository.shouldAutoRefresh(airfield, metarConfig, System.currentTimeMillis())) return
-        if (!metarAutoRefreshAttempted.add(airfield.id)) return
+        if (!metarRefresher.shouldAutoRefresh(airfield, metarConfig)) return
 
         viewModelScope.launch {
             runCatching { repositoryForMetar.refreshOne(airfield, metarConfig) }
         }
     }
 
-    /** Airfields already tried this session, so a failing lookup isn't retried on every single
-     * recalculation — the collector fires on each edit, and a field with no station would
-     * otherwise hammer the network. */
-    private val metarAutoRefreshAttempted = mutableSetOf<Long>()
+    private val metarRefresher = MetarAutoRefresher()
+
+    /**
+     * The pilot explicitly asked for a fresh METAR (the button [MetarSummary] shows once its
+     * report is stale) — unlike [autoRefreshMetarIfStale], this always attempts the fetch
+     * regardless of [MetarAutoRefresher]'s once-per-visit bookkeeping, and reports back via
+     * [TakeoffFormState.metarRefreshing] so the button can show it's working.
+     */
+    fun refreshMetarNow() {
+        val repositoryForMetar = metarRepository ?: return
+        val airfield = _state.value.selectedAirfield ?: return
+        viewModelScope.launch {
+            _state.update { it.copy(metarRefreshing = true) }
+            runCatching { repositoryForMetar.refreshOne(airfield, metarConfig) }
+            _state.update { it.copy(metarRefreshing = false) }
+        }
+    }
 
     fun update(transform: (TakeoffFormState) -> TakeoffFormState) {
         _state.update(transform)

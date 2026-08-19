@@ -158,12 +158,6 @@ fun ProfileListScreen(
                     ) {
                         ListItem(
                             headlineContent = { Text(profile.registration) },
-                            supportingContent = {
-                                Text(
-                                    stringResource(R.string.profile_list_mtow_format, profile.mtowKg.toInt()),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            },
                             trailingContent = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     IconButton(onClick = { onEditProfile(profile) }) {

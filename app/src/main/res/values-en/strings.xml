@@ -68,7 +68,6 @@
     <string name="profile_list_add_content_description">New registration</string>
     <string name="profile_list_empty_title">No registration added yet.</string>
     <string name="profile_list_empty_body">Add an HK36 TTC registration with the data from your own Weighing Report / Mass and Balance Form.</string>
-    <string name="profile_list_mtow_format">MTOW %1$d kg</string>
     <string name="profile_list_edit_content_description">Edit</string>
     <string name="profile_list_delete_content_description">Delete registration</string>
     <string name="profile_list_delete_confirm_title">Delete registration?</string>
@@ -279,6 +278,7 @@
     <string name="airfield_edit_metar_section_title">METAR</string>
     <string name="airfield_edit_metar_auto_hint">The METAR is fetched automatically for the METAR station above, or otherwise for this airfield\'s ICAO code. Without an internet connection the last fetched report stays in place.</string>
     <string name="airfield_edit_metar_fetching">Fetching METAR…</string>
+    <string name="metar_summary_refresh_action">Check for a new METAR</string>
     <string name="metar_fetch_failed_format">Fetch failed: %1$s. The previously stored METAR was left unchanged.</string>
     <string name="metar_fetch_no_station">This airfield has no ICAO or METAR station code, so there is nothing to fetch. Enter one above.</string>
     <string name="metar_fetch_no_report">No current METAR available for this station. Many gliding sites have no station of their own — enter a nearby METAR station above (e.g. Terlet → EHDL).</string>
@@ -366,6 +366,7 @@
     <string name="flight_context_runway_status_fits_without_margin">Fits without safety margin</string>
     <string name="flight_context_runway_status_does_not_fit">Doesn\'t fit</string>
     <string name="flight_context_runway_status_tailwind">Tailwind — not available</string>
+    <string name="flight_context_runway_tailwind_detail">Tailwind is not supported by the AFM for this direction — no data available.</string>
     <string name="flight_context_runway_detail_format">Headwind %1$d kt · Crosswind %2$d kt</string>
     <string name="flight_context_runway_detail_gust_format">Headwind %1$d kt (%2$d) · Crosswind %3$d kt (%4$d)</string>
     <string name="flight_context_runway_remaining_label">Runway remaining</string>

@@ -68,7 +68,6 @@
     <string name="profile_list_add_content_description">Nieuwe registratie</string>
     <string name="profile_list_empty_title">Nog geen registratie toegevoegd.</string>
     <string name="profile_list_empty_body">Voeg een HK36 TTC-registratie toe met de gegevens uit je eigen Weeg- en Zwaartepuntsrapport.</string>
-    <string name="profile_list_mtow_format">MTOW %1$d kg</string>
     <string name="profile_list_edit_content_description">Bewerken</string>
     <string name="profile_list_delete_content_description">Registratie verwijderen</string>
     <string name="profile_list_delete_confirm_title">Registratie verwijderen?</string>
@@ -279,6 +278,7 @@
     <string name="airfield_edit_metar_section_title">METAR</string>
     <string name="airfield_edit_metar_auto_hint">De METAR wordt automatisch opgehaald voor het METAR-station hierboven, of anders voor de ICAO-code van dit vliegveld. Zonder internet blijft de laatst opgehaalde melding staan.</string>
     <string name="airfield_edit_metar_fetching">METAR ophalen…</string>
+    <string name="metar_summary_refresh_action">Controleer op nieuwe METAR</string>
     <string name="metar_fetch_failed_format">Ophalen mislukt: %1$s. De eerder opgeslagen METAR is ongewijzigd gebleven.</string>
     <string name="metar_fetch_no_station">Dit vliegveld heeft geen ICAO- of METAR-station-code, dus er valt niets op te halen. Vul er hierboven een in.</string>
     <string name="metar_fetch_no_report">Geen actuele METAR beschikbaar voor dit station. Veel zweefvelden hebben geen eigen station — vul hierboven een nabijgelegen METAR-station in (bijv. Terlet → EHDL).</string>
@@ -365,6 +365,7 @@
     <string name="flight_context_runway_status_fits_without_margin">Past zonder veiligheidsmarge</string>
     <string name="flight_context_runway_status_does_not_fit">Niet mogelijk</string>
     <string name="flight_context_runway_status_tailwind">Rugwind!</string>
+    <string name="flight_context_runway_tailwind_detail">Rugwind wordt door het AFM niet ondersteund voor deze richting — geen data beschikbaar.</string>
     <string name="flight_context_runway_detail_format">Tegenwind %1$d kt · zijwind %2$d kt</string>
     <string name="flight_context_runway_detail_gust_format">Tegenwind %1$d kt (%2$d) · zijwind %3$d kt (%4$d)</string>
     <string name="flight_context_runway_remaining_label">Resterende lengte</string>

@@ -31,6 +31,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.math.roundToInt
 import nl.glcillustrious.hk36ttc.R
 import nl.glcillustrious.hk36ttc.core.metar.MetarConfigData
+import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
 import nl.glcillustrious.hk36ttc.core.metar.MetarParser
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceCorrectionsData
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceNormalData
@@ -60,6 +61,7 @@ import nl.glcillustrious.hk36ttc.ui.report.buildPerformanceReport
 @Composable
 fun SleepvluchtScreen(
     repository: AircraftProfileRepository,
+    metarRepository: MetarRepository,
     performanceTow: PerformanceTowData,
     performanceNormal: PerformanceNormalData,
     performanceCorrections: PerformanceCorrectionsData,
@@ -70,7 +72,8 @@ fun SleepvluchtScreen(
 ) {
     val viewModel: SleepvluchtViewModel = viewModel(
         factory = SleepvluchtViewModel.factory(
-            repository, profileId, performanceTow, performanceNormal, performanceCorrections, sailplaneTypes
+            repository, profileId, performanceTow, performanceNormal, performanceCorrections, sailplaneTypes,
+            metarRepository, metarConfig
         )
     )
     val state by viewModel.state.collectAsState()
@@ -130,7 +133,9 @@ fun SleepvluchtScreen(
                         stringResource(R.string.perf_wind_direction_unknown_warning)
                     } else {
                         null
-                    }
+                    },
+                    onRefresh = { viewModel.refreshMetarNow() },
+                    refreshing = state.metarRefreshing
                 )
             }
             val metarWeather = state.weatherDerivable && state.weatherMode == WeatherInputMode.METAR
