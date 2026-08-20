@@ -89,6 +89,7 @@ fun MetarSummary(
 
         is MetarParseResult.Success -> {
             val metar = parsed.metar
+            val units = LocalAppUnits.current
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     val windGustKts = metar.windGustKts
@@ -118,7 +119,13 @@ fun MetarSummary(
                     if (qnhHpa != null) {
                         Text(stringResource(R.string.airfield_edit_metar_summary_qnh_format, qnhHpa.toInt()))
                         val pressureAlt = PressureAltitude.fromElevationAndQnh(elevationM.toDouble(), qnhHpa)
-                        Text(stringResource(R.string.airfield_edit_metar_summary_pressure_altitude_format, pressureAlt.toInt()))
+                        Text(
+                            stringResource(
+                                R.string.airfield_edit_metar_summary_pressure_altitude_format,
+                                displayHeight(pressureAlt, units.height),
+                                heightSuffix(units.height)
+                            )
+                        )
                     } else {
                         Text(
                             stringResource(R.string.airfield_edit_metar_summary_no_qnh),

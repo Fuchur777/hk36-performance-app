@@ -16,6 +16,38 @@
     <string name="settings_language_heading">Taal</string>
     <string name="settings_language_explanation">Als de systeemtaal op Nederlands staat dan de app automatisch ook, bij een andere systeemtaal wordt de app Engels. Dat kun je hier handmatig overschrijven.</string>
     <string name="settings_language_system">Systeemtaal (automatisch)</string>
+
+    <!-- Eenheden -->
+    <string name="settings_units_heading">Eenheden</string>
+    <string name="settings_units_explanation">Kies in welke eenheden de app getallen toont en accepteert. Berekeningen blijven altijd intern in de eenheden van het vlieghandboek; alleen wat je ziet en intypt wordt omgerekend.</string>
+    <string name="settings_unit_temperature_label">Temperatuur</string>
+    <string name="settings_unit_celsius">°C</string>
+    <string name="settings_unit_fahrenheit">°F</string>
+    <string name="settings_unit_distance_label">Afstand (baanlengte, resultaten)</string>
+    <string name="settings_unit_height_label">Hoogte (veldhoogte, drukhoogte)</string>
+    <string name="settings_unit_meters">m</string>
+    <string name="settings_unit_feet">ft</string>
+    <string name="settings_unit_wind_speed_label">Windsnelheid</string>
+    <string name="settings_unit_knots">kt</string>
+    <string name="settings_unit_meters_per_second">m/s</string>
+    <string name="settings_unit_pressure_label">Luchtdruk (QNH)</string>
+    <string name="settings_unit_hpa">hPa</string>
+    <string name="settings_unit_inhg">inHg</string>
+    <string name="settings_unit_vertical_speed_label">Klimsnelheid (verticaal)</string>
+    <string name="settings_unit_feet_per_minute">ft/min</string>
+    <string name="settings_unit_airspeed_label">Vliegsnelheid (Vy)</string>
+    <string name="settings_unit_kmh">km/h</string>
+    <string name="settings_unit_mph">mph</string>
+    <string name="settings_unit_mass_label">Gewicht</string>
+    <string name="settings_unit_kg">kg</string>
+    <string name="settings_unit_lbs">lbs</string>
+    <string name="settings_unit_cg_position_label">CG-positie</string>
+    <string name="settings_unit_mm">mm</string>
+    <string name="settings_unit_inch">inch</string>
+    <string name="settings_unit_fuel_volume_label">Brandstof</string>
+    <string name="settings_unit_liters">L</string>
+    <string name="settings_unit_us_gallons">US gal</string>
+
     <string name="settings_data_heading">Gegevens</string>
     <string name="settings_data_explanation">Maak een back-up van alles wat je zelf hebt ingevoerd: kisten, vliegvelden met banen, favorieten, je laatst ingevulde rekenwaarden en je taalkeuze.</string>
     <string name="settings_data_export">Gegevens exporteren</string>
@@ -102,20 +134,20 @@
     <string name="wb_pilot_label">Piloot</string>
     <string name="wb_copilot_label">Copiloot (0 = solo)</string>
     <string name="wb_fuel_label">Brandstof</string>
-    <string name="wb_fuel_helper_format">~%1$dkg@%2$skg/L</string>
+    <string name="wb_fuel_helper_format">~%1$d %2$s @ %3$d %2$s/%4$s</string>
     <string name="wb_baggage_label">Bagage</string>
     <string name="wb_result_warning_heading">Waarschuwing</string>
     <string name="wb_result_ok_heading">Binnen de MTOW en CG envelop</string>
-    <string name="wb_result_total_mass_format">Totaalgewicht: %1$.1f kg (marge: %2$.1f kg)</string>
-    <string name="wb_result_cg_format">CG: %1$.1f mm (marge voor: %2$.1f mm, marge achter: %3$.1f mm)</string>
-    <string name="wb_violation_mtow_exceeded_format">Totaalgewicht %1$.1f kg overschrijdt MTOW %2$.1f kg (%3$.1f kg te veel).</string>
-    <string name="wb_violation_seat_limit_pilot_format">Piloot %1$.1f kg overschrijdt max. stoelbelasting %2$.1f kg.</string>
-    <string name="wb_violation_seat_limit_copilot_format">Copiloot %1$.1f kg overschrijdt max. stoelbelasting %2$.1f kg.</string>
-    <string name="wb_violation_baggage_limit_format">Bagage %1$.1f kg overschrijdt max. bagage %2$.1f kg.</string>
-    <string name="wb_violation_cg_forward_format">CG %1$.1f mm ligt voor de voorwaartse grens (%2$.1f mm).</string>
-    <string name="wb_violation_cg_aft_format">CG %1$.1f mm ligt achter de achterwaartse grens (%2$.1f mm).</string>
-    <string name="wb_warning_trim_with_mass_format">Solo-vlucht met slechts %1$.1f kg op de stoelen (&lt; %2$.1f kg minimum) — trimgewicht vereist (indicatief %3$.1f kg, zie AMM).</string>
-    <string name="wb_warning_trim_without_mass_format">Solo-vlucht met slechts %1$.1f kg op de stoelen (&lt; %2$.1f kg minimum) — trimgewicht vereist (buiten gepubliceerde tabel, zie AMM).</string>
+    <string name="wb_result_total_mass_format">Totaalgewicht: %1$d %3$s (marge: %2$d %3$s)</string>
+    <string name="wb_result_cg_format">CG: %1$d %4$s (marge voor: %2$d %4$s, marge achter: %3$d %4$s)</string>
+    <string name="wb_violation_mtow_exceeded_format">Totaalgewicht %1$d %4$s overschrijdt MTOW %2$d %4$s (%3$d %4$s te veel).</string>
+    <string name="wb_violation_seat_limit_pilot_format">Piloot %1$d %3$s overschrijdt max. stoelbelasting %2$d %3$s.</string>
+    <string name="wb_violation_seat_limit_copilot_format">Copiloot %1$d %3$s overschrijdt max. stoelbelasting %2$d %3$s.</string>
+    <string name="wb_violation_baggage_limit_format">Bagage %1$d %3$s overschrijdt max. bagage %2$d %3$s.</string>
+    <string name="wb_violation_cg_forward_format">CG %1$d %3$s ligt voor de voorwaartse grens (%2$d %3$s).</string>
+    <string name="wb_violation_cg_aft_format">CG %1$d %3$s ligt achter de achterwaartse grens (%2$d %3$s).</string>
+    <string name="wb_warning_trim_with_mass_format">Solo-vlucht met slechts %1$d %4$s op de stoelen (&lt; %2$d %4$s minimum) — trimgewicht vereist (indicatief %3$d %4$s, zie AMM).</string>
+    <string name="wb_warning_trim_without_mass_format">Solo-vlucht met slechts %1$d %3$s op de stoelen (&lt; %2$d %3$s minimum) — trimgewicht vereist (buiten gepubliceerde tabel, zie AMM).</string>
 
     <!-- Gedeelde stepper-controls -->
     <string name="stepper_decrease_content_description_format">%1$s verlagen</string>
@@ -186,7 +218,7 @@
     <string name="takeoff_surface_toeslag_format">%1$s Inclusief ondergrond-toeslag (+%2$s%%)</string>
     <string name="takeoff_slope_correction_format">[AIC P173] Inclusief hellingscorrectie voor %1$s%% oplopend</string>
     <string name="takeoff_climb_heading">Klimprestatie (referentie, zeeniveau/MTOW)</string>
-    <string name="takeoff_climb_vy_format">Vy: %1$s km/h — max. klimsnelheid: %2$s m/s</string>
+    <string name="takeoff_climb_vy_format">Vy: %1$s %3$s — max. klimsnelheid: %2$s %4$s</string>
 
     <!-- Landing -->
     <string name="landing_title_format">Landing — %1$s</string>
@@ -194,7 +226,6 @@
     <string name="landing_surface_aangepast">Aangepast</string>
     <string name="landing_custom_surface_explanation_format">[AIC P173] Voor zeer kort, glad gemaaid gras geeft de richtlijn geen precies cijfer, alleen een bovengrens van %1$d%%. Gebruik deze optie alleen voor die situatie — voor gewoon droog of nat gras kies je hiernaast de vaste optie.</string>
     <string name="landing_custom_surface_factor_label">[AIC P173] Eigen ondergrond-factor</string>
-    <string name="landing_easa_note">EASA Part-NCO (NCO.OP.205) schrijft geen vast percentage voor — dit is een aanbevolen praktijkconventie uit AIC P173, geen wettelijke eis.</string>
     <string name="landing_mtow_note">Deze afstand geldt voor MTOW, ongeacht het werkelijke landingsgewicht — AFM Sup 11 publiceert geen aparte landingsdata voor lagere gewichten.</string>
     <string name="landing_surface_grass_note">[AIC P173] AFM Sup 11 publiceert geen landingscorrectie voor gras.</string>
     <string name="landing_surface_correction_format">[AIC P173] Inclusief ondergrond-correctie %1$s%%</string>
@@ -208,24 +239,24 @@
     <string name="sleepvlucht_surface_nat_zacht_caption">[AIC P173] Toeslag herleid via dezelfde asfalt-equivalente omrekening — geen AFM Sup 1-cijfer.</string>
     <string name="sleepvlucht_glider_type_label">Zweefvliegtuig-type</string>
     <string name="sleepvlucht_edit_manually_content_description">Handmatig wijzigen</string>
-    <string name="sleepvlucht_type_detail_fallback_format">%1$d kg, L/D %2$d — gebaseerd op leeggewicht+75kg (past niet bij MTOW binnen AFM-klassen)</string>
-    <string name="sleepvlucht_type_detail_mtow_format">%1$d kg, L/D %2$d — gebaseerd op MTOW</string>
+    <string name="sleepvlucht_type_detail_fallback_format">%1$d %3$s, L/D %2$d — gebaseerd op leeggewicht+%4$d %3$s (past niet bij MTOW binnen AFM-klassen)</string>
+    <string name="sleepvlucht_type_detail_mtow_format">%1$d %3$s, L/D %2$d — gebaseerd op MTOW</string>
     <string name="sleepvlucht_glider_weight_label">Sleepgewicht (zweefvliegtuig)</string>
     <string name="sleepvlucht_ld_known_label">Glijgetal (L/D) bekend</string>
     <string name="sleepvlucht_ld_label">Glijgetal (L/D)</string>
     <string name="sleepvlucht_favorite_type_label">Zweefvliegtuigtypes (favoriet)</string>
     <string name="sleepvlucht_favorite_type_placeholder">Kies een type</string>
-    <string name="sleepvlucht_favorite_type_option_format">%1$s (%2$d kg MTOW, L/D %3$s)</string>
+    <string name="sleepvlucht_favorite_type_option_format">%1$s (%2$d %4$s MTOW, L/D %3$s)</string>
     <string name="sleepvlucht_instruction_flight_label">Instructie TMG Glidertow (DBO)</string>
     <string name="sleepvlucht_towplane_weight_label">Sleepvliegtuig-gewicht</string>
-    <string name="sleepvlucht_towplane_from_wb_format">%1$d kg — uit laatste W&amp;B-berekening</string>
-    <string name="sleepvlucht_towplane_reset_to_wb_format">Terug naar W&amp;B-waarde (%1$d kg)</string>
+    <string name="sleepvlucht_towplane_from_wb_format">%1$d %2$s — uit laatste W&amp;B-berekening</string>
+    <string name="sleepvlucht_towplane_reset_to_wb_format">Terug naar W&amp;B-waarde (%1$d %2$s)</string>
     <string name="sleepvlucht_class_format">Klasse: %1$s</string>
     <string name="sleepvlucht_class_bumped_up_note">Glijgetal onvoldoende voor de gewichtsklasse — eerstvolgende zwaardere klasse gebruikt.</string>
     <string name="sleepvlucht_surface_toeslag_format">%1$s Baantype-toeslag %2$s%%</string>
     <string name="sleepvlucht_slope_correction_format">[AIC P173] Inclusief hellingscorrectie voor %1$s%% </string>
     <string name="sleepvlucht_climb_heading">Klimprestatie tijdens sleep (referentie)</string>
-    <string name="sleepvlucht_climb_point_format">%1$s kg sleepgewicht: %2$s m/s</string>
+    <string name="sleepvlucht_climb_point_format">%1$s %3$s sleepgewicht: %2$s %4$s</string>
 
     <!-- Sleepvlucht: blokkerende redenen (TowBlockReason) -->
     <string name="tow_block_sailplane_mass_solo_format">Zweefvliegtuig %1$.0f kg overschrijdt max. %2$.0f kg (solo).</string>
@@ -296,7 +327,7 @@
     <string name="airfield_edit_metar_summary_temperature_format">Temperatuur %1$d°C</string>
     <string name="airfield_edit_metar_summary_qnh_format">QNH %1$d hPa</string>
     <string name="airfield_edit_metar_summary_no_qnh">Geen QNH in deze METAR — drukhoogte moet handmatig ingevuld worden.</string>
-    <string name="airfield_edit_metar_summary_pressure_altitude_format">Drukhoogte ≈ %1$d m</string>
+    <string name="airfield_edit_metar_summary_pressure_altitude_format">Drukhoogte ≈ %1$d %2$s</string>
     <string name="airfield_edit_metar_summary_age_format">%1$d minuten oud</string>
     <string name="airfield_edit_metar_summary_age_stale_format">%1$d minuten oud — mogelijk verouderd!</string>
     <!-- Wereldwijde vliegvelddatabase (OurAirports) -->
@@ -366,8 +397,8 @@
     <string name="flight_context_runway_status_does_not_fit">Niet mogelijk</string>
     <string name="flight_context_runway_status_tailwind">Rugwind!</string>
     <string name="flight_context_runway_tailwind_detail">Rugwind wordt door het AFM niet ondersteund voor deze richting — geen data beschikbaar.</string>
-    <string name="flight_context_runway_detail_format">Tegenwind %1$d kt · zijwind %2$d kt</string>
-    <string name="flight_context_runway_detail_gust_format">Tegenwind %1$d kt (%2$d) · zijwind %3$d kt (%4$d)</string>
+    <string name="flight_context_runway_detail_format">Tegenwind %1$d %3$s · zijwind %2$d %3$s</string>
+    <string name="flight_context_runway_detail_gust_format">Tegenwind %1$d %5$s (%2$d) · zijwind %3$d %5$s (%4$d)</string>
     <string name="flight_context_runway_remaining_label">Resterende lengte</string>
     <string name="flight_context_crosswind_exceeded_warning">Zijwind boven de gedemonstreerde limiet</string>
 </resources>

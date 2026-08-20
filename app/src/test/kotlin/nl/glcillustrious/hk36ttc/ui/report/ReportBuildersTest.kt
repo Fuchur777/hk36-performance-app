@@ -1,5 +1,6 @@
 package nl.glcillustrious.hk36ttc.ui.report
 
+import nl.glcillustrious.hk36ttc.core.units.AppUnits
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -100,7 +101,7 @@ class RunwayReportRowsTest {
     fun `every runway direction produces its own block`() {
         val entries = listOf("04C", "22C", "04L", "22R", "12", "30").map { entry(it) }
 
-        val rows = runwayReportRows(entries, labels)
+        val rows = runwayReportRows(entries, labels, AppUnits())
 
         val headers = rows.filter { it.value == null && it.emphasized }.map { it.label }
         assertEquals(6, headers.size)
@@ -110,15 +111,14 @@ class RunwayReportRowsTest {
 
     @Test
     fun `a calculable direction lists surface, wind components and all three distances`() {
-        val rows = runwayReportRows(listOf(entry("02")), labels)
+        val rows = runwayReportRows(listOf(entry("02")), labels, AppUnits())
 
         val labelsFound = rows.map { it.label.trim() }
         assertTrue(labelsFound.containsAll(listOf("Ondergrond", "Tegenwind", "Kruiswind", "Grondloop", "Tot 15m obstakel", "Resterend")))
-        // Compared through the formatter rather than a literal: these numbers deliberately follow
-        // the device locale (comma on Frank's Dutch machine, point on CI), matching what the
-        // screen shows — so a hardcoded "180.0" here would pass in one place and fail in the other.
-        assertEquals(formatOneDecimal(180.0) + " m", rows.first { it.label.trim() == "Grondloop" }.value)
-        assertEquals(formatOneDecimal(280.0) + " m", rows.first { it.label.trim() == "Tot 15m obstakel" }.value)
+        // Whole numbers, no decimals — matches the screen's own display rounding policy, and with
+        // the default AppUnits() the figures stay in the same native metres/knots as before.
+        assertEquals("180 m", rows.first { it.label.trim() == "Grondloop" }.value)
+        assertEquals("280 m", rows.first { it.label.trim() == "Tot 15m obstakel" }.value)
     }
 
     /** A tailwind direction still gets a line, so the report shows it was considered rather than
@@ -127,7 +127,8 @@ class RunwayReportRowsTest {
     fun `a direction without distances is reported as not calculable, not omitted`() {
         val rows = runwayReportRows(
             listOf(entry("20", groundRun = null, obstacle = null, remaining = null)),
-            labels
+            labels,
+            AppUnits()
         )
 
         assertTrue(rows.any { it.label.trim() == "Niet te berekenen (staartwind)" })
@@ -137,20 +138,21 @@ class RunwayReportRowsTest {
 
     @Test
     fun `an exceeded crosswind is called out and emphasized on its own row`() {
-        val rows = runwayReportRows(listOf(entry("02", crosswindExceeded = true)), labels)
+        val rows = runwayReportRows(listOf(entry("02", crosswindExceeded = true)), labels, AppUnits())
 
         val crosswind = rows.first { it.label.trim() == "Kruiswind" }
         assertTrue(crosswind.emphasized)
         assertTrue(crosswind.value!!.contains("boven gedemonstreerde waarde"))
     }
 
-    /** Only the sign logic is asserted; the digits go through the same locale-aware formatter the
-     * screens use, so this holds on a Dutch and an English JVM alike. */
     @Test
     fun `remaining runway carries an explicit sign, since the sign is the whole point`() {
-        assertEquals("+" + formatOneDecimal(180.0), formatSigned(180.0))
-        assertEquals(formatOneDecimal(-40.0), formatSigned(-40.0))
-        assertTrue(formatSigned(-40.0).startsWith("-"))
-        assertEquals("+" + formatOneDecimal(0.0), formatSigned(0.0))
+        val positive = runwayReportRows(listOf(entry("02", remaining = 180.0)), labels, AppUnits())
+        val negative = runwayReportRows(listOf(entry("02", remaining = -40.0)), labels, AppUnits())
+        val zero = runwayReportRows(listOf(entry("02", remaining = 0.0)), labels, AppUnits())
+
+        assertEquals("+180 m", positive.first { it.label.trim() == "Resterend" }.value)
+        assertEquals("-40 m", negative.first { it.label.trim() == "Resterend" }.value)
+        assertEquals("+0 m", zero.first { it.label.trim() == "Resterend" }.value)
     }
 }

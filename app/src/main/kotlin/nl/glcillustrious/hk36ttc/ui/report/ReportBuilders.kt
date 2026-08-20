@@ -1,5 +1,12 @@
 package nl.glcillustrious.hk36ttc.ui.report
 
+import nl.glcillustrious.hk36ttc.core.units.AppUnits
+import nl.glcillustrious.hk36ttc.core.units.WindSpeedUnit
+import nl.glcillustrious.hk36ttc.ui.common.displayDistance
+import nl.glcillustrious.hk36ttc.ui.common.displayWindSpeed
+import nl.glcillustrious.hk36ttc.ui.common.distanceSuffix
+import nl.glcillustrious.hk36ttc.ui.common.windSpeedSuffix
+
 /**
  * Small builder for assembling a [ReportDocument] from a screen.
  *
@@ -88,21 +95,26 @@ data class RunwayRowLabels(
  */
 fun runwayReportRows(
     entries: List<RunwayReportEntry>,
-    labels: RunwayRowLabels
+    labels: RunwayRowLabels,
+    units: AppUnits
 ): List<ReportDocument.Row> = buildList {
+    val windSpeedSuf = windSpeedSuffix(units.windSpeed)
+    val distanceSuf = distanceSuffix(units.distance)
     entries.forEach { entry ->
         add(ReportDocument.Row("${entry.label} — ${entry.statusLabel}", null, emphasized = true))
         add(ReportDocument.Row("    ${labels.surface}", entry.surfaceLabel))
         add(
             ReportDocument.Row(
                 "    ${labels.headwind}",
-                formatOneDecimal(entry.headwindKts) + " kt" + gustSuffix(entry.headwindGustKts)
+                "${displayWindSpeed(entry.headwindKts, units.windSpeed)} $windSpeedSuf" +
+                    gustSuffix(entry.headwindGustKts, units.windSpeed)
             )
         )
         add(
             ReportDocument.Row(
                 "    ${labels.crosswind}",
-                formatOneDecimal(entry.crosswindKts) + " kt" + gustSuffix(entry.crosswindGustKts) +
+                "${displayWindSpeed(entry.crosswindKts, units.windSpeed)} $windSpeedSuf" +
+                    gustSuffix(entry.crosswindGustKts, units.windSpeed) +
                     if (entry.crosswindExceeded) " — ${labels.crosswindExceeded}" else "",
                 emphasized = entry.crosswindExceeded
             )
@@ -110,12 +122,14 @@ fun runwayReportRows(
         val groundRun = entry.groundRunWithMarginM
         val obstacle = entry.obstacleWithMarginM
         if (groundRun != null && obstacle != null) {
-            add(ReportDocument.Row("    ${labels.groundRun}", formatOneDecimal(groundRun) + " m"))
-            add(ReportDocument.Row("    ${labels.obstacle}", formatOneDecimal(obstacle) + " m"))
+            add(ReportDocument.Row("    ${labels.groundRun}", "${displayDistance(groundRun, units.distance)} $distanceSuf"))
+            add(ReportDocument.Row("    ${labels.obstacle}", "${displayDistance(obstacle, units.distance)} $distanceSuf"))
             // Directly after the with-margin distances, matching the screen: remaining length is
             // derived from those, not from the raw figures.
             entry.remainingM?.let {
-                add(ReportDocument.Row("    ${labels.remaining}", formatSigned(it) + " m"))
+                val remaining = displayDistance(it, units.distance)
+                val signed = if (remaining >= 0) "+$remaining" else remaining.toString()
+                add(ReportDocument.Row("    ${labels.remaining}", "$signed $distanceSuf"))
             }
         } else {
             add(ReportDocument.Row("    ${labels.notCalculable}", null))
@@ -123,16 +137,7 @@ fun runwayReportRows(
     }
 }
 
-/** Matches the one-decimal formatting the calculation screens already use on screen, so a
- * report and the screen it came from never disagree on a rounded value. */
-fun formatOneDecimal(value: Double): String = "%.1f".format(value)
-
-/** Remaining runway reads better with an explicit sign — "+180 m" vs "-40 m" — since the sign
- * is the whole point of that figure. */
-fun formatSigned(value: Double): String =
-    if (value >= 0) "+" + formatOneDecimal(value) else formatOneDecimal(value)
-
-/** " (18.0)" for a gust component, or "" when the report carried no gust group. Matches the
+/** " (18)" for a gust component, or "" when the report carried no gust group. Matches the
  * on-screen runway cards, which put the same figure in brackets after the steady one. */
-private fun gustSuffix(gustKts: Double?): String =
-    if (gustKts == null) "" else " (" + formatOneDecimal(gustKts) + ")"
+private fun gustSuffix(gustKts: Double?, unit: WindSpeedUnit): String =
+    if (gustKts == null) "" else " (" + displayWindSpeed(gustKts, unit) + ")"

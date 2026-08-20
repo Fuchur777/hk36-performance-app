@@ -28,33 +28,52 @@ data class WbReportLabels(
  * `:core` sealed types with no access to resources, and `WbScreen` already owns the mapping to
  * localized strings — reusing it here means the PDF and the screen can never word the same
  * problem differently.
+ *
+ * Every numeric input/result is already converted to the pilot's chosen display unit by the
+ * caller, alongside the matching [massSuffix]/[fuelSuffix]/[cgSuffix] — this function stays a
+ * pure formatter with no access to [nl.glcillustrious.hk36ttc.core.units.AppUnits] or Compose,
+ * same as it had no access to string resources before. [result] is kept only for the
+ * violations/warnings-empty check; its own kg/mm fields are never read directly here, since
+ * [totalMassDisplay]/[cgPositionDisplay]/[marginToMtowDisplay] already carry the converted
+ * numbers that belong with it.
+ *
+ * `Int`, not `Double`: every converted quantity in the app is a whole number (see
+ * [nl.glcillustrious.hk36ttc.ui.common.displayMass]'s KDoc) — formatted directly here, same as
+ * the take-off/landing/tow report paths ([buildPerformanceReport]) do for their own figures.
  */
 fun buildWbReport(
     title: String,
     timestamp: String,
     labels: WbReportLabels,
     registration: String?,
-    pilotKg: Int,
-    copilotKg: Int,
-    fuelLiters: Int,
-    baggageKg: Int,
+    pilotDisplay: Int,
+    copilotDisplay: Int,
+    fuelDisplay: Int,
+    baggageDisplay: Int,
+    massSuffix: String,
+    fuelSuffix: String,
+    cgSuffix: String,
     result: WBResult?,
+    totalMassDisplay: Int?,
+    cgPositionDisplay: Int?,
+    marginToMtowDisplay: Int?,
     violationTexts: List<String>,
     warningTexts: List<String>
 ): ReportDocument = ReportDocumentBuilder().apply {
     section(labels.sectionInput) {
         rowIfPresent(labels.registration, registration)
-        row(labels.pilot, "$pilotKg kg")
-        row(labels.copilot, "$copilotKg kg")
-        row(labels.fuel, "$fuelLiters L")
-        row(labels.baggage, "$baggageKg kg")
+        row(labels.pilot, "$pilotDisplay $massSuffix")
+        row(labels.copilot, "$copilotDisplay $massSuffix")
+        row(labels.fuel, "$fuelDisplay $fuelSuffix")
+        row(labels.baggage, "$baggageDisplay $massSuffix")
     }
 
     section(labels.sectionResult) {
-        if (result != null) {
-            row(labels.totalMass, formatOneDecimal(result.totalMassKg) + " kg", emphasized = true)
-            row(labels.cg, formatOneDecimal(result.cgMm) + " mm", emphasized = true)
-            row(labels.marginToMtow, formatSigned(result.marginToMtowKg) + " kg")
+        if (result != null && totalMassDisplay != null && cgPositionDisplay != null && marginToMtowDisplay != null) {
+            row(labels.totalMass, "$totalMassDisplay $massSuffix", emphasized = true)
+            row(labels.cg, "$cgPositionDisplay $cgSuffix", emphasized = true)
+            val signedMargin = if (marginToMtowDisplay >= 0) "+$marginToMtowDisplay" else marginToMtowDisplay.toString()
+            row(labels.marginToMtow, "$signedMargin $massSuffix")
             // Only stated when it holds — a violation line below says the opposite far more
             // specifically, and printing both would be contradictory.
             if (result.violations.isEmpty() && result.warnings.isEmpty()) {

@@ -9,6 +9,7 @@ import nl.glcillustrious.hk36ttc.data.local.AppDatabase
 import nl.glcillustrious.hk36ttc.data.export.UserDataRepository
 import nl.glcillustrious.hk36ttc.data.local.CalculationDataStore
 import nl.glcillustrious.hk36ttc.data.local.LanguagePreference
+import nl.glcillustrious.hk36ttc.data.local.UnitPreferences
 import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
 
 class Hk36Application : Application() {
@@ -31,6 +32,10 @@ class Hk36Application : Application() {
         private set
 
     lateinit var calculationDataStore: CalculationDataStore
+        private set
+
+    /** The pilot's chosen display units — see [UnitPreferences] and [nl.glcillustrious.hk36ttc.core.units.AppUnits]. */
+    lateinit var unitPreferences: UnitPreferences
         private set
 
     override fun onCreate() {
@@ -62,10 +67,13 @@ class Hk36Application : Application() {
         )
         metarRepository = MetarRepository(repository)
         val languagePreference = LanguagePreference(this)
+        unitPreferences = UnitPreferences(this)
         userDataRepository = UserDataRepository(
             dao = database.userDataDao(),
             languageTag = { languagePreference.get() },
             setLanguageTag = { languagePreference.set(it) },
+            units = { unitPreferences.units.value },
+            setUnits = { newUnits -> unitPreferences.update { newUnits } },
             transaction = { block -> database.withTransaction { block() } },
             appVersionName = BuildConfig.VERSION_NAME
         )

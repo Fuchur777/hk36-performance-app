@@ -16,7 +16,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +43,8 @@ import nl.glcillustrious.hk36ttc.data.local.AppCalculationData
 import nl.glcillustrious.hk36ttc.data.local.CalculationDataResult
 import nl.glcillustrious.hk36ttc.data.local.CalculationDataStore
 import nl.glcillustrious.hk36ttc.data.local.LanguagePreference
+import nl.glcillustrious.hk36ttc.data.local.UnitPreferences
+import nl.glcillustrious.hk36ttc.ui.common.LocalAppUnits
 import nl.glcillustrious.hk36ttc.ui.about.AboutScreen
 import nl.glcillustrious.hk36ttc.ui.airfield.AirfieldEditScreen
 import nl.glcillustrious.hk36ttc.ui.airfield.AirfieldListScreen
@@ -113,20 +117,25 @@ class MainActivity : ComponentActivity() {
         val metarRepository = app.metarRepository
         val userDataRepository = app.userDataRepository
         val dataStore = app.calculationDataStore
+        val unitPreferences = app.unitPreferences
 
         setContent {
-            Hk36ttcTheme {
-                CalculationDataGate(dataStore) { appData ->
-                    val navController = rememberNavController()
-                    Hk36NavHost(
-                        navController,
-                        repository,
-                        airportCatalog,
-                        metarRepository,
-                        userDataRepository,
-                        appData,
-                        onLanguageChanged = { recreate() }
-                    )
+            val appUnits by unitPreferences.units.collectAsState()
+            CompositionLocalProvider(LocalAppUnits provides appUnits) {
+                Hk36ttcTheme {
+                    CalculationDataGate(dataStore) { appData ->
+                        val navController = rememberNavController()
+                        Hk36NavHost(
+                            navController,
+                            repository,
+                            airportCatalog,
+                            metarRepository,
+                            userDataRepository,
+                            unitPreferences,
+                            appData,
+                            onLanguageChanged = { recreate() }
+                        )
+                    }
                 }
             }
         }
@@ -191,6 +200,7 @@ private fun Hk36NavHost(
     airportCatalog: AirportCatalogRepository,
     metarRepository: MetarRepository,
     userDataRepository: UserDataRepository,
+    unitPreferences: UnitPreferences,
     appData: AppCalculationData,
     onLanguageChanged: () -> Unit
 ) {
@@ -210,6 +220,7 @@ private fun Hk36NavHost(
         composable(Routes.SETTINGS) {
             SettingsScreen(
                 userDataRepository = userDataRepository,
+                unitPreferences = unitPreferences,
                 onBack = { navController.popBackStack() },
                 onLanguageChanged = onLanguageChanged
             )

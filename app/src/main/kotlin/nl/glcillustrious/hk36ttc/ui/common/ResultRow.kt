@@ -61,6 +61,14 @@ fun ResultRow(label: String, value: String, unit: String, emphasized: Boolean = 
  * (`remainingWithMarginM`). Hanging it under the raw figures instead implied a relationship
  * that doesn't exist.
  */
+/**
+ * [groundRunWithMarginM]/[obstacleWithMarginM]/[groundRunRawM]/[obstacleRawM] carry an "M" for
+ * historical reasons — the app was metric-only when this was written — but the caller is now
+ * responsible for converting to the pilot's chosen distance unit *before* calling this, and
+ * passing the matching [unitSuffix] ("m" or "ft"). This composable itself stays unit-agnostic:
+ * it only formats and labels whatever numbers it's given. `Int`, not `Double`: every converted
+ * distance is a whole number (see [nl.glcillustrious.hk36ttc.ui.common.displayDistance]).
+ */
 @Composable
 fun DistanceResultBlock(
     marginFactor: Double,
@@ -68,22 +76,23 @@ fun DistanceResultBlock(
     obstacleLabel: String,
     withMarginHeading: String,
     withoutMarginHeading: String,
-    groundRunWithMarginM: Double,
-    obstacleWithMarginM: Double,
-    groundRunRawM: Double,
-    obstacleRawM: Double,
+    groundRunWithMarginM: Int,
+    obstacleWithMarginM: Int,
+    groundRunRawM: Int,
+    obstacleRawM: Int,
+    unitSuffix: String = "m",
     withMarginTrailing: @Composable () -> Unit = {}
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxWidth()) {
         GroupHeading(withMarginHeading)
-        ResultRow(groundRunLabel, formatDistance(groundRunWithMarginM), "m")
-        ResultRow(obstacleLabel, formatDistance(obstacleWithMarginM), "m")
+        ResultRow(groundRunLabel, groundRunWithMarginM.toString(), unitSuffix)
+        ResultRow(obstacleLabel, obstacleWithMarginM.toString(), unitSuffix)
         withMarginTrailing()
 
         GroupHeading(withoutMarginHeading, topPadding = 10.dp)
         // Not bold: reference figures beside the two above, which are what the pilot plans on.
-        ResultRow(groundRunLabel, formatDistance(groundRunRawM), "m", emphasized = false)
-        ResultRow(obstacleLabel, formatDistance(obstacleRawM), "m", emphasized = false)
+        ResultRow(groundRunLabel, groundRunRawM.toString(), unitSuffix, emphasized = false)
+        ResultRow(obstacleLabel, obstacleRawM.toString(), unitSuffix, emphasized = false)
     }
 }
 
@@ -103,9 +112,12 @@ private fun GroupHeading(text: String, topPadding: Dp = 0.dp) {
     }
 }
 
-/** One decimal, following the device locale — same as everywhere else the app prints a
- * distance, so a screen and its PDF never disagree on a rounded value. */
+/** One decimal — used only for [nl.glcillustrious.hk36ttc.ui.common.FlightContextCard]'s margin
+ * *factor* heading (e.g. "1.33x"), which is dimensionless and unrelated to the unit-conversion
+ * feature. Every actual distance is a whole number now (see [DistanceResultBlock]'s KDoc) and
+ * formats with a plain `.toString()` instead of this. */
 fun formatDistance(value: Double): String = "%.1f".format(value)
 
-/** Remaining runway reads better with an explicit sign; the sign is the whole point. */
-fun formatSignedDistance(value: Double): String = "%+.1f".format(value)
+/** Remaining runway reads better with an explicit sign; the sign is the whole point. Whole
+ * number, like every other converted distance. */
+fun formatSignedDistance(value: Int): String = if (value >= 0) "+$value" else value.toString()

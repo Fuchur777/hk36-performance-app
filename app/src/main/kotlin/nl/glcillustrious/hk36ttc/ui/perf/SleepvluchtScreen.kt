@@ -42,14 +42,26 @@ import nl.glcillustrious.hk36ttc.data.local.FlightContextMode
 import nl.glcillustrious.hk36ttc.ui.common.FlightContextCard
 import nl.glcillustrious.hk36ttc.ui.common.GrassConditionSelector
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
+import nl.glcillustrious.hk36ttc.ui.common.LocalAppUnits
 import nl.glcillustrious.hk36ttc.ui.common.MetarSummary
 import nl.glcillustrious.hk36ttc.ui.common.ResettableIntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.RunwayResultCard
 import nl.glcillustrious.hk36ttc.ui.common.WeatherInputMode
 import nl.glcillustrious.hk36ttc.ui.common.WeatherModeSelector
+import nl.glcillustrious.hk36ttc.ui.common.displayHeight
+import nl.glcillustrious.hk36ttc.ui.common.displayMass
+import nl.glcillustrious.hk36ttc.ui.common.displayTemperature
+import nl.glcillustrious.hk36ttc.ui.common.displayWindSpeed
 import nl.glcillustrious.hk36ttc.ui.common.grassConditionLabel
+import nl.glcillustrious.hk36ttc.ui.common.heightSuffix
+import nl.glcillustrious.hk36ttc.ui.common.massSuffix
+import nl.glcillustrious.hk36ttc.ui.common.nativeHeightMetersInt
+import nl.glcillustrious.hk36ttc.ui.common.nativeTemperatureCelsiusInt
+import nl.glcillustrious.hk36ttc.ui.common.nativeWindSpeedKnotsInt
 import nl.glcillustrious.hk36ttc.ui.common.runwayStatusPresentation
+import nl.glcillustrious.hk36ttc.ui.common.temperatureSuffix
 import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
+import nl.glcillustrious.hk36ttc.ui.common.windSpeedSuffix
 import nl.glcillustrious.hk36ttc.ui.report.PerformanceReportContext
 import nl.glcillustrious.hk36ttc.ui.report.PerformanceReportResult
 import nl.glcillustrious.hk36ttc.ui.report.ReportDocument
@@ -79,6 +91,7 @@ fun SleepvluchtScreen(
     val state by viewModel.state.collectAsState()
     val favoriteTypes by viewModel.favoriteSailplaneTypes.collectAsState()
     val airfields by viewModel.airfields.collectAsState()
+    val units = LocalAppUnits.current
 
     Scaffold(
         topBar = {
@@ -145,16 +158,20 @@ fun SleepvluchtScreen(
             if (state.windNeedsManualEntry) {
                 if (!metarWeather) {
                     IntStepperField(
-                        label = stringResource(R.string.perf_oat_label), value = state.oatC,
-                        onValueChange = { v -> viewModel.update { it.copy(oatC = v) } },
-                        min = -20, max = 45, suffix = "°C"
+                        label = stringResource(R.string.perf_oat_label),
+                        value = displayTemperature(state.oatC, units.temperature),
+                        onValueChange = { v -> viewModel.update { it.copy(oatC = nativeTemperatureCelsiusInt(v, units.temperature)) } },
+                        min = displayTemperature(-20, units.temperature),
+                        max = displayTemperature(45, units.temperature),
+                        suffix = temperatureSuffix(units.temperature)
                     )
                 }
                 if (!(metarWeather && state.pressureAltDerivable)) {
                     IntStepperField(
-                        label = stringResource(R.string.perf_pressure_alt_label), value = state.pressureAltM,
-                        onValueChange = { v -> viewModel.update { it.copy(pressureAltM = v) } },
-                        min = 0, max = 1500, suffix = "m"
+                        label = stringResource(R.string.perf_pressure_alt_label),
+                        value = displayHeight(state.pressureAltM, units.height),
+                        onValueChange = { v -> viewModel.update { it.copy(pressureAltM = nativeHeightMetersInt(v, units.height)) } },
+                        min = 0, max = displayHeight(1500, units.height), suffix = heightSuffix(units.height)
                     )
                 }
                 IntStepperField(
@@ -163,29 +180,38 @@ fun SleepvluchtScreen(
                     min = 0, max = 359, suffix = "°"
                 )
                 IntStepperField(
-                    label = stringResource(R.string.perf_wind_speed_label), value = state.windSpeedKts,
-                    onValueChange = { v -> viewModel.update { it.copy(windSpeedKts = v, windManuallySet = true) } },
-                    min = 0, max = 60, suffix = "kts"
+                    label = stringResource(R.string.perf_wind_speed_label),
+                    value = displayWindSpeed(state.windSpeedKts, units.windSpeed),
+                    onValueChange = { v ->
+                        viewModel.update { it.copy(windSpeedKts = nativeWindSpeedKnotsInt(v, units.windSpeed), windManuallySet = true) }
+                    },
+                    min = 0, max = displayWindSpeed(60, units.windSpeed), suffix = windSpeedSuffix(units.windSpeed)
                 )
             } else if (!state.showRunwayResults) {
                 if (!metarWeather) {
                     IntStepperField(
-                        label = stringResource(R.string.perf_oat_label), value = state.oatC,
-                        onValueChange = { v -> viewModel.update { it.copy(oatC = v) } },
-                        min = -20, max = 45, suffix = "°C"
+                        label = stringResource(R.string.perf_oat_label),
+                        value = displayTemperature(state.oatC, units.temperature),
+                        onValueChange = { v -> viewModel.update { it.copy(oatC = nativeTemperatureCelsiusInt(v, units.temperature)) } },
+                        min = displayTemperature(-20, units.temperature),
+                        max = displayTemperature(45, units.temperature),
+                        suffix = temperatureSuffix(units.temperature)
                     )
                 }
                 if (!(metarWeather && state.pressureAltDerivable)) {
                     IntStepperField(
-                        label = stringResource(R.string.perf_pressure_alt_label), value = state.pressureAltM,
-                        onValueChange = { v -> viewModel.update { it.copy(pressureAltM = v) } },
-                        min = 0, max = 1500, suffix = "m"
+                        label = stringResource(R.string.perf_pressure_alt_label),
+                        value = displayHeight(state.pressureAltM, units.height),
+                        onValueChange = { v -> viewModel.update { it.copy(pressureAltM = nativeHeightMetersInt(v, units.height)) } },
+                        min = 0, max = displayHeight(1500, units.height), suffix = heightSuffix(units.height)
                     )
                 }
                 IntStepperField(
-                    label = stringResource(R.string.perf_headwind_label), value = state.headwindKts,
-                    onValueChange = { v -> viewModel.update { it.copy(headwindKts = v) } },
-                    min = -10, max = 20, suffix = "kts"
+                    label = stringResource(R.string.perf_headwind_label),
+                    value = displayWindSpeed(state.headwindKts, units.windSpeed),
+                    onValueChange = { v -> viewModel.update { it.copy(headwindKts = nativeWindSpeedKnotsInt(v, units.windSpeed)) } },
+                    min = displayWindSpeed(-10, units.windSpeed), max = displayWindSpeed(20, units.windSpeed),
+                    suffix = windSpeedSuffix(units.windSpeed)
                 )
                 SleepSurfaceSelector(
                     surfaceType = state.surfaceType,
@@ -358,13 +384,17 @@ fun SleepvluchtScreen(
                             )
                         },
                         runways = runwayEntries,
+                        units = units,
                         // The tow-specific inputs the shared context has no field for — they
                         // exist on no other screen.
                         extraInputRows = listOf(
-                            ReportDocument.Row(sailplaneLabel, "${state.sailplaneMassKg} kg"),
+                            ReportDocument.Row(sailplaneLabel, "${displayMass(state.sailplaneMassKg, units.mass)} ${massSuffix(units.mass)}"),
                             ReportDocument.Row(ldLabel, if (state.ldRatioKnown) "${state.ldRatio}" else "—"),
                             ReportDocument.Row(instructionLabel, if (state.instructionFlight) yes else no),
-                            ReportDocument.Row(towplaneLabel, "${state.effectiveTowplaneMassKg} kg")
+                            ReportDocument.Row(
+                                towplaneLabel,
+                                "${displayMass(state.effectiveTowplaneMassKg, units.mass)} ${massSuffix(units.mass)}"
+                            )
                         ),
                         extraNotes = listOfNotNull(classNote) + blockNotes
                     )

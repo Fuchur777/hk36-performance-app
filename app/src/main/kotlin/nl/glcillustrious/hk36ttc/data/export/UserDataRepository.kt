@@ -2,6 +2,7 @@ package nl.glcillustrious.hk36ttc.data.export
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import nl.glcillustrious.hk36ttc.core.units.AppUnits
 import nl.glcillustrious.hk36ttc.core.wb.FuelTankType
 import nl.glcillustrious.hk36ttc.data.local.FavoriteAirfieldEntity
 import nl.glcillustrious.hk36ttc.data.local.FavoriteSailplaneTypeEntity
@@ -41,6 +42,10 @@ class UserDataRepository(
     /** Reads/writes the language override, which lives in SharedPreferences rather than Room. */
     private val languageTag: () -> String?,
     private val setLanguageTag: (String?) -> Unit,
+    /** Reads/writes the pilot's chosen display units, which also live in SharedPreferences
+     * rather than Room — see [nl.glcillustrious.hk36ttc.data.local.UnitPreferences]. */
+    private val units: () -> AppUnits,
+    private val setUnits: (AppUnits) -> Unit,
     /** Runs [block] in one database transaction. Injected so this class stays JVM-testable. */
     private val transaction: suspend (suspend () -> Unit) -> Unit,
     private val appVersionName: String,
@@ -52,6 +57,7 @@ class UserDataRepository(
             exportedAtEpochMs = now(),
             appVersionName = appVersionName,
             languageTag = languageTag(),
+            units = units().toDto(),
             aircraftProfiles = dao.allProfiles().map { it.toDto() },
             favoriteSailplaneTypes = dao.allFavoriteSailplaneTypes().map { it.toName() },
             airfields = dao.allAirfields().map { it.toDto() },
@@ -158,6 +164,7 @@ class UserDataRepository(
         // Outside the transaction: this is SharedPreferences, not Room, and it must only change
         // once the data it belongs with is actually in place.
         setLanguageTag(data.languageTag)
+        setUnits(data.units.toAppUnits())
     }
 
     /** True when the import would switch the app's language, so the caller knows to recreate

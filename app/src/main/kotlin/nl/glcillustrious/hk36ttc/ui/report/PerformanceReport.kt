@@ -1,5 +1,15 @@
 package nl.glcillustrious.hk36ttc.ui.report
 
+import nl.glcillustrious.hk36ttc.core.units.AppUnits
+import nl.glcillustrious.hk36ttc.ui.common.displayDistance
+import nl.glcillustrious.hk36ttc.ui.common.displayHeight
+import nl.glcillustrious.hk36ttc.ui.common.displayTemperature
+import nl.glcillustrious.hk36ttc.ui.common.displayWindSpeed
+import nl.glcillustrious.hk36ttc.ui.common.distanceSuffix
+import nl.glcillustrious.hk36ttc.ui.common.heightSuffix
+import nl.glcillustrious.hk36ttc.ui.common.temperatureSuffix
+import nl.glcillustrious.hk36ttc.ui.common.windSpeedSuffix
+
 /**
  * Translated strings shared by the Take-off, Landing and Sleepvlucht reports. One bundle rather
  * than three near-identical ones: the three screens already share their labels on screen (all
@@ -76,9 +86,13 @@ fun buildPerformanceReport(
     context: PerformanceReportContext,
     result: PerformanceReportResult?,
     runways: List<RunwayReportEntry>,
+    units: AppUnits,
     extraInputRows: List<ReportDocument.Row> = emptyList(),
     extraNotes: List<String> = emptyList()
 ): ReportDocument = ReportDocumentBuilder().apply {
+    val distanceSuf = distanceSuffix(units.distance)
+    val windSpeedSuf = windSpeedSuffix(units.windSpeed)
+
     section(labels.sectionWeather) {
         rowIfPresent(labels.registration, context.registration)
         if (context.airfieldName != null) {
@@ -86,11 +100,11 @@ fun buildPerformanceReport(
         } else {
             statement(labels.manualMode)
         }
-        row(labels.oat, "${context.oatC} °C")
-        row(labels.pressureAlt, "${context.pressureAltM} m")
+        row(labels.oat, "${displayTemperature(context.oatC, units.temperature)} ${temperatureSuffix(units.temperature)}")
+        row(labels.pressureAlt, "${displayHeight(context.pressureAltM, units.height)} ${heightSuffix(units.height)}")
         context.windDirectionDeg?.let { row(labels.windDirection, "$it °") }
-        context.windSpeedKts?.let { row(labels.windSpeed, "$it kt") }
-        context.headwindKts?.let { row(labels.headwind, "$it kt") }
+        context.windSpeedKts?.let { row(labels.windSpeed, "${displayWindSpeed(it, units.windSpeed)} $windSpeedSuf") }
+        context.headwindKts?.let { row(labels.headwind, "${displayWindSpeed(it, units.windSpeed)} $windSpeedSuf") }
         rowIfPresent(labels.grassCondition, context.grassConditionLabel)
         // The raw METAR is included verbatim so the report stands on its own as evidence of what
         // the weather actually was, not just the numbers derived from it.
@@ -109,16 +123,16 @@ fun buildPerformanceReport(
             if (result.tailwindBlocked) {
                 statement(labels.tailwindNotSupported, emphasized = true)
             } else {
-                row(labels.groundRun, formatOneDecimal(result.groundRunWithMarginM) + " m", emphasized = true)
-                row(labels.obstacle, formatOneDecimal(result.obstacleWithMarginM) + " m", emphasized = true)
-                row(labels.groundRunRaw, formatOneDecimal(result.groundRunRawM) + " m")
-                row(labels.obstacleRaw, formatOneDecimal(result.obstacleRawM) + " m")
+                row(labels.groundRun, "${displayDistance(result.groundRunWithMarginM, units.distance)} $distanceSuf", emphasized = true)
+                row(labels.obstacle, "${displayDistance(result.obstacleWithMarginM, units.distance)} $distanceSuf", emphasized = true)
+                row(labels.groundRunRaw, "${displayDistance(result.groundRunRawM, units.distance)} $distanceSuf")
+                row(labels.obstacleRaw, "${displayDistance(result.obstacleRawM, units.distance)} $distanceSuf")
             }
         }
     }
 
     section(labels.sectionRunways) {
-        addAll(runwayReportRows(runways, labels.runwayRows))
+        addAll(runwayReportRows(runways, labels.runwayRows, units))
     }
 
     section(labels.sectionNotes) {

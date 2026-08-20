@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import nl.glcillustrious.hk36ttc.R
 import nl.glcillustrious.hk36ttc.core.perf.PerformanceTowData
 import nl.glcillustrious.hk36ttc.core.perf.SailplaneTypesData
@@ -40,7 +41,15 @@ import nl.glcillustrious.hk36ttc.core.perf.TowBlockReason
 import nl.glcillustrious.hk36ttc.core.perf.TowTakeoffResult
 import nl.glcillustrious.hk36ttc.ui.common.DistanceResultBlock
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
+import nl.glcillustrious.hk36ttc.ui.common.LocalAppUnits
 import nl.glcillustrious.hk36ttc.ui.common.ResultRow
+import nl.glcillustrious.hk36ttc.ui.common.displayDistance
+import nl.glcillustrious.hk36ttc.ui.common.displayMass
+import nl.glcillustrious.hk36ttc.ui.common.displayVerticalSpeed
+import nl.glcillustrious.hk36ttc.ui.common.distanceSuffix
+import nl.glcillustrious.hk36ttc.ui.common.massSuffix
+import nl.glcillustrious.hk36ttc.ui.common.nativeMassKgInt
+import nl.glcillustrious.hk36ttc.ui.common.verticalSpeedSuffix
 import nl.glcillustrious.hk36ttc.ui.theme.status
 
 /**
@@ -69,6 +78,7 @@ internal fun SailplaneTypeField(
     onLdRatioKnownChange: (Boolean) -> Unit,
     onManualLdChange: (Int) -> Unit
 ) {
+    val units = LocalAppUnits.current
     if (selectedTypeName != null) {
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -90,9 +100,20 @@ internal fun SailplaneTypeField(
                 }
                 Text(
                     if (usedFallback) {
-                        stringResource(R.string.sleepvlucht_type_detail_fallback_format, sailplaneMassKg, ldRatio)
+                        stringResource(
+                            R.string.sleepvlucht_type_detail_fallback_format,
+                            displayMass(sailplaneMassKg, units.mass), ldRatio, massSuffix(units.mass),
+                            // The "leeggewicht+75kg" fallback rule itself — see
+                            // SleepvluchtViewModel.selectSailplaneType — is only explained here,
+                            // never a live value, so the 75kg constant is repeated rather than
+                            // threaded all the way from the ViewModel just for this sentence.
+                            displayMass(75, units.mass)
+                        )
                     } else {
-                        stringResource(R.string.sleepvlucht_type_detail_mtow_format, sailplaneMassKg, ldRatio)
+                        stringResource(
+                            R.string.sleepvlucht_type_detail_mtow_format,
+                            displayMass(sailplaneMassKg, units.mass), ldRatio, massSuffix(units.mass)
+                        )
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -104,9 +125,10 @@ internal fun SailplaneTypeField(
             FavoriteSailplaneTypeDropdown(favoriteTypes = favoriteTypes, onSelectType = onSelectType)
         }
         IntStepperField(
-            label = stringResource(R.string.sleepvlucht_glider_weight_label), value = sailplaneMassKg,
-            onValueChange = onManualMassChange,
-            min = 100, max = 800, suffix = "kg"
+            label = stringResource(R.string.sleepvlucht_glider_weight_label),
+            value = displayMass(sailplaneMassKg, units.mass),
+            onValueChange = { v -> onManualMassChange(nativeMassKgInt(v, units.mass)) },
+            min = displayMass(100, units.mass), max = displayMass(800, units.mass), suffix = massSuffix(units.mass)
         )
         LabeledCheckbox(
             label = stringResource(R.string.sleepvlucht_ld_known_label),
@@ -136,6 +158,7 @@ internal fun FavoriteSailplaneTypeDropdown(
     favoriteTypes: List<SailplaneTypesData.SailplaneType>,
     onSelectType: (SailplaneTypesData.SailplaneType) -> Unit
 ) {
+    val units = LocalAppUnits.current
     var menuExpanded by remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
@@ -163,7 +186,14 @@ internal fun FavoriteSailplaneTypeDropdown(
         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
             favoriteTypes.forEach { type ->
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.sleepvlucht_favorite_type_option_format, type.name, type.mtowKg.toInt(), type.ldRatio.toString())) },
+                    text = {
+                        Text(
+                            stringResource(
+                                R.string.sleepvlucht_favorite_type_option_format,
+                                type.name, displayMass(type.mtowKg, units.mass), type.ldRatio.toString(), massSuffix(units.mass)
+                            )
+                        )
+                    },
                     onClick = {
                         menuExpanded = false
                         onSelectType(type)
@@ -189,6 +219,7 @@ internal fun TowplaneMassField(
     onUseWbValue: () -> Unit,
     onManualChange: (Int) -> Unit
 ) {
+    val units = LocalAppUnits.current
     if (fromWbKg != null && !manualOverride) {
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -202,7 +233,10 @@ internal fun TowplaneMassField(
                 Column {
                     Text(stringResource(R.string.sleepvlucht_towplane_weight_label), style = MaterialTheme.typography.labelLarge)
                     Text(
-                        stringResource(R.string.sleepvlucht_towplane_from_wb_format, fromWbKg),
+                        stringResource(
+                            R.string.sleepvlucht_towplane_from_wb_format,
+                            displayMass(fromWbKg, units.mass), massSuffix(units.mass)
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -214,13 +248,19 @@ internal fun TowplaneMassField(
         }
     } else {
         IntStepperField(
-            label = stringResource(R.string.sleepvlucht_towplane_weight_label), value = manualKg,
-            onValueChange = onManualChange,
-            min = 600, max = 800, suffix = "kg"
+            label = stringResource(R.string.sleepvlucht_towplane_weight_label),
+            value = displayMass(manualKg, units.mass),
+            onValueChange = { v -> onManualChange(nativeMassKgInt(v, units.mass)) },
+            min = displayMass(600, units.mass), max = displayMass(800, units.mass), suffix = massSuffix(units.mass)
         )
         if (fromWbKg != null) {
             TextButton(onClick = onUseWbValue) {
-                Text(stringResource(R.string.sleepvlucht_towplane_reset_to_wb_format, fromWbKg))
+                Text(
+                    stringResource(
+                        R.string.sleepvlucht_towplane_reset_to_wb_format,
+                        displayMass(fromWbKg, units.mass), massSuffix(units.mass)
+                    )
+                )
             }
         }
     }
@@ -249,6 +289,7 @@ internal fun SleepvluchtResultCard(
         BlockedReasonsCard(result.blockReasons)
         return
     }
+    val units = LocalAppUnits.current
     val statusColors = MaterialTheme.status
     Card(
         // See TakeoffScreen's result card: green, since there is only one result here and no
@@ -281,10 +322,11 @@ internal fun SleepvluchtResultCard(
                 obstacleLabel = stringResource(R.string.perf_obstacle_15m_label),
                 withMarginHeading = stringResource(R.string.perf_with_margin_heading_format, fmt(result.marginFactor)),
                 withoutMarginHeading = stringResource(R.string.perf_without_margin_heading),
-                groundRunWithMarginM = result.s1WithMarginM,
-                obstacleWithMarginM = result.s2WithMarginM,
-                groundRunRawM = result.s1M,
-                obstacleRawM = result.s2M
+                groundRunWithMarginM = displayDistance(result.s1WithMarginM, units.distance),
+                obstacleWithMarginM = displayDistance(result.s2WithMarginM, units.distance),
+                groundRunRawM = displayDistance(result.s1M, units.distance),
+                obstacleRawM = displayDistance(result.s2M, units.distance),
+                unitSuffix = distanceSuffix(units.distance)
             )
             val surfaceTag = if (surfaceType == SleepvluchtSurfaceType.DROOG_GRAS || surfaceType == SleepvluchtSurfaceType.ASFALT) {
                 "[AFM]"
@@ -345,6 +387,7 @@ internal fun BlockedReasonsCard(reasons: List<TowBlockReason>) {
 
 @Composable
 internal fun SleepClimbReferenceCard(performanceTow: PerformanceTowData) {
+    val units = LocalAppUnits.current
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         modifier = Modifier.fillMaxWidth()
@@ -352,7 +395,15 @@ internal fun SleepClimbReferenceCard(performanceTow: PerformanceTowData) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.sleepvlucht_climb_heading), style = MaterialTheme.typography.labelLarge)
             performanceTow.climb.points.forEach { point ->
-                Text(stringResource(R.string.sleepvlucht_climb_point_format, fmt(point.sailplaneMassKg), fmt(point.maxRateOfClimbMs)))
+                Text(
+                    stringResource(
+                        R.string.sleepvlucht_climb_point_format,
+                        displayMass(point.sailplaneMassKg, units.mass).toString(),
+                        displayVerticalSpeed(point.maxRateOfClimbMs, units.verticalSpeed).toString(),
+                        massSuffix(units.mass),
+                        verticalSpeedSuffix(units.verticalSpeed)
+                    )
+                )
             }
             Text(
                 stringResource(R.string.perf_no_correction_table_note),

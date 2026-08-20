@@ -5,6 +5,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
+import nl.glcillustrious.hk36ttc.core.units.AppUnits
+import nl.glcillustrious.hk36ttc.core.units.DistanceUnit
+import nl.glcillustrious.hk36ttc.core.units.MassUnit
 import nl.glcillustrious.hk36ttc.core.wb.FuelTankType
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileEntity
 import nl.glcillustrious.hk36ttc.data.local.AirfieldEntity
@@ -19,18 +22,22 @@ class UserDataRepositoryTest {
 
     private fun repository(
         dao: FakeUserDataDao,
-        initialLanguage: String? = null
-    ): Pair<UserDataRepository, () -> String?> {
+        initialLanguage: String? = null,
+        initialUnits: AppUnits = AppUnits()
+    ): Triple<UserDataRepository, () -> String?, () -> AppUnits> {
         var language: String? = initialLanguage
+        var units = initialUnits
         val repo = UserDataRepository(
             dao = dao,
             languageTag = { language },
             setLanguageTag = { language = it },
+            units = { units },
+            setUnits = { units = it },
             transaction = { block -> block() },
             appVersionName = "0.8.0",
             now = { 1_700_000_000_000L }
         )
-        return repo to { language }
+        return Triple(repo, { language }, { units })
     }
 
     /** A field with two strips, a favourite marker and saved calculation input — enough that
@@ -205,6 +212,37 @@ class UserDataRepositoryTest {
         assertTrue(importRepo.languageWouldChange(parsed.data))
         importRepo.replaceAll(parsed.data)
         assertEquals("en", targetLanguage())
+    }
+
+    @Test
+    fun `the chosen display units travel with the backup`() = runTest {
+        val source = FakeUserDataDao()
+        val sourceUnits = AppUnits(distance = DistanceUnit.FEET, mass = MassUnit.LBS)
+        val (exportRepo, _, _) = repository(source, initialUnits = sourceUnits)
+        val json = exportRepo.serialize(exportRepo.buildExport())
+
+        val target = FakeUserDataDao()
+        val (importRepo, _, targetUnits) = repository(target, initialUnits = AppUnits())
+        val parsed = importRepo.parse(json) as ImportParseResult.Ok
+        importRepo.replaceAll(parsed.data)
+
+        assertEquals(sourceUnits, targetUnits())
+    }
+
+    /** An older/smaller file that predates the units feature entirely must still import, falling
+     * back to the same metric/native defaults a fresh install already starts with. */
+    @Test
+    fun `a backup written before units existed imports with metric defaults`() = runTest {
+        val dao = FakeUserDataDao()
+        val minimal = """
+            {"schema_version":1,"exported_at_epoch_ms":1,"app_version_name":"0.8.0"}
+        """.trimIndent()
+        val (repo, _, targetUnits) = repository(dao, initialUnits = AppUnits(distance = DistanceUnit.FEET))
+
+        val parsed = repo.parse(minimal) as ImportParseResult.Ok
+        repo.replaceAll(parsed.data)
+
+        assertEquals(AppUnits(), targetUnits())
     }
 
     @Test

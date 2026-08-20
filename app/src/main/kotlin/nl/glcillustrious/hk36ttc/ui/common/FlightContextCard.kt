@@ -33,7 +33,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import kotlin.math.roundToInt
 import nl.glcillustrious.hk36ttc.R
 import nl.glcillustrious.hk36ttc.core.metar.RunwayAdviceStatus
 import nl.glcillustrious.hk36ttc.data.local.AirfieldEntity
@@ -284,6 +283,7 @@ fun RunwayResultCard(
      * showed which margin produced their numbers. */
     marginFactor: Double
 ) {
+    val units = LocalAppUnits.current
     Card(colors = CardDefaults.cardColors(containerColor = containerColor, contentColor = contentColor)) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(
@@ -301,13 +301,18 @@ fun RunwayResultCard(
                 if (headwindGustKts != null && crosswindGustKts != null) {
                     stringResource(
                         R.string.flight_context_runway_detail_gust_format,
-                        headwindKts.roundToInt(), headwindGustKts.roundToInt(),
-                        crosswindKts.roundToInt(), crosswindGustKts.roundToInt()
+                        displayWindSpeed(headwindKts, units.windSpeed),
+                        displayWindSpeed(headwindGustKts, units.windSpeed),
+                        displayWindSpeed(crosswindKts, units.windSpeed),
+                        displayWindSpeed(crosswindGustKts, units.windSpeed),
+                        windSpeedSuffix(units.windSpeed)
                     )
                 } else {
                     stringResource(
                         R.string.flight_context_runway_detail_format,
-                        headwindKts.roundToInt(), crosswindKts.roundToInt()
+                        displayWindSpeed(headwindKts, units.windSpeed),
+                        displayWindSpeed(crosswindKts, units.windSpeed),
+                        windSpeedSuffix(units.windSpeed)
                     )
                 },
                 style = MaterialTheme.typography.bodySmall
@@ -331,18 +336,19 @@ fun RunwayResultCard(
                     obstacleLabel = stringResource(R.string.perf_obstacle_15m_label),
                     withMarginHeading = stringResource(R.string.perf_with_margin_heading_format, fmtDistance(marginFactor)),
                     withoutMarginHeading = stringResource(R.string.perf_without_margin_heading),
-                    groundRunWithMarginM = groundRunWithMarginM,
-                    obstacleWithMarginM = obstacleWithMarginM,
-                    groundRunRawM = groundRunRawM,
-                    obstacleRawM = obstacleRawM,
+                    groundRunWithMarginM = displayDistance(groundRunWithMarginM, units.distance),
+                    obstacleWithMarginM = displayDistance(obstacleWithMarginM, units.distance),
+                    groundRunRawM = displayDistance(groundRunRawM, units.distance),
+                    obstacleRawM = displayDistance(obstacleRawM, units.distance),
+                    unitSuffix = distanceSuffix(units.distance),
                     // Closes the with-margin group: this is what's left over *after* the margin
                     // is applied, so it belongs to those figures, not to the raw ones.
                     withMarginTrailing = {
                         remainingM?.let {
                             ResultRow(
                                 stringResource(R.string.flight_context_runway_remaining_label),
-                                fmtSignedDistance(it),
-                                "m"
+                                fmtSignedDistance(displayDistance(it, units.distance)),
+                                distanceSuffix(units.distance)
                             )
                         }
                     }
@@ -363,4 +369,4 @@ fun RunwayResultCard(
 // Formatting now lives in ResultRow.kt alongside the row that renders it — see
 // formatDistance/formatSignedDistance there.
 private fun fmtDistance(value: Double): String = formatDistance(value)
-private fun fmtSignedDistance(value: Double): String = formatSignedDistance(value)
+private fun fmtSignedDistance(value: Int): String = formatSignedDistance(value)

@@ -65,8 +65,12 @@ import nl.glcillustrious.hk36ttc.data.local.RunwaySurfaceType
 import nl.glcillustrious.hk36ttc.data.metar.MetarFetchResult
 import nl.glcillustrious.hk36ttc.data.metar.MetarRepository
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
+import nl.glcillustrious.hk36ttc.ui.common.LocalAppUnits
 import nl.glcillustrious.hk36ttc.ui.common.MetarSummary
 import nl.glcillustrious.hk36ttc.ui.common.deriveOppositeDesignator
+import nl.glcillustrious.hk36ttc.ui.common.displayHeight
+import nl.glcillustrious.hk36ttc.ui.common.heightSuffix
+import nl.glcillustrious.hk36ttc.ui.common.nativeHeightMetersInt
 import nl.glcillustrious.hk36ttc.ui.common.padDesignatorNumber
 import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
 
@@ -92,6 +96,7 @@ fun AirfieldEditScreen(
     var runwayDialogFor by remember { mutableStateOf<RunwayStripFormState?>(null) }
     var runwayPendingDelete by remember { mutableStateOf<RunwayStripEntity?>(null) }
     var showNewRunwayDialog by remember { mutableStateOf(false) }
+    val units = LocalAppUnits.current
 
     importResult?.let { result ->
         AlertDialog(
@@ -191,13 +196,15 @@ fun AirfieldEditScreen(
             )
             IntStepperField(
                 label = stringResource(R.string.airfield_edit_elevation_label),
-                value = state.elevationM,
+                value = displayHeight(state.elevationM, units.height),
                 // Touching the stepper at all is the pilot confirming the value, which is what
                 // clears the catalogue's "not recorded" placeholder marking.
-                onValueChange = { v -> viewModel.update { it.copy(elevationM = v, elevationKnown = true) } },
-                min = -50,
-                max = 3000,
-                suffix = "m"
+                onValueChange = { v ->
+                    viewModel.update { it.copy(elevationM = nativeHeightMetersInt(v, units.height), elevationKnown = true) }
+                },
+                min = displayHeight(-50, units.height),
+                max = displayHeight(3000, units.height),
+                suffix = heightSuffix(units.height)
             )
             if (!state.elevationKnown) {
                 // Not a blocking error: the pilot may genuinely know the field is at 0 m, and

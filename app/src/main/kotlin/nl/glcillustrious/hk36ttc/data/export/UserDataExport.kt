@@ -3,6 +3,17 @@ package nl.glcillustrious.hk36ttc.data.export
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import nl.glcillustrious.hk36ttc.core.units.AirspeedUnit
+import nl.glcillustrious.hk36ttc.core.units.AppUnits
+import nl.glcillustrious.hk36ttc.core.units.CgPositionUnit
+import nl.glcillustrious.hk36ttc.core.units.DistanceUnit
+import nl.glcillustrious.hk36ttc.core.units.FuelVolumeUnit
+import nl.glcillustrious.hk36ttc.core.units.HeightUnit
+import nl.glcillustrious.hk36ttc.core.units.MassUnit
+import nl.glcillustrious.hk36ttc.core.units.PressureUnit
+import nl.glcillustrious.hk36ttc.core.units.TemperatureUnit
+import nl.glcillustrious.hk36ttc.core.units.VerticalSpeedUnit
+import nl.glcillustrious.hk36ttc.core.units.WindSpeedUnit
 import nl.glcillustrious.hk36ttc.core.wb.FuelTankType
 import nl.glcillustrious.hk36ttc.data.local.AircraftProfileEntity
 import nl.glcillustrious.hk36ttc.data.local.AirfieldEntity
@@ -36,6 +47,10 @@ data class UserDataExport(
     @SerialName("app_version_name") val appVersionName: String,
     /** "nl"/"en", or null when the app follows the device language. */
     @SerialName("language_tag") val languageTag: String? = null,
+    /** The pilot's chosen display units — see [UnitsDto]. Defaults to [UnitsDto]'s own defaults
+     * (which match [AppUnits]'s), so a backup written before this field existed still imports as
+     * "metric/native", the same as a fresh install. */
+    @SerialName("units") val units: UnitsDto = UnitsDto(),
     @SerialName("aircraft_profiles") val aircraftProfiles: List<AircraftProfileDto> = emptyList(),
     @SerialName("favorite_sailplane_types") val favoriteSailplaneTypes: List<String> = emptyList(),
     @SerialName("airfields") val airfields: List<AirfieldDto> = emptyList(),
@@ -158,6 +173,27 @@ data class SleepvluchtInputDto(
     @SerialName("towplane_mass_manual_kg") val towplaneMassManualKg: Int
 )
 
+/**
+ * [AppUnits], carried as enum names rather than the enums directly — same reasoning as every
+ * other enum column in this file. Each field falls back tolerantly on import (see
+ * [UnitsDto.toAppUnits]), matching [nl.glcillustrious.hk36ttc.data.local.UnitPreferences]'s own
+ * tolerance for a value from an app version this build doesn't recognise — an unrecognised unit
+ * is not the kind of problem a refused import protects against, since it never crashes anything.
+ */
+@Serializable
+data class UnitsDto(
+    val temperature: String = TemperatureUnit.CELSIUS.name,
+    val distance: String = DistanceUnit.METERS.name,
+    val height: String = HeightUnit.METERS.name,
+    @SerialName("wind_speed") val windSpeed: String = WindSpeedUnit.KNOTS.name,
+    val pressure: String = PressureUnit.HPA.name,
+    @SerialName("vertical_speed") val verticalSpeed: String = VerticalSpeedUnit.METERS_PER_SECOND.name,
+    val airspeed: String = AirspeedUnit.KMH.name,
+    val mass: String = MassUnit.KG.name,
+    @SerialName("cg_position") val cgPosition: String = CgPositionUnit.MM.name,
+    @SerialName("fuel_volume") val fuelVolume: String = FuelVolumeUnit.LITERS.name
+)
+
 @Serializable
 data class LastWbResultDto(
     @SerialName("profile_id") val profileId: Long,
@@ -250,6 +286,35 @@ fun SleepvluchtInputDto.toEntity() = SleepvluchtInputEntity(
 
 fun LastWbResultEntity.toDto() = LastWbResultDto(profileId, totalMassKg, computedAtEpochMs)
 fun LastWbResultDto.toEntity() = LastWbResultEntity(profileId, totalMassKg, computedAtEpochMs)
+
+fun AppUnits.toDto() = UnitsDto(
+    temperature = temperature.name,
+    distance = distance.name,
+    height = height.name,
+    windSpeed = windSpeed.name,
+    pressure = pressure.name,
+    verticalSpeed = verticalSpeed.name,
+    airspeed = airspeed.name,
+    mass = mass.name,
+    cgPosition = cgPosition.name,
+    fuelVolume = fuelVolume.name
+)
+
+fun UnitsDto.toAppUnits() = AppUnits(
+    temperature = enumOrDefault(temperature, TemperatureUnit.CELSIUS),
+    distance = enumOrDefault(distance, DistanceUnit.METERS),
+    height = enumOrDefault(height, HeightUnit.METERS),
+    windSpeed = enumOrDefault(windSpeed, WindSpeedUnit.KNOTS),
+    pressure = enumOrDefault(pressure, PressureUnit.HPA),
+    verticalSpeed = enumOrDefault(verticalSpeed, VerticalSpeedUnit.METERS_PER_SECOND),
+    airspeed = enumOrDefault(airspeed, AirspeedUnit.KMH),
+    mass = enumOrDefault(mass, MassUnit.KG),
+    cgPosition = enumOrDefault(cgPosition, CgPositionUnit.MM),
+    fuelVolume = enumOrDefault(fuelVolume, FuelVolumeUnit.LITERS)
+)
+
+private inline fun <reified T : Enum<T>> enumOrDefault(name: String, default: T): T =
+    enumValues<T>().firstOrNull { it.name == name } ?: default
 
 fun FavoriteSailplaneTypeEntity.toName() = name
 fun FavoriteAirfieldEntity.toId() = airfieldId

@@ -36,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +47,7 @@ import nl.glcillustrious.hk36ttc.data.export.ImportParseResult
 import nl.glcillustrious.hk36ttc.data.export.UserDataExport
 import nl.glcillustrious.hk36ttc.data.export.UserDataRepository
 import nl.glcillustrious.hk36ttc.data.local.LanguagePreference
+import nl.glcillustrious.hk36ttc.data.local.UnitPreferences
 import nl.glcillustrious.hk36ttc.ui.common.FileSharing
 
 private data class LanguageOption(val tag: String?, val labelResId: Int?, val literalLabel: String?)
@@ -60,10 +62,12 @@ private val LANGUAGE_OPTIONS = listOf(
 @Composable
 fun SettingsScreen(
     userDataRepository: UserDataRepository,
+    unitPreferences: UnitPreferences,
     onBack: () -> Unit,
     onLanguageChanged: () -> Unit
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val prefs = remember { LanguagePreference(context) }
     var selectedTag by remember { mutableStateOf(prefs.get()) }
     val scope = rememberCoroutineScope()
@@ -88,7 +92,7 @@ fun SettingsScreen(
             }.getOrNull()
             when (val parsed = json?.let { userDataRepository.parse(it) }) {
                 is ImportParseResult.Ok -> pendingImport = parsed.data
-                is ImportParseResult.TooNew -> message = context.getString(
+                is ImportParseResult.TooNew -> message = resources.getString(
                     R.string.settings_data_import_failed_too_new_format,
                     parsed.fileVersion,
                     parsed.supportedVersion
@@ -201,6 +205,10 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+            UnitSettingsSection(unitPreferences)
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 

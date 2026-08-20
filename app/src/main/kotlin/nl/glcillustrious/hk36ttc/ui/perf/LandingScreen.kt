@@ -45,15 +45,27 @@ import nl.glcillustrious.hk36ttc.ui.common.DistanceResultBlock
 import nl.glcillustrious.hk36ttc.ui.common.FlightContextCard
 import nl.glcillustrious.hk36ttc.ui.common.GrassConditionSelector
 import nl.glcillustrious.hk36ttc.ui.common.IntStepperField
+import nl.glcillustrious.hk36ttc.ui.common.LocalAppUnits
 import nl.glcillustrious.hk36ttc.ui.common.MetarSummary
 import nl.glcillustrious.hk36ttc.ui.common.ResettableIntStepperField
 import nl.glcillustrious.hk36ttc.ui.common.ResultRow
 import nl.glcillustrious.hk36ttc.ui.common.RunwayResultCard
 import nl.glcillustrious.hk36ttc.ui.common.WeatherInputMode
 import nl.glcillustrious.hk36ttc.ui.common.WeatherModeSelector
+import nl.glcillustrious.hk36ttc.ui.common.distanceSuffix
+import nl.glcillustrious.hk36ttc.ui.common.displayDistance
+import nl.glcillustrious.hk36ttc.ui.common.displayHeight
+import nl.glcillustrious.hk36ttc.ui.common.displayTemperature
+import nl.glcillustrious.hk36ttc.ui.common.displayWindSpeed
 import nl.glcillustrious.hk36ttc.ui.common.grassConditionLabel
+import nl.glcillustrious.hk36ttc.ui.common.heightSuffix
+import nl.glcillustrious.hk36ttc.ui.common.nativeHeightMetersInt
+import nl.glcillustrious.hk36ttc.ui.common.nativeTemperatureCelsiusInt
+import nl.glcillustrious.hk36ttc.ui.common.nativeWindSpeedKnotsInt
 import nl.glcillustrious.hk36ttc.ui.common.runwayStatusPresentation
+import nl.glcillustrious.hk36ttc.ui.common.temperatureSuffix
 import nl.glcillustrious.hk36ttc.ui.common.uniformSegmentedRowHeight
+import nl.glcillustrious.hk36ttc.ui.common.windSpeedSuffix
 import nl.glcillustrious.hk36ttc.ui.report.PerformanceReportContext
 import nl.glcillustrious.hk36ttc.ui.report.PerformanceReportResult
 import nl.glcillustrious.hk36ttc.ui.report.RunwayReportEntry
@@ -79,6 +91,7 @@ fun LandingScreen(
     )
     val state by viewModel.state.collectAsState()
     val airfields by viewModel.airfields.collectAsState()
+    val units = LocalAppUnits.current
 
     Scaffold(
         topBar = {
@@ -146,16 +159,20 @@ fun LandingScreen(
             if (state.windNeedsManualEntry) {
                 if (!metarWeather) {
                     IntStepperField(
-                        label = stringResource(R.string.perf_oat_label), value = state.oatC,
-                        onValueChange = { v -> viewModel.update { it.copy(oatC = v) } },
-                        min = -20, max = 45, suffix = "°C"
+                        label = stringResource(R.string.perf_oat_label),
+                        value = displayTemperature(state.oatC, units.temperature),
+                        onValueChange = { v -> viewModel.update { it.copy(oatC = nativeTemperatureCelsiusInt(v, units.temperature)) } },
+                        min = displayTemperature(-20, units.temperature),
+                        max = displayTemperature(45, units.temperature),
+                        suffix = temperatureSuffix(units.temperature)
                     )
                 }
                 if (!(metarWeather && state.pressureAltDerivable)) {
                     IntStepperField(
-                        label = stringResource(R.string.perf_pressure_alt_label), value = state.pressureAltM,
-                        onValueChange = { v -> viewModel.update { it.copy(pressureAltM = v) } },
-                        min = 0, max = 1500, suffix = "m"
+                        label = stringResource(R.string.perf_pressure_alt_label),
+                        value = displayHeight(state.pressureAltM, units.height),
+                        onValueChange = { v -> viewModel.update { it.copy(pressureAltM = nativeHeightMetersInt(v, units.height)) } },
+                        min = 0, max = displayHeight(1500, units.height), suffix = heightSuffix(units.height)
                     )
                 }
                 IntStepperField(
@@ -164,23 +181,30 @@ fun LandingScreen(
                     min = 0, max = 359, suffix = "°"
                 )
                 IntStepperField(
-                    label = stringResource(R.string.perf_wind_speed_label), value = state.windSpeedKts,
-                    onValueChange = { v -> viewModel.update { it.copy(windSpeedKts = v, windManuallySet = true) } },
-                    min = 0, max = 60, suffix = "kts"
+                    label = stringResource(R.string.perf_wind_speed_label),
+                    value = displayWindSpeed(state.windSpeedKts, units.windSpeed),
+                    onValueChange = { v ->
+                        viewModel.update { it.copy(windSpeedKts = nativeWindSpeedKnotsInt(v, units.windSpeed), windManuallySet = true) }
+                    },
+                    min = 0, max = displayWindSpeed(60, units.windSpeed), suffix = windSpeedSuffix(units.windSpeed)
                 )
             } else if (!state.showRunwayResults) {
                 if (!metarWeather) {
                     IntStepperField(
-                        label = stringResource(R.string.perf_oat_label), value = state.oatC,
-                        onValueChange = { v -> viewModel.update { it.copy(oatC = v) } },
-                        min = -20, max = 45, suffix = "°C"
+                        label = stringResource(R.string.perf_oat_label),
+                        value = displayTemperature(state.oatC, units.temperature),
+                        onValueChange = { v -> viewModel.update { it.copy(oatC = nativeTemperatureCelsiusInt(v, units.temperature)) } },
+                        min = displayTemperature(-20, units.temperature),
+                        max = displayTemperature(45, units.temperature),
+                        suffix = temperatureSuffix(units.temperature)
                     )
                 }
                 if (!(metarWeather && state.pressureAltDerivable)) {
                     IntStepperField(
-                        label = stringResource(R.string.perf_pressure_alt_label), value = state.pressureAltM,
-                        onValueChange = { v -> viewModel.update { it.copy(pressureAltM = v) } },
-                        min = 0, max = 1500, suffix = "m"
+                        label = stringResource(R.string.perf_pressure_alt_label),
+                        value = displayHeight(state.pressureAltM, units.height),
+                        onValueChange = { v -> viewModel.update { it.copy(pressureAltM = nativeHeightMetersInt(v, units.height)) } },
+                        min = 0, max = displayHeight(1500, units.height), suffix = heightSuffix(units.height)
                     )
                 }
                 LandingSurfaceSelector(
@@ -212,12 +236,6 @@ fun LandingScreen(
                 onValueChange = { v -> viewModel.update { it.copy(marginFactorPct = v) } },
                 min = 100, max = 200, suffix = "%"
             )
-            Text(
-                stringResource(R.string.landing_easa_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
             if (state.showGrassCondition) {
                 GrassConditionSelector(state.grassCondition, { viewModel.setGrassCondition(it) })
             }
@@ -263,7 +281,6 @@ fun LandingScreen(
             val labels = performanceReportLabels()
             val grassLabel = if (state.showGrassCondition) grassConditionLabel(state.grassCondition) else null
             val mtowNote = stringResource(R.string.landing_mtow_note)
-            val easaNote = stringResource(R.string.landing_easa_note)
             val runwayEntries = state.runwayResults.map { row ->
                 RunwayReportEntry(
                     label = row.advice.candidate.label,
@@ -322,7 +339,8 @@ fun LandingScreen(
                             )
                         },
                         runways = runwayEntries,
-                        extraNotes = listOf(easaNote, mtowNote)
+                        units = units,
+                        extraNotes = listOf(mtowNote)
                     )
                 }
             )
@@ -381,6 +399,7 @@ private fun LandingSurfaceSelector(surfaceType: LandingSurfaceType, onSelected: 
 
 @Composable
 private fun LandingResultCard(result: LandingResult, surfaceType: LandingSurfaceType) {
+    val units = LocalAppUnits.current
     val statusColors = MaterialTheme.status
     Card(
         // See TakeoffScreen's result card: green, since there is only one result here and no
@@ -406,10 +425,11 @@ private fun LandingResultCard(result: LandingResult, surfaceType: LandingSurface
                 obstacleLabel = stringResource(R.string.perf_obstacle_15m_label),
                 withMarginHeading = stringResource(R.string.perf_with_margin_heading_format, fmt(result.marginFactor)),
                 withoutMarginHeading = stringResource(R.string.perf_without_margin_heading),
-                groundRunWithMarginM = result.l1WithMarginM,
-                obstacleWithMarginM = result.l2WithMarginM,
-                groundRunRawM = result.l1M,
-                obstacleRawM = result.l2M
+                groundRunWithMarginM = displayDistance(result.l1WithMarginM, units.distance),
+                obstacleWithMarginM = displayDistance(result.l2WithMarginM, units.distance),
+                groundRunRawM = displayDistance(result.l1M, units.distance),
+                obstacleRawM = displayDistance(result.l2M, units.distance),
+                unitSuffix = distanceSuffix(units.distance)
             )
             if (result.surfaceFactorApplied) {
                 Text(
