@@ -1,5 +1,6 @@
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -11,12 +12,28 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+/**
+ * Release signing is opt-in. `keystore.properties` and the .jks it points at are deliberately
+ * untracked (see .gitignore): the signing key must never live in the repository, and losing it
+ * means never being able to update an app already published under it.
+ *
+ * When the file is absent — a fresh clone, another machine, CI — the build still configures and
+ * every debug/test task works exactly as before; only `assembleRelease` degrades, producing an
+ * *unsigned* APK. That is deliberate: a missing key should be visible in the output filename
+ * rather than failing every unrelated Gradle invocation.
+ */
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) keystorePropertiesFile.inputStream().use { load(it) }
+}
+val hasReleaseSigning = keystoreProperties.getProperty("storeFile") != null
+
 android {
-    namespace = "nl.glcillustrious.hk36ttc"
+    namespace = "nl.schellenberg.hk36ttc"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "nl.glcillustrious.hk36ttc"
+        applicationId = "nl.schellenberg.hk36ttc"
         minSdk = 26
         targetSdk = 37
         versionCode = 22
@@ -35,10 +52,30 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // Only when the key is actually present; otherwise this stays unsigned and the
+            // output is named app-release-unsigned.apk, which is hard to mistake for shippable.
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // No native code of our own, but a dependency ships a small .so — this packages its
+            // debug symbols into the bundle so Play Console can symbolicate any native crash,
+            // regardless of which dependency the library came from.
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
         }
     }
 

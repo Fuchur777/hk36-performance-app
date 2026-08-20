@@ -25,8 +25,8 @@ Write-Host "Installing on connected device/emulator..." -ForegroundColor Cyan
 & $adb install -r "app\build\outputs\apk\debug\app-debug.apk"
 
 Write-Host "Launching app..." -ForegroundColor Cyan
-& $adb shell am force-stop nl.glcillustrious.hk36ttc
-& $adb shell am start -n nl.glcillustrious.hk36ttc/.MainActivity
+& $adb shell am force-stop nl.schellenberg.hk36ttc
+& $adb shell am start -n nl.schellenberg.hk36ttc/.MainActivity
 
 Write-Host ""
 Write-Host "=== Handmatige checklist ===" -ForegroundColor Yellow
