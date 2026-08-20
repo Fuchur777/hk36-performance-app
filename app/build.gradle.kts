@@ -36,8 +36,8 @@ android {
         applicationId = "nl.schellenberg.hk36ttc"
         minSdk = 26
         targetSdk = 37
-        versionCode = 22
-        versionName = "0.9.4"
+        versionCode = 23
+        versionName = "0.9.5"
 
         // Generated fresh at build configuration time - shown alongside versionName/versionCode
         // in the About screen so a specific build can still be pinned down within a day even
