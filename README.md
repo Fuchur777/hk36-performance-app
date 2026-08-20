@@ -11,15 +11,29 @@ voor de rekenformules, en [`docs/data/`](docs/data) voor de gedigitaliseerde AFM
 
 - ✅ Fase 1 (MVP): aircraft profile (meerdere registraties, verwijderbaar met cascade-cleanup) + W&B-calculator
 - ✅ Fase 2/2b: take-off/landing/sleepvlucht performance-module (incl. helling- en ondergrondcorrecties per AIC P173/2024)
-- ✅ Zweeftype-referentielijst met favorieten (auto-vult sleepgewicht + L/D in bij sleepvlucht)
+- ✅ Fase 2c: vliegveldbeheer, per-baan advies, METAR (automatisch opgehaald van aviationweather.gov),
+  vliegveld-/baancatalogus uit OurAirports
+- ✅ Zweeftype-referentielijst met favorieten (auto-vult sleepgewicht + L/D in bij sleepvlucht; L/D-waarden
+  op 2026-08-19 gecorrigeerd voor 137 van 192 typen, zie `docs/00-plan.md` §21)
 - ✅ Per-registratie inputpersistentie op elk rekenscherm (W&B, take-off, landing, sleepvlucht)
 - ✅ Volledige NL/EN-localisatie (auto-detect + handmatige override)
-- ✅ "Documenten"-, "Over deze app"- en "Hoe de app rekent"-schermen
+- ✅ Instelbare eenheden (metrisch/native vs. Amerikaans/imperiaal, per grootheid) — doorgevoerd in
+  invoervelden, resultaten én PDF-rapporten, eenheidskeuze reist mee in de back-up (`docs/00-plan.md` §23)
+- ✅ PDF-export per berekening (Take-off/Landing/Sleepvlucht/W&B) + volledige gegevens-back-up
+  (export/import van alles wat de piloot zelf invoerde)
+- ✅ "About"-scherm (databronnen, licenties, contact, hoe de app rekent)
 - ✅ Echte Room `Migration`-objecten voor elke schemaversie (geen destructieve fallback meer,
   geen dataverlies bij een toekomstige update) — zie `Migrations.kt` hieronder
-- ⬜ Fase 2c: locatie/METAR/vliegveldprofielen
 - ❌ Fase 2d (bereik/wind/kaart) — **komt niet**, andere apps dekken dit al goed af (besluit 2026-08-16)
-- ⬜ Fase 3 (optioneel): historie, PDF-export
+- ❌ Historie-scherm — bewust afgewezen; PDF-export ís de geschiedenis, buiten de app (`docs/00-plan.md` §20)
+
+## Pakketnaam
+
+De `applicationId`/package is `nl.schellenberg.hk36ttc` (tot 2026-08-20 `nl.glcillustrious.hk36ttc`,
+zie `docs/00-plan.md` §24). Android behandelt dit als een ander pakket dan een eerder
+geïnstalleerde build — bestaande lokale data (kisten, vliegvelden, rekeninvoer, instellingen)
+blijft achter tenzij eerst een back-up gemaakt is via Instellingen → export en na herinstallatie
+teruggezet wordt.
 
 ## Bouwen
 

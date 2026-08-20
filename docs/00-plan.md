@@ -2,8 +2,10 @@
 
 **Toestel:** Diamond HK36 TTC Super Dimona, S/N 36.680, Rotax 914 F3
 **Platform:** Android (APK), offline-first
-**Status:** Fase 1, 2 en 2b gebouwd en geverifieerd (build + emulator), app heet nu "HK36TTC Calc".
-Zie §10 voor de volledige stand van zaken en wat nog open staat (Fase 2c/2d/3).
+**Status:** Fase 1 t/m 2c volledig gebouwd en geverifieerd, inclusief PDF-export, gegevens-back-up
+en instelbare eenheden (metrisch/native vs. Amerikaans/imperiaal). App heet "HK36TTC Calc"
+(package `nl.schellenberg.hk36ttc`, zie §24). Fase 2d vervalt (besluit 2026-08-16). Zie §10 voor
+de volledige stand van zaken.
 
 ---
 
@@ -408,11 +410,14 @@ het bouwen te voorkomen:**
     geval naar een `stringResource()`. Dit patroon hergebruiken voor elke toekomstige
     core-gegenereerde gebruikersboodschap.
 
-**Nog open / bewust uitgesteld:** Fase 2c (locatie/METAR/vliegveldprofielen), Fase 3
-(historie/PDF-export) — zie §2 hierboven. **Fase 2d (bereik/wind/kaart) wordt niet meer
-gebouwd**: andere apps dekken dat al goed af (besluit 2026-08-16), dus de codereview-punten die
-eerder "pas bij Fase 2d" waren uitgesteld zijn met dat besluit vervallen en gewoon nu opgepakt
-(zie §11).
+**Nog open / bewust uitgesteld:** niets structureels meer uit de oorspronkelijke fase-indeling —
+Fase 2c is met ronde 1–6 (§12–17) afgerond, PDF-export en gegevens-back-up (§20) dekken het
+optionele deel van Fase 3, en een geschiedenis-tabel is daarbij expliciet afgewezen (§20).
+**Fase 2d (bereik/wind/kaart) wordt niet meer gebouwd**: andere apps dekken dat al goed af
+(besluit 2026-08-16), dus de codereview-punten die eerder "pas bij Fase 2d" waren uitgesteld zijn
+met dat besluit vervallen en gewoon opgepakt (zie §11). De enige nog openstaande punten zijn de
+release-signing-scaffolding in `app/build.gradle.kts` (keystore-opzet, nog niet bevestigd
+werkend) en R8/proguard aanzetten (bewust uitgesteld, zie §24).
 
 ## 11. Codereview 2026-08-16: bevindingen en opvolging
 
@@ -842,3 +847,136 @@ Alleen nieuwe queries op bestaande tabellen: **geen Room-migratie.**
 tot de databases. Gedeeld door beide functies via `ui/common/FileSharing.kt`.
 
 Versie 0.8.0 (versionCode 17).
+
+## 21. Codereview-fixes, taalherziening en L/D-correcties (2026-08-19)
+
+**Codereview (elf bevindingen, sinds 25ca5e3).** Veiligheidsrelevant:
+- Vliegvelden uit de catalogus zonder gepubliceerde hoogte sloegen 0,0 m op, niet te
+  onderscheiden van een echt veld op zeeniveau — en die waarde voedt de drukhoogte-afleiding en
+  daarmee elke afstand. `AirfieldEntity` heeft nu `elevationKnown` (schema v8); de migratie zet
+  bestaande rijen op "bekend" in plaats van te gokken op `elevationM == 0` (Lelystad en Schiphol
+  liggen écht op/onder zeeniveau). Het bewerkscherm waarschuwt tot de piloot een waarde
+  bevestigt. Vóór deze build geïmporteerde vliegvelden worden niet met terugwerkende kracht
+  hersteld — achteraf is niet te zien welke gegokt hebben.
+- METAR-vlagen werden wel geparst maar alleen op de samenvattingskaart getoond; de
+  vlaagsterkte voor tegen-/zijwind staat nu tussen haakjes op de baankaarten én in de PDF. Het
+  advies zelf (status, rangschikking, kruiswindwaarschuwing) blijft op de gestage wind
+  gebaseerd — een vlaag herrangschikt nooit de banen.
+- Een back-up terugzetten valideerde alleen `schema_version`. Elke enum-waarde wordt nu vóór de
+  destructieve wipe gecontroleerd, zodat een kapot bestand geweigerd wordt terwijl de piloot zijn
+  data nog heeft, in plaats van te importeren en daarna op een `valueOf` te crashen.
+
+Overige acht punten (robuustheid/structuur): profiel-/vliegveld-verwijdering in één transactie,
+catalogus-parsers omgezet naar streaming (niet meer ~127.000 rijen in het geheugen), METAR-
+afleiding en baanondergrond-mapping ontdubbeld naar `ui/common`, `MetarFeed` bewaart het eerste
+bericht per station i.p.v. het laatste, `MetarParser` slaat `COR`/`AUTO`/`RTD` over vóór de
+stationscode, `MetarRepository` vangt meer dan `IOException` (een mislukte lookup toont nu
+"Mislukt" i.p.v. het scherm te laten crashen), stationscodes worden op vier letters gevalideerd
+vóór ze in een URL komen, METAR-leeftijd wordt op nul afgekapt. 208 unit tests + 6 instrumented
+migratietests groen.
+
+**Nederlandse teksten herzien.** Frank's eigen doorloop van `values/strings.xml`: 34 strings
+herschreven. `values-en/strings.xml` ongewijzigd; beide bestanden nog steeds 323 keys met
+matchende format-specifiers.
+
+**L/D-ratio's in de zweeftype-referentielijst gecorrigeerd (137 van 192).** XCSoar's
+polar-database bewaart alleen sink-polar-coëfficiënten, geen glijgetal zelf — dat volgt uit het
+punt waar een raaklijn vanuit de oorsprong de sink-curve raakt. Voor 137 typen was in plaats
+daarvan de verhouding op het eerste polar-datapunt gebruikt (rond minimum-sink-snelheid, altijd
+lager dan het werkelijke beste glijgetal) — elke afwijking was dus een onderschatting. Gevonden
+na een vraag over de LS-8 15m (38,1 → 41,6) en systematisch nagerekend tegen XCSoar's eigen
+bronbestand (rechtstreeks opgehaald, niet via een AI-samenvatting) voor alle 192 typen. Niet
+veiligheidskritisch: voedt alleen de Sleepvlucht-referentielijst, nooit de AFM-sleeptabellen —
+`TowPerformanceCalculator.selectTowClass` behandelt een lagere L/D als moeilijker, dus de oude te
+lage waarden konden de klasse-keuze alleen voorzichtiger maken, nooit optimistischer.
+
+Versie 0.9.2 (versionCode 20).
+
+## 22. Vijf UI/gedrag-verbeteringen (2026-08-20)
+
+- MTOW-regel onder de registratie op het hoofdscherm verwijderd (voegde niets toe); de daardoor
+  wees geworden string uit beide taalbestanden gehaald.
+- Baanadvies rangschikt nu op grootste tegenwindcomponent eerst, resterende meters alleen als
+  gelijkstand-tiebreak — niet langer op resterende meters eerst. Voor een gegeven windvector zijn
+  meer tegenwind en minder zijwind dezelfde richting (complementaire componenten van dezelfde
+  vector), dus dit is meteen ook "minste zijwind eerst".
+- METAR-verversing werkte voorheen alleen op het Take-off-scherm, en daar nog maar eenmaal per
+  schermbezoek; Landing en Sleepvlucht hadden helemaal geen ververslogica. Gedeelde
+  `MetarAutoRefresher` lost de asymmetrie op; alle drie de rekenschermen tonen nu een "Controleer
+  op nieuwe METAR"-knop zodra de bestaande veroudering-drempel gepasseerd is.
+- De laatste regel van een rugwind-baankaart herhaalt niet langer "Rugwind!" (staat al
+  rechtsboven als status), maar legt uit dat het AFM daar geen data voor heeft.
+- "Past zonder veiligheidsmarge" lijnde niet uit zoals de andere statuslabels op smalle
+  telefoons (wrapt naar twee regels, `Text()` lijnt standaard links uit); `textAlign =
+  TextAlign.End` op de gedeelde `RunwayResultCard` dekt dit voor alle drie de rekenschermen.
+
+Onderweg gevonden en hersteld: een sed-fout (`\x2D\x2D` als hex-escape gelezen in plaats van
+letterlijke tekst) had de opening van 46 XML-commentaarregels in beide `strings.xml`-bestanden
+verminkt — volledig hersteld en geverifieerd tegen `git diff` dat alleen de bedoelde regels nog
+verschillen.
+
+Versie 0.9.3 (versionCode 21).
+
+## 23. Instelbare eenheden (2026-08-20)
+
+Nieuwe Instellingen-sectie: de piloot kiest per grootheid tussen metrisch/native en
+Amerikaanse/imperiale eenheden — temperatuur (°C/°F), afstand (m/ft), hoogte (m/ft), windsnelheid
+(kt/m/s), druk (hPa/inHg), klimsnelheid (m/s/ft/min), vliegsnelheid (km/h/kt/mph — apart van
+windsnelheid, want Vy staat in het AFM in km/h), massa (kg/lbs), CG-positie (mm/in) en
+brandstofvolume (L/US gal).
+
+**Architectuurprincipe**: ViewModels en de rekenkern rekenen en bewaren altíjd in native eenheden
+(Celsius, meter, knopen, hPa, mm, kg, liter, km/h voor Vy) — alléén de Compose UI-laag
+converteert, op het moment van tonen of invoeren. Conversie raakt nooit opgeslagen state. Nieuw
+`core/units/`-pakket (`AppUnits`, `UnitConversions`) plus `ui/common/UnitFormatting.kt`
+(`display*`/`native*`-functiepaar per grootheid) en een `LocalAppUnits`-`CompositionLocal` die
+overal in de Compose-boom reactief beschikbaar is zodra de instelling wijzigt.
+
+**Afronding**: elke getoonde geconverteerde waarde is een heel getal, nooit een decimaal. Voet
+rondt naar beneden af, mph naar boven — nooit een gunstiger getal tonen dan de native waarde
+waaruit het komt (marges/afstanden bij voet, streefsnelheid bij mph); alle overige grootheden
+ronden naar het dichtstbijzijnde gehele getal.
+
+**Doorgevoerd in**: de invoervelden en resultaten van Take-off/Landing/Sleepvlucht (inclusief de
+klimreferentie-kaart en per-baan-resultaten), de Weight & Balance-module (inclusief het
+brandstof-hulpgetal), de vliegveldhoogte in het vliegveld-bewerkscherm, en de METAR-drukhoogte
+(bewust géén conversie voor de rauwe METAR-velden zelf — wind/temperatuur/QNH blijven in
+kt/°C/hPa, de standaard-eenheden van een METAR-uitzending waar een piloot tegen ATIS/AWOS aan
+controleert; alleen de afgeleide drukhoogte is een berekend resultaat en volgt dus de
+hoogte-instelling).
+
+**PDF-rapporten**: Take-off/Landing/Sleepvlucht-rapporten (inclusief de per-baan-uitsplitsing)
+converteren nu net als het scherm waar ze vandaan komen — de oude vaste 1-decimaal-opmaak
+(`formatOneDecimal`/`formatSigned`) is vervangen door dezelfde hele-getallen-conventie als de
+rest van de app.
+
+**Back-up**: de gekozen eenheden reizen mee in de export/import-JSON (`UnitsDto`, tolerante
+fallback per veld net als `UnitPreferences` zelf) — een back-up van vóór deze feature importeert
+gewoon met metrische/native standaardwaarden.
+
+**Nog niet omgezet** (bewust uitgesteld, geen bug): de invoervelden op het profielbewerkscherm
+(kist-CG/massa/hefarmen) gebruiken nog native eenheden — dit stond al los van de rekenschermen
+en is niet in deze ronde meegenomen.
+
+Versie 0.9.4 (versionCode 22).
+
+## 24. Pakketnaam gewijzigd naar nl.schellenberg.hk36ttc (2026-08-20)
+
+`applicationId`/`namespace` en alle package-/import-declaraties (133 bestanden, alle vijf source
+sets, plus de Room-schemahistorie in `app/schemas/` en `scripts/verify-persistence-and-ui-fixes.ps1`)
+verhuisd van `nl.glcillustrious.hk36ttc`.
+
+**Consequentie voor een al geïnstalleerd toestel**: Android behandelt de nieuwe `applicationId`
+als een compleet ander pakket. Een bestaande installatie update niet automatisch mee — alle
+lokale data (kisten, vliegvelden, rekeninvoer, eenhedeninstellingen) blijft achter in de oude app
+tenzij eerst een back-up (§20) gemaakt en na herinstallatie teruggezet wordt.
+
+Tegelijk toegevoegd: `ndk { debugSymbolLevel = "FULL" }` op de release-buildvariant, zodat Play
+Console geen "geen native debug symbols"-waarschuwing meer geeft voor de native code die via een
+dependency wordt meegeleverd (dit project bevat zelf geen C/C++-code). De andere Play
+Console-waarschuwing ("geen deobfuscatiebestand") blijft bewust bestaan — `isMinifyEnabled` staat
+uit, dus is er niets te obfusceren; R8/proguard aanzetten is een bewust uitgestelde, grotere
+beslissing die een eigen test-release-build vergt (obfuscatie kan reflectie-gebaseerde code
+zoals Room/kotlinx-serialization breken).
+
+Versie 0.9.5 (versionCode 23).
