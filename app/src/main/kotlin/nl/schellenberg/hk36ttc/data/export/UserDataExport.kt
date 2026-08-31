@@ -17,11 +17,16 @@ import nl.schellenberg.hk36ttc.core.units.WindSpeedUnit
 import nl.schellenberg.hk36ttc.core.wb.FuelTankType
 import nl.schellenberg.hk36ttc.data.local.AircraftProfileEntity
 import nl.schellenberg.hk36ttc.data.local.AirfieldEntity
+import nl.schellenberg.hk36ttc.data.local.BarometerSampleEntity
 import nl.schellenberg.hk36ttc.data.local.FavoriteAirfieldEntity
 import nl.schellenberg.hk36ttc.data.local.FavoriteSailplaneTypeEntity
 import nl.schellenberg.hk36ttc.data.local.FlightContextEntity
+import nl.schellenberg.hk36ttc.data.local.ImuSampleEntity
 import nl.schellenberg.hk36ttc.data.local.LandingInputEntity
 import nl.schellenberg.hk36ttc.data.local.LastWbResultEntity
+import nl.schellenberg.hk36ttc.data.local.LocationSampleEntity
+import nl.schellenberg.hk36ttc.data.local.RealLifeLogEntity
+import nl.schellenberg.hk36ttc.data.local.RealLifeMarkerEntity
 import nl.schellenberg.hk36ttc.data.local.RunwayStripEntity
 import nl.schellenberg.hk36ttc.data.local.SleepvluchtInputEntity
 import nl.schellenberg.hk36ttc.data.local.TakeoffInputEntity
@@ -39,6 +44,16 @@ import nl.schellenberg.hk36ttc.data.local.WbInputEntity
  * **Not included**: the OurAirports catalogue (a separate, deliberately disposable database that
  * rebuilds itself, and 7 MB has no business in a backup) and the JSON calculation data (that is
  * configuration with its own "restore defaults", not user data).
+ *
+ * **Real Life Performance recordings ARE included** (Fase 4). Unlike every other table here,
+ * these can run to tens of thousands of sample rows per recording -- deliberately included
+ * anyway (Frank's explicit choice) rather than trimmed to headers-only, since a restore that
+ * silently drops a recording's raw samples would be exactly the kind of quiet data loss this
+ * backup format exists to prevent. See [RealLifeLogBackupDto] and its sibling sample DTOs below,
+ * kept distinct from [nl.schellenberg.hk36ttc.data.export.RealLifeLogDto] and its siblings in
+ * `RealLifeLogExport.kt` -- that is a different, single-recording share/archive format with a
+ * narrower DTO shape (no `id`/`logId`, since a single-log export has only one implicit log);
+ * this one is a flat multi-log dump that needs both to restore cross-references.
  */
 @Serializable
 data class UserDataExport(
@@ -61,7 +76,14 @@ data class UserDataExport(
     @SerialName("takeoff_inputs") val takeoffInputs: List<TakeoffInputDto> = emptyList(),
     @SerialName("landing_inputs") val landingInputs: List<LandingInputDto> = emptyList(),
     @SerialName("sleepvlucht_inputs") val sleepvluchtInputs: List<SleepvluchtInputDto> = emptyList(),
-    @SerialName("last_wb_results") val lastWbResults: List<LastWbResultDto> = emptyList()
+    @SerialName("last_wb_results") val lastWbResults: List<LastWbResultDto> = emptyList(),
+    /** Defaulted to empty so a backup written before Fase 4 (or before this field existed) still
+     * imports fine -- exactly [UnitsDto]'s own reasoning above. */
+    @SerialName("real_life_logs") val realLifeLogs: List<RealLifeLogBackupDto> = emptyList(),
+    @SerialName("location_samples") val locationSamples: List<LocationSampleBackupDto> = emptyList(),
+    @SerialName("imu_samples") val imuSamples: List<ImuSampleBackupDto> = emptyList(),
+    @SerialName("barometer_samples") val barometerSamples: List<BarometerSampleBackupDto> = emptyList(),
+    @SerialName("real_life_markers") val realLifeMarkers: List<RealLifeMarkerBackupDto> = emptyList()
 ) {
     /** Counts for the confirmation dialog, so the pilot sees what they are about to swap in. */
     val profileCount: Int get() = aircraftProfiles.size
@@ -201,6 +223,80 @@ data class LastWbResultDto(
     @SerialName("computed_at_epoch_ms") val computedAtEpochMs: Long
 )
 
+/** See this file's own KDoc for why this is a distinct DTO from `RealLifeLogDto` in
+ * `RealLifeLogExport.kt` -- carries [id] (unlike that one) since a whole-database backup is a
+ * flat multi-log dump restored under original ids, same as every other table here. */
+@Serializable
+data class RealLifeLogBackupDto(
+    val id: Long,
+    @SerialName("profile_id") val profileId: Long,
+    val configuration: String,
+    val notes: String,
+    @SerialName("started_at_epoch_ms") val startedAtEpochMs: Long,
+    @SerialName("stopped_at_epoch_ms") val stoppedAtEpochMs: Long?,
+    @SerialName("stop_reason") val stopReason: String?,
+    @SerialName("barometer_available") val barometerAvailable: Boolean,
+    @SerialName("gps_requested_interval_ms") val gpsRequestedIntervalMs: Long,
+    @SerialName("airfield_id") val airfieldId: Long? = null,
+    @SerialName("surface_type") val surfaceType: String? = null,
+    @SerialName("slope_pct") val slopePct: Double? = null,
+    @SerialName("oat_c") val oatC: Int? = null,
+    @SerialName("pressure_alt_m") val pressureAltM: Int? = null,
+    @SerialName("wind_direction_deg") val windDirectionDeg: Int? = null,
+    @SerialName("wind_speed_kts") val windSpeedKts: Int? = null,
+    @SerialName("metar_raw") val metarRaw: String? = null,
+    @SerialName("metar_observed_at_epoch_ms") val metarObservedAtEpochMs: Long? = null,
+    @SerialName("conditions_source") val conditionsSource: String? = null
+)
+
+@Serializable
+data class LocationSampleBackupDto(
+    val id: Long,
+    @SerialName("log_id") val logId: Long,
+    @SerialName("epoch_ms") val epochMs: Long,
+    @SerialName("elapsed_realtime_nanos") val elapsedRealtimeNanos: Long,
+    val latitude: Double,
+    val longitude: Double,
+    @SerialName("altitude_m") val altitudeM: Double?,
+    @SerialName("speed_mps") val speedMps: Float?,
+    @SerialName("speed_accuracy_mps") val speedAccuracyMps: Float?,
+    @SerialName("bearing_deg") val bearingDeg: Float?,
+    @SerialName("bearing_accuracy_deg") val bearingAccuracyDeg: Float?,
+    @SerialName("horizontal_accuracy_m") val horizontalAccuracyM: Float?,
+    @SerialName("vertical_accuracy_m") val verticalAccuracyM: Float?
+)
+
+@Serializable
+data class ImuSampleBackupDto(
+    val id: Long,
+    @SerialName("log_id") val logId: Long,
+    @SerialName("epoch_ms") val epochMs: Long,
+    @SerialName("elapsed_realtime_nanos") val elapsedRealtimeNanos: Long,
+    @SerialName("sensor_type") val sensorType: String,
+    val x: Float,
+    val y: Float,
+    val z: Float,
+    val accuracy: Int
+)
+
+@Serializable
+data class BarometerSampleBackupDto(
+    val id: Long,
+    @SerialName("log_id") val logId: Long,
+    @SerialName("epoch_ms") val epochMs: Long,
+    @SerialName("elapsed_realtime_nanos") val elapsedRealtimeNanos: Long,
+    @SerialName("pressure_hpa") val pressureHpa: Float
+)
+
+@Serializable
+data class RealLifeMarkerBackupDto(
+    val id: Long,
+    @SerialName("log_id") val logId: Long,
+    @SerialName("epoch_ms") val epochMs: Long,
+    @SerialName("elapsed_realtime_nanos") val elapsedRealtimeNanos: Long,
+    @SerialName("marker_type") val markerType: String
+)
+
 // --- Entity <-> DTO -------------------------------------------------------------------
 //
 // Ids are carried across verbatim on purpose. Because import replaces everything rather than
@@ -286,6 +382,64 @@ fun SleepvluchtInputDto.toEntity() = SleepvluchtInputEntity(
 
 fun LastWbResultEntity.toDto() = LastWbResultDto(profileId, totalMassKg, computedAtEpochMs)
 fun LastWbResultDto.toEntity() = LastWbResultEntity(profileId, totalMassKg, computedAtEpochMs)
+
+fun RealLifeLogEntity.toBackupDto() = RealLifeLogBackupDto(
+    id = id, profileId = profileId, configuration = configuration, notes = notes,
+    startedAtEpochMs = startedAtEpochMs, stoppedAtEpochMs = stoppedAtEpochMs, stopReason = stopReason,
+    barometerAvailable = barometerAvailable, gpsRequestedIntervalMs = gpsRequestedIntervalMs,
+    airfieldId = airfieldId, surfaceType = surfaceType, slopePct = slopePct, oatC = oatC,
+    pressureAltM = pressureAltM, windDirectionDeg = windDirectionDeg, windSpeedKts = windSpeedKts,
+    metarRaw = metarRaw, metarObservedAtEpochMs = metarObservedAtEpochMs, conditionsSource = conditionsSource
+)
+
+fun RealLifeLogBackupDto.toEntity() = RealLifeLogEntity(
+    id = id, profileId = profileId, configuration = configuration, notes = notes,
+    startedAtEpochMs = startedAtEpochMs, stoppedAtEpochMs = stoppedAtEpochMs, stopReason = stopReason,
+    barometerAvailable = barometerAvailable, gpsRequestedIntervalMs = gpsRequestedIntervalMs,
+    airfieldId = airfieldId, surfaceType = surfaceType, slopePct = slopePct, oatC = oatC,
+    pressureAltM = pressureAltM, windDirectionDeg = windDirectionDeg, windSpeedKts = windSpeedKts,
+    metarRaw = metarRaw, metarObservedAtEpochMs = metarObservedAtEpochMs, conditionsSource = conditionsSource
+)
+
+fun LocationSampleEntity.toBackupDto() = LocationSampleBackupDto(
+    id = id, logId = logId, epochMs = epochMs, elapsedRealtimeNanos = elapsedRealtimeNanos,
+    latitude = latitude, longitude = longitude, altitudeM = altitudeM, speedMps = speedMps,
+    speedAccuracyMps = speedAccuracyMps, bearingDeg = bearingDeg, bearingAccuracyDeg = bearingAccuracyDeg,
+    horizontalAccuracyM = horizontalAccuracyM, verticalAccuracyM = verticalAccuracyM
+)
+
+fun LocationSampleBackupDto.toEntity() = LocationSampleEntity(
+    id = id, logId = logId, epochMs = epochMs, elapsedRealtimeNanos = elapsedRealtimeNanos,
+    latitude = latitude, longitude = longitude, altitudeM = altitudeM, speedMps = speedMps,
+    speedAccuracyMps = speedAccuracyMps, bearingDeg = bearingDeg, bearingAccuracyDeg = bearingAccuracyDeg,
+    horizontalAccuracyM = horizontalAccuracyM, verticalAccuracyM = verticalAccuracyM
+)
+
+fun ImuSampleEntity.toBackupDto() = ImuSampleBackupDto(
+    id = id, logId = logId, epochMs = epochMs, elapsedRealtimeNanos = elapsedRealtimeNanos,
+    sensorType = sensorType, x = x, y = y, z = z, accuracy = accuracy
+)
+
+fun ImuSampleBackupDto.toEntity() = ImuSampleEntity(
+    id = id, logId = logId, epochMs = epochMs, elapsedRealtimeNanos = elapsedRealtimeNanos,
+    sensorType = sensorType, x = x, y = y, z = z, accuracy = accuracy
+)
+
+fun BarometerSampleEntity.toBackupDto() = BarometerSampleBackupDto(
+    id = id, logId = logId, epochMs = epochMs, elapsedRealtimeNanos = elapsedRealtimeNanos, pressureHpa = pressureHpa
+)
+
+fun BarometerSampleBackupDto.toEntity() = BarometerSampleEntity(
+    id = id, logId = logId, epochMs = epochMs, elapsedRealtimeNanos = elapsedRealtimeNanos, pressureHpa = pressureHpa
+)
+
+fun RealLifeMarkerEntity.toBackupDto() = RealLifeMarkerBackupDto(
+    id = id, logId = logId, epochMs = epochMs, elapsedRealtimeNanos = elapsedRealtimeNanos, markerType = markerType
+)
+
+fun RealLifeMarkerBackupDto.toEntity() = RealLifeMarkerEntity(
+    id = id, logId = logId, epochMs = epochMs, elapsedRealtimeNanos = elapsedRealtimeNanos, markerType = markerType
+)
 
 fun AppUnits.toDto() = UnitsDto(
     temperature = temperature.name,

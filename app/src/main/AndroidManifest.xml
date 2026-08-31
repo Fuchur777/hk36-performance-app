@@ -9,6 +9,16 @@
     -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+        Fase 4a — Real Life Performance (docs/00-plan.md): GPS logging of the take-off roll,
+        used only while the app is in the foreground during an active recording. No
+        FOREGROUND_SERVICE/POST_NOTIFICATIONS — recording stops the moment the app is
+        backgrounded rather than trying to continue in the background.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
     <application
         android:name=".Hk36Application"
         android:allowBackup="true"

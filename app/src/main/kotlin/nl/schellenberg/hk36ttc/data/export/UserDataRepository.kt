@@ -8,6 +8,8 @@ import nl.schellenberg.hk36ttc.data.local.FavoriteAirfieldEntity
 import nl.schellenberg.hk36ttc.data.local.FavoriteSailplaneTypeEntity
 import nl.schellenberg.hk36ttc.data.local.FlightContextMode
 import nl.schellenberg.hk36ttc.data.local.GrassCondition
+import nl.schellenberg.hk36ttc.data.local.RealLifeConfiguration
+import nl.schellenberg.hk36ttc.data.local.RealLifeMarkerType
 import nl.schellenberg.hk36ttc.data.local.RunwaySurfaceType
 import nl.schellenberg.hk36ttc.data.local.UserDataDao
 import nl.schellenberg.hk36ttc.ui.perf.LandingSurfaceType
@@ -68,7 +70,12 @@ class UserDataRepository(
             takeoffInputs = dao.allTakeoffInputs().map { it.toDto() },
             landingInputs = dao.allLandingInputs().map { it.toDto() },
             sleepvluchtInputs = dao.allSleepvluchtInputs().map { it.toDto() },
-            lastWbResults = dao.allLastWbResults().map { it.toDto() }
+            lastWbResults = dao.allLastWbResults().map { it.toDto() },
+            realLifeLogs = dao.allRealLifeLogs().map { it.toBackupDto() },
+            locationSamples = dao.allLocationSamples().map { it.toBackupDto() },
+            imuSamples = dao.allImuSamples().map { it.toBackupDto() },
+            barometerSamples = dao.allBarometerSamples().map { it.toBackupDto() },
+            realLifeMarkers = dao.allRealLifeMarkers().map { it.toBackupDto() }
         )
     }
 
@@ -125,6 +132,12 @@ class UserDataRepository(
             ?: sleepvluchtInputs.firstNotNullOfOrNull {
                 check("sleepvlucht surface_type", it.surfaceType, SleepvluchtSurfaceType.values())
             }
+            ?: realLifeLogs.firstNotNullOfOrNull {
+                check("real_life_logs configuration", it.configuration, RealLifeConfiguration.values())
+            }
+            ?: realLifeMarkers.firstNotNullOfOrNull {
+                check("real_life_markers marker_type", it.markerType, RealLifeMarkerType.values())
+            }
     }
 
     /**
@@ -148,6 +161,13 @@ class UserDataRepository(
             dao.clearLandingInputs()
             dao.clearSleepvluchtInputs()
             dao.clearLastWbResults()
+            // Child tables first, matching the shape a real FK-cascading schema would require --
+            // see UserDataDao.clearRealLifeLogs's KDoc.
+            dao.clearLocationSamples()
+            dao.clearImuSamples()
+            dao.clearBarometerSamples()
+            dao.clearRealLifeMarkers()
+            dao.clearRealLifeLogs()
 
             dao.insertProfiles(data.aircraftProfiles.map { it.toEntity() })
             dao.insertFavoriteSailplaneTypes(data.favoriteSailplaneTypes.map { FavoriteSailplaneTypeEntity(it) })
@@ -160,6 +180,13 @@ class UserDataRepository(
             dao.insertLandingInputs(data.landingInputs.map { it.toEntity() })
             dao.insertSleepvluchtInputs(data.sleepvluchtInputs.map { it.toEntity() })
             dao.insertLastWbResults(data.lastWbResults.map { it.toEntity() })
+            // Header before children -- harmless either way with no FK constraints, but reads
+            // naturally in insert order.
+            dao.insertRealLifeLogs(data.realLifeLogs.map { it.toEntity() })
+            dao.insertLocationSamples(data.locationSamples.map { it.toEntity() })
+            dao.insertImuSamples(data.imuSamples.map { it.toEntity() })
+            dao.insertBarometerSamples(data.barometerSamples.map { it.toEntity() })
+            dao.insertRealLifeMarkers(data.realLifeMarkers.map { it.toEntity() })
         }
         // Outside the transaction: this is SharedPreferences, not Room, and it must only change
         // once the data it belongs with is actually in place.

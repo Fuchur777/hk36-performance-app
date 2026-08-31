@@ -25,6 +25,13 @@ local.properties
 *.apk
 *.aab
 
+# Release signing. The key and its passwords must never enter the repository: anyone with
+# both can publish an update as this app, and losing the key means the app can never be
+# updated again under the same identity.
+keystore.properties
+*.jks
+*.keystore
+
 # OS
 .DS_Store
 Thumbs.db

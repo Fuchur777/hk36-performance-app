@@ -10,9 +10,11 @@ import androidx.room.TypeConverters
     entities = [
         AircraftProfileEntity::class, LastWbResultEntity::class, FavoriteSailplaneTypeEntity::class,
         WbInputEntity::class, TakeoffInputEntity::class, LandingInputEntity::class, SleepvluchtInputEntity::class,
-        AirfieldEntity::class, RunwayStripEntity::class, FlightContextEntity::class, FavoriteAirfieldEntity::class
+        AirfieldEntity::class, RunwayStripEntity::class, FlightContextEntity::class, FavoriteAirfieldEntity::class,
+        RealLifeLogEntity::class, LocationSampleEntity::class, ImuSampleEntity::class, BarometerSampleEntity::class,
+        RealLifeMarkerEntity::class
     ],
-    version = 8,
+    version = 11,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -29,6 +31,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun runwayStripDao(): RunwayStripDao
     abstract fun flightContextDao(): FlightContextDao
     abstract fun favoriteAirfieldDao(): FavoriteAirfieldDao
+
+    /** Fase 4a — see [RealLifeLogEntity]. */
+    abstract fun realLifeLogDao(): RealLifeLogDao
+    abstract fun locationSampleDao(): LocationSampleDao
+    abstract fun imuSampleDao(): ImuSampleDao
+    abstract fun barometerSampleDao(): BarometerSampleDao
+    abstract fun realLifeMarkerDao(): RealLifeMarkerDao
 
     /** Bulk access across all user tables, for export/import only — see [UserDataDao]. Adds no
      * entity and no schema change, so [version] stays where it is. */

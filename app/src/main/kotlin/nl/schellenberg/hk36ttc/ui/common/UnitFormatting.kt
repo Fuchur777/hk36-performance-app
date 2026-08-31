@@ -23,11 +23,14 @@ import nl.schellenberg.hk36ttc.core.units.WindSpeedUnit
  *
  * Every `displayXxx` function returns a whole number, never a decimal — every converted figure
  * in the app is shown as an integer, matching how the steppers already worked before conversion
- * existed. The rounding *direction* is not always "nearest": feet is rounded down and mph is
- * rounded up, both so a converted number never reads as more favourable than the underlying
- * metric figure — a feet-displayed margin that rounds up would overstate how much runway is
- * left, and an mph Vy that rounds down would understate the safe reference speed to fly. Every
- * other quantity rounds to nearest. See [roundForDisplay].
+ * existed. The one exception is [displayFuelDensity]: it converts a rate (mass per unit volume,
+ * native value well under 1) rather than a magnitude, so it keeps two decimals instead of
+ * rounding to a whole number — see its own KDoc. The rounding *direction* for every other
+ * quantity is not always "nearest": feet is rounded down and mph is rounded up, both so a
+ * converted number never reads as more favourable than the underlying metric figure — a
+ * feet-displayed margin that rounds up would overstate how much runway is left, and an mph Vy
+ * that rounds down would understate the safe reference speed to fly. Every other quantity
+ * rounds to nearest. See [roundForDisplay].
  *
  * Only the display step rounds this way — converting the pilot's *input* back to the native
  * unit ([nativeMassKg] and friends) always rounds to nearest, since interpreting what they typed
@@ -118,12 +121,16 @@ fun nativeFuelVolumeLitersInt(displayValue: Int, unit: FuelVolumeUnit): Int = na
 
 /** kg-per-litre fuel density (an AFM/POH-published constant, never pilot-entered) expressed in
  * the pilot's chosen mass-per-volume units — e.g. "kg/L" becomes "lbs/gal" when both settings
- * are imperial. Used only for the informational fuel-mass hint on the W&B screen. Rounded to
- * nearest like every other non-feet/mph quantity. */
-fun displayFuelDensity(nativeKgPerLiter: Double, massUnit: MassUnit, volumeUnit: FuelVolumeUnit): Int {
+ * are imperial. Used only for the informational fuel-mass hint on the W&B screen.
+ *
+ * Unlike every other `displayXxx` function, this one is NOT rounded to a whole number: it's a
+ * rate (mass per unit volume), not a magnitude, and its native value is well under 1 (0.75
+ * kg/L) — rounding that to an integer would turn it into 1 kg/L, a ~33% error. Two decimals,
+ * computed from the untouched full-precision native constant. */
+fun displayFuelDensity(nativeKgPerLiter: Double, massUnit: MassUnit, volumeUnit: FuelVolumeUnit): String {
     val massPerLiter = rawMass(nativeKgPerLiter, massUnit)
     val oneVolumeInLiters = nativeFuelVolumeLiters(1.0, volumeUnit)
-    return roundForDisplay(massPerLiter * oneVolumeInLiters, RoundMode.NEAREST)
+    return "%.2f".format(massPerLiter * oneVolumeInLiters)
 }
 
 // --- Temperature (OAT input/display, METAR temperature) -------------------------------------

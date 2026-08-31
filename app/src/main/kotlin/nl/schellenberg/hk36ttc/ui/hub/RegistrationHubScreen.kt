@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.FlightLand
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Scale
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,12 +46,16 @@ import nl.schellenberg.hk36ttc.data.local.AircraftProfileRepository
 fun RegistrationHubScreen(
     repository: AircraftProfileRepository,
     profileId: Long,
+    /** Fase 4a is a testing/data-gathering tool, hidden from the hub until switched on in
+     * Instellingen — see [nl.schellenberg.hk36ttc.data.local.RealLifePreferences]. */
+    showRealLife: Boolean,
     onBack: () -> Unit,
     onEditProfile: () -> Unit,
     onOpenWb: () -> Unit,
     onOpenTakeoff: () -> Unit,
     onOpenSleepvlucht: () -> Unit,
-    onOpenLanding: () -> Unit
+    onOpenLanding: () -> Unit,
+    onOpenRealLife: () -> Unit
 ) {
     var registration by remember { mutableStateOf<String?>(null) }
 
@@ -93,6 +98,9 @@ fun RegistrationHubScreen(
             HubActionCard("Take-off", Icons.Filled.FlightTakeoff, onOpenTakeoff)
             HubActionCard(stringResource(R.string.hub_action_sleepvlucht), Icons.Filled.Link, onOpenSleepvlucht)
             HubActionCard("Landing", Icons.Filled.FlightLand, onOpenLanding)
+            if (showRealLife) {
+                HubActionCard("Real Life Performance", Icons.Filled.Sensors, onOpenRealLife)
+            }
         }
     }
 }

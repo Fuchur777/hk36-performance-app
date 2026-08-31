@@ -37,12 +37,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.schellenberg.hk36ttc.data.catalog.AirportCatalogRepository
 import nl.schellenberg.hk36ttc.data.export.UserDataRepository
+import nl.schellenberg.hk36ttc.data.metar.HistoricalMetarRepository
 import nl.schellenberg.hk36ttc.data.metar.MetarRepository
 import nl.schellenberg.hk36ttc.data.local.AircraftProfileRepository
 import nl.schellenberg.hk36ttc.data.local.AppCalculationData
 import nl.schellenberg.hk36ttc.data.local.CalculationDataResult
 import nl.schellenberg.hk36ttc.data.local.CalculationDataStore
 import nl.schellenberg.hk36ttc.data.local.LanguagePreference
+import nl.schellenberg.hk36ttc.data.local.RealLifePreferences
 import nl.schellenberg.hk36ttc.data.local.UnitPreferences
 import nl.schellenberg.hk36ttc.ui.common.LocalAppUnits
 import nl.schellenberg.hk36ttc.ui.about.AboutScreen
@@ -55,6 +57,9 @@ import nl.schellenberg.hk36ttc.ui.perf.SleepvluchtScreen
 import nl.schellenberg.hk36ttc.ui.perf.TakeoffScreen
 import nl.schellenberg.hk36ttc.ui.profile.ProfileEditScreen
 import nl.schellenberg.hk36ttc.ui.profile.ProfileListScreen
+import nl.schellenberg.hk36ttc.ui.reallife.RealLifeLogDetailScreen
+import nl.schellenberg.hk36ttc.ui.reallife.RealLifeLogListScreen
+import nl.schellenberg.hk36ttc.ui.reallife.RealLifeRecordScreen
 import nl.schellenberg.hk36ttc.ui.sailplane.SailplaneTypesScreen
 import nl.schellenberg.hk36ttc.ui.settings.SettingsScreen
 import nl.schellenberg.hk36ttc.ui.theme.Hk36ttcTheme
@@ -69,6 +74,9 @@ private object Routes {
     const val TAKEOFF = "takeoff/{profileId}"
     const val SLEEPVLUCHT = "sleepvlucht/{profileId}"
     const val LANDING = "landing/{profileId}"
+    const val REAL_LIFE_LOGS = "real_life_logs/{profileId}"
+    const val REAL_LIFE_RECORD = "real_life_record/{profileId}"
+    const val REAL_LIFE_LOG_DETAIL = "real_life_log_detail/{profileId}/{logId}"
     const val SAILPLANE_TYPES = "sailplane_types"
     const val AIRFIELDS = "airfields"
     const val AIRFIELD_EDIT = "airfield_edit/{airfieldId}"
@@ -83,6 +91,9 @@ private object Routes {
     fun sleepvlucht(id: Long) = "sleepvlucht/$id"
     fun landing(id: Long) = "landing/$id"
     fun airfieldEdit(id: Long) = "airfield_edit/$id"
+    fun realLifeLogs(id: Long) = "real_life_logs/$id"
+    fun realLifeRecord(id: Long) = "real_life_record/$id"
+    fun realLifeLogDetail(profileId: Long, logId: Long) = "real_life_log_detail/$profileId/$logId"
 }
 
 class MainActivity : ComponentActivity() {
@@ -115,9 +126,11 @@ class MainActivity : ComponentActivity() {
         val repository = app.repository
         val airportCatalog = app.airportCatalogRepository
         val metarRepository = app.metarRepository
+        val historicalMetarRepository = app.historicalMetarRepository
         val userDataRepository = app.userDataRepository
         val dataStore = app.calculationDataStore
         val unitPreferences = app.unitPreferences
+        val realLifePreferences = app.realLifePreferences
 
         setContent {
             val appUnits by unitPreferences.units.collectAsState()
@@ -130,8 +143,10 @@ class MainActivity : ComponentActivity() {
                             repository,
                             airportCatalog,
                             metarRepository,
+                            historicalMetarRepository,
                             userDataRepository,
                             unitPreferences,
+                            realLifePreferences,
                             appData,
                             onLanguageChanged = { recreate() }
                         )
@@ -199,8 +214,10 @@ private fun Hk36NavHost(
     repository: AircraftProfileRepository,
     airportCatalog: AirportCatalogRepository,
     metarRepository: MetarRepository,
+    historicalMetarRepository: HistoricalMetarRepository,
     userDataRepository: UserDataRepository,
     unitPreferences: UnitPreferences,
+    realLifePreferences: RealLifePreferences,
     appData: AppCalculationData,
     onLanguageChanged: () -> Unit
 ) {
@@ -221,6 +238,7 @@ private fun Hk36NavHost(
             SettingsScreen(
                 userDataRepository = userDataRepository,
                 unitPreferences = unitPreferences,
+                realLifePreferences = realLifePreferences,
                 onBack = { navController.popBackStack() },
                 onLanguageChanged = onLanguageChanged
             )
@@ -278,15 +296,18 @@ private fun Hk36NavHost(
         }
         composable(Routes.HUB) { backStackEntry ->
             val profileId = backStackEntry.arguments?.getString("profileId")?.toLongOrNull() ?: 0L
+            val realLifeEnabled by realLifePreferences.enabled.collectAsState()
             RegistrationHubScreen(
                 repository = repository,
                 profileId = profileId,
+                showRealLife = realLifeEnabled,
                 onBack = { navController.popBackStack() },
                 onEditProfile = { navController.navigate(Routes.profileEdit(profileId)) },
                 onOpenWb = { navController.navigate(Routes.wb(profileId)) },
                 onOpenTakeoff = { navController.navigate(Routes.takeoff(profileId)) },
                 onOpenSleepvlucht = { navController.navigate(Routes.sleepvlucht(profileId)) },
-                onOpenLanding = { navController.navigate(Routes.landing(profileId)) }
+                onOpenLanding = { navController.navigate(Routes.landing(profileId)) },
+                onOpenRealLife = { navController.navigate(Routes.realLifeLogs(profileId)) }
             )
         }
         composable(Routes.PROFILE_EDIT) { backStackEntry ->
@@ -343,6 +364,40 @@ private fun Hk36NavHost(
                 performanceCorrections = appData.performanceCorrections,
                 metarConfig = appData.metarConfig,
                 profileId = profileId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.REAL_LIFE_LOGS) { backStackEntry ->
+            val profileId = backStackEntry.arguments?.getString("profileId")?.toLongOrNull() ?: 0L
+            RealLifeLogListScreen(
+                repository = repository,
+                profileId = profileId,
+                onBack = { navController.popBackStack() },
+                onAddRecording = { navController.navigate(Routes.realLifeRecord(profileId)) },
+                onOpenLog = { logId -> navController.navigate(Routes.realLifeLogDetail(profileId, logId)) }
+            )
+        }
+        composable(Routes.REAL_LIFE_RECORD) { backStackEntry ->
+            val profileId = backStackEntry.arguments?.getString("profileId")?.toLongOrNull() ?: 0L
+            RealLifeRecordScreen(
+                repository = repository,
+                profileId = profileId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.REAL_LIFE_LOG_DETAIL) { backStackEntry ->
+            val profileId = backStackEntry.arguments?.getString("profileId")?.toLongOrNull() ?: 0L
+            val logId = backStackEntry.arguments?.getString("logId")?.toLongOrNull() ?: 0L
+            RealLifeLogDetailScreen(
+                repository = repository,
+                profileId = profileId,
+                logId = logId,
+                performanceNormal = appData.performanceNormal,
+                performanceCorrections = appData.performanceCorrections,
+                metarRepository = metarRepository,
+                historicalMetarRepository = historicalMetarRepository,
+                metarConfig = appData.metarConfig,
+                reallifeDetectionConfig = appData.reallifeDetectionConfig,
                 onBack = { navController.popBackStack() }
             )
         }

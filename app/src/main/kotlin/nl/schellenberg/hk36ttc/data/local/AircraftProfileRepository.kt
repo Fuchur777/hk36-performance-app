@@ -16,6 +16,11 @@ class AircraftProfileRepository(
     private val runwayStripDao: RunwayStripDao,
     private val flightContextDao: FlightContextDao,
     private val favoriteAirfieldDao: FavoriteAirfieldDao,
+    private val realLifeLogDao: RealLifeLogDao,
+    private val locationSampleDao: LocationSampleDao,
+    private val imuSampleDao: ImuSampleDao,
+    private val barometerSampleDao: BarometerSampleDao,
+    private val realLifeMarkerDao: RealLifeMarkerDao,
     /** Runs [block] in one database transaction. A lambda rather than the `AppDatabase` itself
      * so this class stays testable on the JVM — the same shape [nl.schellenberg.hk36ttc.data.export.UserDataRepository]
      * and [nl.schellenberg.hk36ttc.data.catalog.AirportCatalogRepository] already take. */
@@ -54,6 +59,13 @@ class AircraftProfileRepository(
         landingInputDao.deleteByProfileId(profile.id)
         sleepvluchtInputDao.deleteByProfileId(profile.id)
         flightContextDao.deleteByProfileId(profile.id)
+        realLifeLogDao.getIdsByProfileId(profile.id).forEach { logId ->
+            locationSampleDao.deleteByLogId(logId)
+            imuSampleDao.deleteByLogId(logId)
+            barometerSampleDao.deleteByLogId(logId)
+            realLifeMarkerDao.deleteByLogId(logId)
+        }
+        realLifeLogDao.deleteByProfileId(profile.id)
     }
 
     /** Called after every W&B recalculation so other modules can read "what this aircraft
@@ -133,4 +145,45 @@ class AircraftProfileRepository(
 
     suspend fun getFlightContext(profileId: Long): FlightContextEntity? = flightContextDao.get(profileId)
     suspend fun saveFlightContext(entity: FlightContextEntity) = flightContextDao.upsert(entity)
+
+    // --- Real Life Performance (Fase 4a): raw GPS/IMU/barometer recordings ---
+
+    fun observeRealLifeLogs(profileId: Long): Flow<List<RealLifeLogEntity>> = realLifeLogDao.observeByProfile(profileId)
+
+    suspend fun getRealLifeLog(logId: Long): RealLifeLogEntity? = realLifeLogDao.getById(logId)
+
+    suspend fun startRealLifeLog(log: RealLifeLogEntity): Long = realLifeLogDao.insert(log)
+
+    suspend fun stopRealLifeLog(logId: Long, stoppedAt: Long, reason: String) =
+        realLifeLogDao.markStopped(logId, stoppedAt, reason)
+
+    /** Saves the Fase 4c conditions snapshot (surface/slope/weather) onto an existing log --
+     * always called well after the recording itself, via the detail screen's edit flow. */
+    suspend fun updateRealLifeLog(log: RealLifeLogEntity) = realLifeLogDao.update(log)
+
+    suspend fun appendLocationSamples(samples: List<LocationSampleEntity>) = locationSampleDao.insertAll(samples)
+    suspend fun appendImuSamples(samples: List<ImuSampleEntity>) = imuSampleDao.insertAll(samples)
+    suspend fun appendBarometerSamples(samples: List<BarometerSampleEntity>) = barometerSampleDao.insertAll(samples)
+
+    suspend fun getLocationSamples(logId: Long): List<LocationSampleEntity> = locationSampleDao.getByLog(logId)
+    suspend fun getImuSamples(logId: Long): List<ImuSampleEntity> = imuSampleDao.getByLog(logId)
+    suspend fun getBarometerSamples(logId: Long): List<BarometerSampleEntity> = barometerSampleDao.getByLog(logId)
+
+    suspend fun countLocationSamples(logId: Long): Int = locationSampleDao.countByLog(logId)
+    suspend fun countImuSamples(logId: Long): Int = imuSampleDao.countByLog(logId)
+    suspend fun countBarometerSamples(logId: Long): Int = barometerSampleDao.countByLog(logId)
+
+    /** Ground-truth events a co-pilot/observer taps during recording — see [RealLifeMarkerEntity]. */
+    suspend fun addRealLifeMarker(marker: RealLifeMarkerEntity): Long = realLifeMarkerDao.insert(marker)
+    suspend fun getRealLifeMarkers(logId: Long): List<RealLifeMarkerEntity> = realLifeMarkerDao.getByLog(logId)
+
+    /** One transaction, same reasoning as [deleteProfileCascade]/[deleteAirfieldCascade]: a
+     * recording's sample and marker tables must never survive without their header row. */
+    suspend fun deleteRealLifeLogCascade(log: RealLifeLogEntity) = transaction {
+        locationSampleDao.deleteByLogId(log.id)
+        imuSampleDao.deleteByLogId(log.id)
+        barometerSampleDao.deleteByLogId(log.id)
+        realLifeMarkerDao.deleteByLogId(log.id)
+        realLifeLogDao.delete(log)
+    }
 }

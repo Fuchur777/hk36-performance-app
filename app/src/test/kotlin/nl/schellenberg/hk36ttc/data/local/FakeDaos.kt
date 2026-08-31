@@ -172,6 +172,89 @@ class FakeFavoriteAirfieldDao : FavoriteAirfieldDao {
     }
 }
 
+/** Fase 4a — see [RealLifeLogEntity]. */
+class FakeRealLifeLogDao : RealLifeLogDao {
+    private val logs = MutableStateFlow<List<RealLifeLogEntity>>(emptyList())
+    private var nextId = 1L
+
+    override fun observeByProfile(profileId: Long): Flow<List<RealLifeLogEntity>> =
+        MutableStateFlow(logs.value.filter { it.profileId == profileId }.sortedByDescending { it.startedAtEpochMs })
+
+    override suspend fun getById(logId: Long): RealLifeLogEntity? = logs.value.find { it.id == logId }
+
+    override suspend fun insert(log: RealLifeLogEntity): Long {
+        val id = nextId++
+        logs.value = logs.value + log.copy(id = id)
+        return id
+    }
+
+    override suspend fun markStopped(logId: Long, stoppedAt: Long, reason: String) {
+        logs.value = logs.value.map {
+            if (it.id == logId) it.copy(stoppedAtEpochMs = stoppedAt, stopReason = reason) else it
+        }
+    }
+
+    override suspend fun update(log: RealLifeLogEntity) {
+        logs.value = logs.value.map { if (it.id == log.id) log else it }
+    }
+
+    override suspend fun delete(log: RealLifeLogEntity) {
+        logs.value = logs.value.filterNot { it.id == log.id }
+    }
+
+    override suspend fun getIdsByProfileId(profileId: Long): List<Long> =
+        logs.value.filter { it.profileId == profileId }.map { it.id }
+
+    override suspend fun deleteByProfileId(profileId: Long) {
+        logs.value = logs.value.filterNot { it.profileId == profileId }
+    }
+
+    fun seed(log: RealLifeLogEntity) {
+        logs.value = logs.value + log
+        nextId = maxOf(nextId, log.id + 1)
+    }
+}
+
+class FakeLocationSampleDao : LocationSampleDao {
+    private val samples = mutableListOf<LocationSampleEntity>()
+    override suspend fun insertAll(samples: List<LocationSampleEntity>) { this.samples += samples }
+    override suspend fun getByLog(logId: Long): List<LocationSampleEntity> = samples.filter { it.logId == logId }
+    override suspend fun countByLog(logId: Long): Int = samples.count { it.logId == logId }
+    override suspend fun deleteByLogId(logId: Long) { samples.removeAll { it.logId == logId } }
+}
+
+class FakeImuSampleDao : ImuSampleDao {
+    private val samples = mutableListOf<ImuSampleEntity>()
+    override suspend fun insertAll(samples: List<ImuSampleEntity>) { this.samples += samples }
+    override suspend fun getByLog(logId: Long): List<ImuSampleEntity> = samples.filter { it.logId == logId }
+    override suspend fun countByLog(logId: Long): Int = samples.count { it.logId == logId }
+    override suspend fun deleteByLogId(logId: Long) { samples.removeAll { it.logId == logId } }
+}
+
+class FakeBarometerSampleDao : BarometerSampleDao {
+    private val samples = mutableListOf<BarometerSampleEntity>()
+    override suspend fun insertAll(samples: List<BarometerSampleEntity>) { this.samples += samples }
+    override suspend fun getByLog(logId: Long): List<BarometerSampleEntity> = samples.filter { it.logId == logId }
+    override suspend fun countByLog(logId: Long): Int = samples.count { it.logId == logId }
+    override suspend fun deleteByLogId(logId: Long) { samples.removeAll { it.logId == logId } }
+}
+
+class FakeRealLifeMarkerDao : RealLifeMarkerDao {
+    private val markers = mutableListOf<RealLifeMarkerEntity>()
+    private var nextId = 1L
+
+    override suspend fun insert(marker: RealLifeMarkerEntity): Long {
+        val id = nextId++
+        markers += marker.copy(id = id)
+        return id
+    }
+
+    override suspend fun getByLog(logId: Long): List<RealLifeMarkerEntity> =
+        markers.filter { it.logId == logId }.sortedBy { it.epochMs }
+
+    override suspend fun deleteByLogId(logId: Long) { markers.removeAll { it.logId == logId } }
+}
+
 /** Builds a real [AircraftProfileRepository] backed entirely by the fakes above. */
 fun fakeAircraftProfileRepository(
     profileDao: FakeAircraftProfileDao = FakeAircraftProfileDao(),
@@ -185,11 +268,17 @@ fun fakeAircraftProfileRepository(
     runwayStripDao: FakeRunwayStripDao = FakeRunwayStripDao(),
     flightContextDao: FakeFlightContextDao = FakeFlightContextDao(),
     favoriteAirfieldDao: FakeFavoriteAirfieldDao = FakeFavoriteAirfieldDao(),
+    realLifeLogDao: FakeRealLifeLogDao = FakeRealLifeLogDao(),
+    locationSampleDao: FakeLocationSampleDao = FakeLocationSampleDao(),
+    imuSampleDao: FakeImuSampleDao = FakeImuSampleDao(),
+    barometerSampleDao: FakeBarometerSampleDao = FakeBarometerSampleDao(),
+    realLifeMarkerDao: FakeRealLifeMarkerDao = FakeRealLifeMarkerDao(),
     /** Straight pass-through: the fakes are plain in-memory lists, so there is nothing to roll
      * back. Production supplies a real Room transaction (see Hk36Application). */
     transaction: suspend (suspend () -> Unit) -> Unit = { block -> block() }
 ): AircraftProfileRepository = AircraftProfileRepository(
     profileDao, lastWbResultDao, favoriteSailplaneTypeDao,
     wbInputDao, takeoffInputDao, landingInputDao, sleepvluchtInputDao,
-    airfieldDao, runwayStripDao, flightContextDao, favoriteAirfieldDao, transaction
+    airfieldDao, runwayStripDao, flightContextDao, favoriteAirfieldDao,
+    realLifeLogDao, locationSampleDao, imuSampleDao, barometerSampleDao, realLifeMarkerDao, transaction
 )

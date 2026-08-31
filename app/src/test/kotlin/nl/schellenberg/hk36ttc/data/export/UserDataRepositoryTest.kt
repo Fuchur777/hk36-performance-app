@@ -14,6 +14,8 @@ import nl.schellenberg.hk36ttc.data.local.AirfieldEntity
 import nl.schellenberg.hk36ttc.data.local.FavoriteAirfieldEntity
 import nl.schellenberg.hk36ttc.data.local.FavoriteSailplaneTypeEntity
 import nl.schellenberg.hk36ttc.data.local.FlightContextEntity
+import nl.schellenberg.hk36ttc.data.local.LocationSampleEntity
+import nl.schellenberg.hk36ttc.data.local.RealLifeLogEntity
 import nl.schellenberg.hk36ttc.data.local.RunwayStripEntity
 import nl.schellenberg.hk36ttc.data.local.TakeoffInputEntity
 import nl.schellenberg.hk36ttc.data.local.WbInputEntity
@@ -289,6 +291,44 @@ class UserDataRepositoryTest {
         // Nothing was written: parse() must never reach the database.
         assertEquals(before.airfields.size, dao.airfields.size)
         assertEquals(before.runwayStrips.size, dao.runwayStrips.size)
+    }
+
+    /** Regression coverage for the backup/restore gap the Fase 4 code review flagged: `replaceAll`
+     * used to leave `real_life_logs` (and its sample tables) completely untouched, so a restore
+     * could leave a recording's `profileId` pointing at whatever aircraft profile happened to
+     * land on that id afterward. Now these tables are cleared and reinserted under their original
+     * ids in the same transaction as everything else, so the cross-reference survives a restore
+     * exactly like `flight_contexts.profileId` already does. */
+    @Test
+    fun `real life logs and their samples survive a restore with profileId intact`() = runTest {
+        val source = FakeUserDataDao()
+        seedRealisticData(source)
+        source.realLifeLogs += RealLifeLogEntity(
+            id = 21, profileId = 7, configuration = "NORMAL", notes = "",
+            startedAtEpochMs = 1_000L, stoppedAtEpochMs = 5_000L, stopReason = "MANUAL",
+            barometerAvailable = true, gpsRequestedIntervalMs = 1_000L,
+            surfaceType = "ASFALT", slopePct = 0.0, oatC = 15, pressureAltM = 0,
+            windDirectionDeg = 260, windSpeedKts = 5, conditionsSource = "MANUAL"
+        )
+        source.locationSamples += LocationSampleEntity(
+            id = 1, logId = 21, epochMs = 1_000L, elapsedRealtimeNanos = 1L,
+            latitude = 52.0, longitude = 5.0, altitudeM = null, speedMps = null,
+            speedAccuracyMps = null, bearingDeg = null, bearingAccuracyDeg = null,
+            horizontalAccuracyM = null, verticalAccuracyM = null
+        )
+        val (exportRepo, _) = repository(source)
+        val json = exportRepo.serialize(exportRepo.buildExport())
+
+        val target = FakeUserDataDao()
+        val (importRepo, _) = repository(target)
+        importRepo.replaceAll((importRepo.parse(json) as ImportParseResult.Ok).data)
+
+        val restoredProfileId = target.profiles.single().id
+        assertEquals(1, target.realLifeLogs.size)
+        assertEquals(restoredProfileId, target.realLifeLogs.single().profileId)
+        assertEquals("MANUAL", target.realLifeLogs.single().conditionsSource)
+        assertEquals(1, target.locationSamples.size)
+        assertEquals(target.realLifeLogs.single().id, target.locationSamples.single().logId)
     }
 
     @Test

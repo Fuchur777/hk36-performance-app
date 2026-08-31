@@ -2,11 +2,16 @@ package nl.schellenberg.hk36ttc.data.export
 
 import nl.schellenberg.hk36ttc.data.local.AircraftProfileEntity
 import nl.schellenberg.hk36ttc.data.local.AirfieldEntity
+import nl.schellenberg.hk36ttc.data.local.BarometerSampleEntity
 import nl.schellenberg.hk36ttc.data.local.FavoriteAirfieldEntity
 import nl.schellenberg.hk36ttc.data.local.FavoriteSailplaneTypeEntity
 import nl.schellenberg.hk36ttc.data.local.FlightContextEntity
+import nl.schellenberg.hk36ttc.data.local.ImuSampleEntity
 import nl.schellenberg.hk36ttc.data.local.LandingInputEntity
 import nl.schellenberg.hk36ttc.data.local.LastWbResultEntity
+import nl.schellenberg.hk36ttc.data.local.LocationSampleEntity
+import nl.schellenberg.hk36ttc.data.local.RealLifeLogEntity
+import nl.schellenberg.hk36ttc.data.local.RealLifeMarkerEntity
 import nl.schellenberg.hk36ttc.data.local.RunwayStripEntity
 import nl.schellenberg.hk36ttc.data.local.SleepvluchtInputEntity
 import nl.schellenberg.hk36ttc.data.local.TakeoffInputEntity
@@ -31,6 +36,11 @@ class FakeUserDataDao : UserDataDao {
     val landingInputs = mutableListOf<LandingInputEntity>()
     val sleepvluchtInputs = mutableListOf<SleepvluchtInputEntity>()
     val lastWbResults = mutableListOf<LastWbResultEntity>()
+    val realLifeLogs = mutableListOf<RealLifeLogEntity>()
+    val locationSamples = mutableListOf<LocationSampleEntity>()
+    val imuSamples = mutableListOf<ImuSampleEntity>()
+    val barometerSamples = mutableListOf<BarometerSampleEntity>()
+    val realLifeMarkers = mutableListOf<RealLifeMarkerEntity>()
 
     override suspend fun allProfiles() = profiles.toList()
     override suspend fun allFavoriteSailplaneTypes() = favoriteSailplaneTypes.toList()
@@ -43,6 +53,11 @@ class FakeUserDataDao : UserDataDao {
     override suspend fun allLandingInputs() = landingInputs.toList()
     override suspend fun allSleepvluchtInputs() = sleepvluchtInputs.toList()
     override suspend fun allLastWbResults() = lastWbResults.toList()
+    override suspend fun allRealLifeLogs() = realLifeLogs.toList()
+    override suspend fun allLocationSamples() = locationSamples.toList()
+    override suspend fun allImuSamples() = imuSamples.toList()
+    override suspend fun allBarometerSamples() = barometerSamples.toList()
+    override suspend fun allRealLifeMarkers() = realLifeMarkers.toList()
 
     override suspend fun clearProfiles() = profiles.clear()
     override suspend fun clearFavoriteSailplaneTypes() = favoriteSailplaneTypes.clear()
@@ -55,6 +70,11 @@ class FakeUserDataDao : UserDataDao {
     override suspend fun clearLandingInputs() = landingInputs.clear()
     override suspend fun clearSleepvluchtInputs() = sleepvluchtInputs.clear()
     override suspend fun clearLastWbResults() = lastWbResults.clear()
+    override suspend fun clearRealLifeLogs() = realLifeLogs.clear()
+    override suspend fun clearLocationSamples() = locationSamples.clear()
+    override suspend fun clearImuSamples() = imuSamples.clear()
+    override suspend fun clearBarometerSamples() = barometerSamples.clear()
+    override suspend fun clearRealLifeMarkers() = realLifeMarkers.clear()
 
     override suspend fun insertProfiles(rows: List<AircraftProfileEntity>) { profiles += rows }
     override suspend fun insertFavoriteSailplaneTypes(rows: List<FavoriteSailplaneTypeEntity>) { favoriteSailplaneTypes += rows }
@@ -67,4 +87,9 @@ class FakeUserDataDao : UserDataDao {
     override suspend fun insertLandingInputs(rows: List<LandingInputEntity>) { landingInputs += rows }
     override suspend fun insertSleepvluchtInputs(rows: List<SleepvluchtInputEntity>) { sleepvluchtInputs += rows }
     override suspend fun insertLastWbResults(rows: List<LastWbResultEntity>) { lastWbResults += rows }
+    override suspend fun insertRealLifeLogs(rows: List<RealLifeLogEntity>) { realLifeLogs += rows }
+    override suspend fun insertLocationSamples(rows: List<LocationSampleEntity>) { locationSamples += rows }
+    override suspend fun insertImuSamples(rows: List<ImuSampleEntity>) { imuSamples += rows }
+    override suspend fun insertBarometerSamples(rows: List<BarometerSampleEntity>) { barometerSamples += rows }
+    override suspend fun insertRealLifeMarkers(rows: List<RealLifeMarkerEntity>) { realLifeMarkers += rows }
 }

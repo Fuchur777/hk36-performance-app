@@ -1,0 +1,29 @@
+{
+  "source": {
+    "note": "Fase 4b TakeoffDetector tuning, not AFM/AIC data. Every default here is derived from 9 real recorded take-off rolls (docs/data/reallife-samples/, see that directory's README.md for the full write-up) - margins are chosen with real headroom below/above the observed values, not tuned to the midpoint of a handful of examples. Always user-adjustable, never hardcoded in Kotlin (rekenlogica.md section 9)."
+  },
+  "turn_bearing_swing_deg": 30.0,
+  "turn_bearing_swing_deg_note": "Cumulative bearing swing (degrees) that qualifies a ground turn as the taxi-to-runway turn preceding the roll. Real turns swung 64-96 deg; taxi-roll bearing stayed flat within ~2-4 deg.",
+  "turn_window_seconds": 10.0,
+  "turn_window_seconds_note": "Maximum time window a candidate turn is allowed to accumulate its bearing swing over.",
+  "turn_max_speed_mps": 5.0,
+  "turn_max_speed_mps_note": "Speed ceiling (m/s) below which a bearing change can count toward a ground turn - excludes airborne/fast-taxi bearing changes.",
+  "min_sustained_accel_mps2": 0.5,
+  "min_sustained_accel_mps2_note": "Plausibility FLOOR only, never a ceiling, for the roll's sustained acceleration. Observed real rolls: 1.4-3.3 m/s^2, but that is 4 examples and aerotow (slower acceleration) has no real recording yet.",
+  "roll_sustain_window_samples": 3,
+  "roll_sustain_window_samples_note": "Consecutive qualifying samples an acceleration run must sustain before it counts as the roll itself, not a brief pre-roll throttle blip.",
+  "min_roll_end_speed_mps": 10.0,
+  "min_roll_end_speed_mps_note": "Minimum speed (m/s) the acceleration run must reach - excludes 'lineup and wait' throttle blips that never reach real rolling speed.",
+  "baro_bucket_seconds": 1.0,
+  "baro_bucket_seconds_note": "Bucket width (seconds) barometer/altitude samples are averaged into before slope/height checks - raw barometer samples run ~25Hz and are too noisy to use directly.",
+  "baro_baseline_window_seconds": 5.0,
+  "baro_baseline_window_seconds_note": "How many seconds before roll-start are averaged to establish the ground-reference pressure (P0).",
+  "lift_off_dp_dt_threshold_hpa_per_s": 0.15,
+  "lift_off_dp_dt_threshold_hpa_per_s_note": "Margin below the observed ~0.4-0.5 hPa/s onset slope at real lift-off - the pressure rate-of-change that marks the start of a sustained climb.",
+  "lift_off_sustain_buckets": 2,
+  "lift_off_sustain_buckets_note": "Consecutive buckets the climb rate must stay above threshold before lift-off is confirmed, not a single noisy bucket.",
+  "fifteen_m_height_m": 15.0,
+  "fifteen_m_height_m_note": "Height AGL (meters) that marks the AFM's 'over 15m obstakel' figure - the standard 50ft obstacle height.",
+  "height_crossing_hysteresis_buckets": 2,
+  "height_crossing_hysteresis_buckets_note": "Consecutive buckets height must stay above the 15m threshold before the crossing is confirmed - avoids single-bucket noise chattering across the boundary."
+}

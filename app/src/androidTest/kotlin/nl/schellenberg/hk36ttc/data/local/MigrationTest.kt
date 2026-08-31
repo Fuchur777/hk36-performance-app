@@ -161,7 +161,86 @@ class MigrationTest {
     }
 
     @Test
-    fun migrateAllTheWayFrom1To8_succeedsAndKeepsSeededProfile() {
+    fun migrate8To9_addsRealLifeTablesWithoutTouchingExistingData() {
+        helper.createDatabase(testDbName, 8).apply {
+            execSQL(
+                "INSERT INTO aircraft_profiles (id, registration, emptyMassKg, emptyMassCgPositionMm, " +
+                    "mtowKg, cgEnvelopeForwardLimitMm, cgEnvelopeAftLimitMm, fuelTankType) " +
+                    "VALUES (1, 'PH-XYZ', 560.0, 2350.0, 770.0, 2300.0, 2450.0, 'STANDARD_55L')"
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(testDbName, 9, true, MIGRATION_8_9)
+
+        val profileCursor = db.query("SELECT registration FROM aircraft_profiles WHERE id = 1")
+        assertTrue(profileCursor.moveToFirst())
+        assertEquals("PH-XYZ", profileCursor.getString(0))
+        profileCursor.close()
+
+        for (table in listOf("real_life_logs", "location_samples", "imu_samples", "barometer_samples")) {
+            val countCursor = db.query("SELECT COUNT(*) FROM $table")
+            assertTrue(countCursor.moveToFirst())
+            assertEquals(0, countCursor.getInt(0))
+            countCursor.close()
+        }
+    }
+
+    @Test
+    fun migrate9To10_addsRealLifeMarkersWithoutTouchingExistingData() {
+        helper.createDatabase(testDbName, 9).apply {
+            execSQL(
+                "INSERT INTO aircraft_profiles (id, registration, emptyMassKg, emptyMassCgPositionMm, " +
+                    "mtowKg, cgEnvelopeForwardLimitMm, cgEnvelopeAftLimitMm, fuelTankType) " +
+                    "VALUES (1, 'PH-XYZ', 560.0, 2350.0, 770.0, 2300.0, 2450.0, 'STANDARD_55L')"
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(testDbName, 10, true, MIGRATION_9_10)
+
+        val profileCursor = db.query("SELECT registration FROM aircraft_profiles WHERE id = 1")
+        assertTrue(profileCursor.moveToFirst())
+        assertEquals("PH-XYZ", profileCursor.getString(0))
+        profileCursor.close()
+
+        val markerCursor = db.query("SELECT COUNT(*) FROM real_life_markers")
+        assertTrue(markerCursor.moveToFirst())
+        assertEquals(0, markerCursor.getInt(0))
+        markerCursor.close()
+    }
+
+    @Test
+    fun migrate10To11_addsConditionFieldsWithoutTouchingExistingData() {
+        helper.createDatabase(testDbName, 10).apply {
+            execSQL(
+                "INSERT INTO aircraft_profiles (id, registration, emptyMassKg, emptyMassCgPositionMm, " +
+                    "mtowKg, cgEnvelopeForwardLimitMm, cgEnvelopeAftLimitMm, fuelTankType) " +
+                    "VALUES (1, 'PH-XYZ', 560.0, 2350.0, 770.0, 2300.0, 2450.0, 'STANDARD_55L')"
+            )
+            execSQL(
+                "INSERT INTO real_life_logs (id, profileId, configuration, notes, startedAtEpochMs, " +
+                    "stoppedAtEpochMs, stopReason, barometerAvailable, gpsRequestedIntervalMs) " +
+                    "VALUES (1, 1, 'NORMAL', 'gras', 1000, 5000, 'MANUAL', 1, 1000)"
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(testDbName, 11, true, MIGRATION_10_11)
+
+        val logCursor = db.query(
+            "SELECT notes, surfaceType, oatC, conditionsSource FROM real_life_logs WHERE id = 1"
+        )
+        assertTrue(logCursor.moveToFirst())
+        assertEquals("gras", logCursor.getString(0))
+        assertTrue(logCursor.isNull(1))
+        assertTrue(logCursor.isNull(2))
+        assertTrue(logCursor.isNull(3))
+        logCursor.close()
+    }
+
+    @Test
+    fun migrateAllTheWayFrom1To11_succeedsAndKeepsSeededProfile() {
         helper.createDatabase(testDbName, 1).apply {
             execSQL(
                 "INSERT INTO aircraft_profiles (id, registration, serialNumber, emptyMassKg, " +
@@ -171,7 +250,7 @@ class MigrationTest {
             close()
         }
 
-        val db = helper.runMigrationsAndValidate(testDbName, 8, true, *ALL_MIGRATIONS)
+        val db = helper.runMigrationsAndValidate(testDbName, 11, true, *ALL_MIGRATIONS)
 
         val cursor = db.query("SELECT registration FROM aircraft_profiles WHERE id = 1")
         assertTrue(cursor.moveToFirst())

@@ -9,7 +9,9 @@ import nl.schellenberg.hk36ttc.data.local.AppDatabase
 import nl.schellenberg.hk36ttc.data.export.UserDataRepository
 import nl.schellenberg.hk36ttc.data.local.CalculationDataStore
 import nl.schellenberg.hk36ttc.data.local.LanguagePreference
+import nl.schellenberg.hk36ttc.data.local.RealLifePreferences
 import nl.schellenberg.hk36ttc.data.local.UnitPreferences
+import nl.schellenberg.hk36ttc.data.metar.HistoricalMetarRepository
 import nl.schellenberg.hk36ttc.data.metar.MetarRepository
 
 class Hk36Application : Application() {
@@ -27,6 +29,11 @@ class Hk36Application : Application() {
     lateinit var metarRepository: MetarRepository
         private set
 
+    /** Historical METAR lookup (Fase 4c) — backfills a past Real Life Performance recording's
+     * conditions. See [HistoricalMetarRepository]. */
+    lateinit var historicalMetarRepository: HistoricalMetarRepository
+        private set
+
     /** Backup/restore of everything the pilot entered themselves — see [UserDataRepository]. */
     lateinit var userDataRepository: UserDataRepository
         private set
@@ -36,6 +43,10 @@ class Hk36Application : Application() {
 
     /** The pilot's chosen display units — see [UnitPreferences] and [nl.schellenberg.hk36ttc.core.units.AppUnits]. */
     lateinit var unitPreferences: UnitPreferences
+        private set
+
+    /** Whether the Fase 4a "Real Life Performance" hub card is shown — see [RealLifePreferences]. */
+    lateinit var realLifePreferences: RealLifePreferences
         private set
 
     override fun onCreate() {
@@ -53,6 +64,11 @@ class Hk36Application : Application() {
             database.runwayStripDao(),
             database.flightContextDao(),
             database.favoriteAirfieldDao(),
+            database.realLifeLogDao(),
+            database.locationSampleDao(),
+            database.imuSampleDao(),
+            database.barometerSampleDao(),
+            database.realLifeMarkerDao(),
             transaction = { block -> database.withTransaction { block() } }
         )
         val catalogDatabase = AirportCatalogDatabase.getInstance(this)
@@ -66,6 +82,7 @@ class Hk36Application : Application() {
             newTempFile = { name -> java.io.File(cacheDir, name) }
         )
         metarRepository = MetarRepository(repository)
+        historicalMetarRepository = HistoricalMetarRepository()
         val languagePreference = LanguagePreference(this)
         unitPreferences = UnitPreferences(this)
         userDataRepository = UserDataRepository(
@@ -78,5 +95,6 @@ class Hk36Application : Application() {
             appVersionName = BuildConfig.VERSION_NAME
         )
         calculationDataStore = CalculationDataStore(this)
+        realLifePreferences = RealLifePreferences(this)
     }
 }

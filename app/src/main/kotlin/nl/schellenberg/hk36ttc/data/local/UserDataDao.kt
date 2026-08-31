@@ -58,6 +58,21 @@ interface UserDataDao {
     @Query("SELECT * FROM last_wb_results")
     suspend fun allLastWbResults(): List<LastWbResultEntity>
 
+    @Query("SELECT * FROM real_life_logs")
+    suspend fun allRealLifeLogs(): List<RealLifeLogEntity>
+
+    @Query("SELECT * FROM location_samples")
+    suspend fun allLocationSamples(): List<LocationSampleEntity>
+
+    @Query("SELECT * FROM imu_samples")
+    suspend fun allImuSamples(): List<ImuSampleEntity>
+
+    @Query("SELECT * FROM barometer_samples")
+    suspend fun allBarometerSamples(): List<BarometerSampleEntity>
+
+    @Query("SELECT * FROM real_life_markers")
+    suspend fun allRealLifeMarkers(): List<RealLifeMarkerEntity>
+
     // --- Replace everything -----------------------------------------------------------
 
     @Query("DELETE FROM aircraft_profiles")
@@ -93,6 +108,25 @@ interface UserDataDao {
     @Query("DELETE FROM last_wb_results")
     suspend fun clearLastWbResults()
 
+    /** Deleted before the header table above it -- Room has no FK constraints on this schema, so
+     * order has no correctness effect on its own, but clearing the child rows first (and
+     * inserting them last, below) mirrors the shape a real FK-cascading schema would require and
+     * keeps this one straightforward to reason about. */
+    @Query("DELETE FROM real_life_logs")
+    suspend fun clearRealLifeLogs()
+
+    @Query("DELETE FROM location_samples")
+    suspend fun clearLocationSamples()
+
+    @Query("DELETE FROM imu_samples")
+    suspend fun clearImuSamples()
+
+    @Query("DELETE FROM barometer_samples")
+    suspend fun clearBarometerSamples()
+
+    @Query("DELETE FROM real_life_markers")
+    suspend fun clearRealLifeMarkers()
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProfiles(rows: List<AircraftProfileEntity>)
 
@@ -125,4 +159,19 @@ interface UserDataDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLastWbResults(rows: List<LastWbResultEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRealLifeLogs(rows: List<RealLifeLogEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLocationSamples(rows: List<LocationSampleEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertImuSamples(rows: List<ImuSampleEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBarometerSamples(rows: List<BarometerSampleEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRealLifeMarkers(rows: List<RealLifeMarkerEntity>)
 }

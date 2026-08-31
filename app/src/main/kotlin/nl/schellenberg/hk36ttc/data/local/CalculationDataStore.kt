@@ -13,6 +13,8 @@ import nl.schellenberg.hk36ttc.core.perf.parsePerformanceCorrectionsData
 import nl.schellenberg.hk36ttc.core.perf.parsePerformanceNormalData
 import nl.schellenberg.hk36ttc.core.perf.parsePerformanceTowData
 import nl.schellenberg.hk36ttc.core.perf.parseSailplaneTypesData
+import nl.schellenberg.hk36ttc.core.reallife.ReallifeDetectionConfigData
+import nl.schellenberg.hk36ttc.core.reallife.parseReallifeDetectionConfigData
 import nl.schellenberg.hk36ttc.core.wb.WbConstantsData
 import nl.schellenberg.hk36ttc.core.wb.parseWbConstants
 
@@ -24,7 +26,8 @@ data class AppCalculationData(
     val performanceTow: PerformanceTowData,
     val performanceCorrections: PerformanceCorrectionsData,
     val sailplaneTypes: SailplaneTypesData,
-    val metarConfig: MetarConfigData
+    val metarConfig: MetarConfigData,
+    val reallifeDetectionConfig: ReallifeDetectionConfigData
 )
 
 /**
@@ -59,7 +62,8 @@ class CalculationDataStore(private val context: Context) {
                 performanceTow = loadJson(FILENAME_PERF_TOW, ASSET_PERF_TOW, ::parsePerformanceTowData),
                 performanceCorrections = loadJson(FILENAME_PERF_CORRECTIONS, ASSET_PERF_CORRECTIONS, ::parsePerformanceCorrectionsData),
                 sailplaneTypes = loadJson(FILENAME_SAILPLANE_TYPES, ASSET_SAILPLANE_TYPES, ::parseSailplaneTypesData),
-                metarConfig = loadJson(FILENAME_METAR_CONFIG, ASSET_METAR_CONFIG, ::parseMetarConfigData)
+                metarConfig = loadJson(FILENAME_METAR_CONFIG, ASSET_METAR_CONFIG, ::parseMetarConfigData),
+                reallifeDetectionConfig = loadJson(FILENAME_REALLIFE_DETECTION, ASSET_REALLIFE_DETECTION, ::parseReallifeDetectionConfigData)
             )
         )
     } catch (e: Exception) {
@@ -74,6 +78,7 @@ class CalculationDataStore(private val context: Context) {
         copyAsset(ASSET_PERF_CORRECTIONS, File(dataDir(), FILENAME_PERF_CORRECTIONS))
         copyAsset(ASSET_SAILPLANE_TYPES, File(dataDir(), FILENAME_SAILPLANE_TYPES))
         copyAsset(ASSET_METAR_CONFIG, File(dataDir(), FILENAME_METAR_CONFIG))
+        copyAsset(ASSET_REALLIFE_DETECTION, File(dataDir(), FILENAME_REALLIFE_DETECTION))
         loadAll()
     } catch (e: Exception) {
         CalculationDataResult.Failure(readableError(e))
@@ -118,5 +123,7 @@ class CalculationDataStore(private val context: Context) {
         const val FILENAME_SAILPLANE_TYPES = "sailplane_types.json"
         const val ASSET_METAR_CONFIG = "data/metar_config.json"
         const val FILENAME_METAR_CONFIG = "metar_config.json"
+        const val ASSET_REALLIFE_DETECTION = "data/reallife_detection.json"
+        const val FILENAME_REALLIFE_DETECTION = "reallife_detection.json"
     }
 }

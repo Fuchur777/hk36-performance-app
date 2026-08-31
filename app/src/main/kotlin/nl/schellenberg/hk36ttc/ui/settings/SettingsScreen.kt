@@ -20,6 +20,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +49,7 @@ import nl.schellenberg.hk36ttc.data.export.ImportParseResult
 import nl.schellenberg.hk36ttc.data.export.UserDataExport
 import nl.schellenberg.hk36ttc.data.export.UserDataRepository
 import nl.schellenberg.hk36ttc.data.local.LanguagePreference
+import nl.schellenberg.hk36ttc.data.local.RealLifePreferences
 import nl.schellenberg.hk36ttc.data.local.UnitPreferences
 import nl.schellenberg.hk36ttc.ui.common.FileSharing
 
@@ -63,6 +66,7 @@ private val LANGUAGE_OPTIONS = listOf(
 fun SettingsScreen(
     userDataRepository: UserDataRepository,
     unitPreferences: UnitPreferences,
+    realLifePreferences: RealLifePreferences,
     onBack: () -> Unit,
     onLanguageChanged: () -> Unit
 ) {
@@ -209,6 +213,23 @@ fun SettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
             UnitSettingsSection(unitPreferences)
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+            val realLifeEnabled by realLifePreferences.enabled.collectAsState()
+            Card(
+                onClick = { realLifePreferences.setEnabled(!realLifeEnabled) },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_real_life_heading)) },
+                    supportingContent = { Text(stringResource(R.string.settings_real_life_explanation)) },
+                    trailingContent = {
+                        Switch(checked = realLifeEnabled, onCheckedChange = { realLifePreferences.setEnabled(it) })
+                    },
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+                )
+            }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 

@@ -108,7 +108,9 @@ private val LIBRARIES = listOf(
     LibraryEntry("AndroidX Navigation Compose", "Apache License 2.0"),
     LibraryEntry("AndroidX Room", "Apache License 2.0"),
     LibraryEntry("Kotlinx Coroutines", "Apache License 2.0"),
-    LibraryEntry("Kotlinx Serialization", "Apache License 2.0")
+    LibraryEntry("Kotlinx Serialization", "Apache License 2.0"),
+    // Not open source, unlike every other entry above — Fase 4a's GPS logging.
+    LibraryEntry("Google Play Services Location", "Google APIs Terms of Service (proprietary)")
 )
 
 /**

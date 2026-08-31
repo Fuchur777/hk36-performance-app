@@ -36,8 +36,8 @@ android {
         applicationId = "nl.schellenberg.hk36ttc"
         minSdk = 26
         targetSdk = 37
-        versionCode = 23
-        versionName = "0.9.5"
+        versionCode = 24
+        versionName = "0.9.6"
 
         // Generated fresh at build configuration time - shown alongside versionName/versionCode
         // in the About screen so a specific build can still be pinned down within a day even
@@ -115,6 +115,9 @@ dependencies {
     implementation("androidx.core:core-ktx:1.19.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    // ProcessLifecycleOwner (whole-app foreground/background), used by RealLifeRecordScreen to
+    // tell true backgrounding apart from Navigation-Compose's per-screen back-stack lifecycle.
+    implementation("androidx.lifecycle:lifecycle-process:2.11.0")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.navigation:navigation-compose:2.9.8")
 
@@ -129,6 +132,11 @@ dependencies {
     implementation("androidx.room:room-ktx:2.8.4")
     ksp("androidx.room:room-compiler:2.8.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+
+    // Fase 4a (Real Life Performance) — this project's first dependency outside
+    // AndroidX/Compose/Room/kotlinx. Verify this version against Maven Central before relying
+    // on it; it was pinned without live internet access.
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 
     testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testImplementation(kotlin("test"))
