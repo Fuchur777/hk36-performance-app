@@ -34,6 +34,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import nl.schellenberg.hk36ttc.R
 import nl.schellenberg.hk36ttc.core.perf.SailplaneTypesData
 import nl.schellenberg.hk36ttc.data.local.AircraftProfileRepository
+import nl.schellenberg.hk36ttc.ui.common.LocalAppUnits
+import nl.schellenberg.hk36ttc.ui.common.displayMass
+import nl.schellenberg.hk36ttc.ui.common.massSuffix
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +50,7 @@ fun SailplaneTypesScreen(
     )
     val query by viewModel.searchQuery.collectAsState()
     val rows by viewModel.rows.collectAsState()
+    val units = LocalAppUnits.current
 
     Scaffold(
         topBar = {
@@ -77,6 +81,13 @@ fun SailplaneTypesScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                item {
+                    Text(
+                        stringResource(R.string.sailplane_types_favorite_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 items(rows, key = { it.type.name }) { row ->
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                         ListItem(
@@ -85,9 +96,10 @@ fun SailplaneTypesScreen(
                                 Text(
                                     stringResource(
                                         R.string.sailplane_types_row_detail_format,
-                                        row.type.emptyMassKg.toInt(),
-                                        row.type.mtowKg.toInt(),
-                                        row.type.ldRatio.toString()
+                                        displayMass(row.type.emptyMassKg, units.mass),
+                                        displayMass(row.type.mtowKg, units.mass),
+                                        row.type.ldRatio.toString(),
+                                        massSuffix(units.mass)
                                     ),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

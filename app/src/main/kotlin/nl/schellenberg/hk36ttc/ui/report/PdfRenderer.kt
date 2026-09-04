@@ -47,6 +47,20 @@ object PdfRenderer {
         val bodyBold = paint(BODY_SIZE, bold = true)
         val muted = paint(BODY_SIZE).apply { color = 0xFF555555.toInt() }
         val footerPaint = paint(FOOTER_SIZE).apply { color = 0xFF555555.toInt() }
+        // Deliberately not the app theme's exact StatusSuccess/StatusWarning/StatusError hex
+        // values -- those are tuned as light background *container* tints behind on-screen text,
+        // which read as washed-out or (StatusWarning) near-invisible as foreground text against
+        // a plain white PDF page. These are darker variants of the same three hues, chosen for
+        // print legibility while still reading as "the same red/orange/green" as the app.
+        val successPaint = paint(BODY_SIZE, bold = true).apply { color = 0xFF2E7D32.toInt() }
+        val warningPaint = paint(BODY_SIZE, bold = true).apply { color = 0xFFB26A00.toInt() }
+        val errorPaint = paint(BODY_SIZE, bold = true).apply { color = 0xFFC62828.toInt() }
+        fun tonePaint(tone: ReportDocument.RowTone?, emphasized: Boolean): Paint = when (tone) {
+            ReportDocument.RowTone.SUCCESS -> successPaint
+            ReportDocument.RowTone.WARNING -> warningPaint
+            ReportDocument.RowTone.ERROR -> errorPaint
+            null -> if (emphasized) bodyBold else body
+        }
 
         val bottomLimit = PAGE_HEIGHT - MARGIN
         val contentWidth = PAGE_WIDTH - 2 * MARGIN
@@ -105,7 +119,7 @@ object PdfRenderer {
             y += SECTION_SPACE_BELOW
 
             section.rows.forEach { row ->
-                val linePaint = if (row.emphasized) bodyBold else body
+                val linePaint = tonePaint(row.tone, row.emphasized)
                 val value = row.value
                 if (value == null) {
                     // A statement (warning, status) rather than a measurement: full width.

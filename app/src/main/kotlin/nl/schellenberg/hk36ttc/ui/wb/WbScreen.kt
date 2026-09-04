@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,7 +35,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.math.roundToInt
 import nl.schellenberg.hk36ttc.R
 import nl.schellenberg.hk36ttc.core.units.CgPositionUnit
+import nl.schellenberg.hk36ttc.core.units.FuelVolumeUnit
 import nl.schellenberg.hk36ttc.core.units.MassUnit
+import nl.schellenberg.hk36ttc.core.wb.FuelTankType
 import nl.schellenberg.hk36ttc.core.wb.Seat
 import nl.schellenberg.hk36ttc.core.wb.WBResult
 import nl.schellenberg.hk36ttc.core.wb.WBViolation
@@ -45,6 +48,7 @@ import nl.schellenberg.hk36ttc.ui.common.IntStepperField
 import nl.schellenberg.hk36ttc.ui.common.LocalAppUnits
 import nl.schellenberg.hk36ttc.ui.common.cgPositionSuffix
 import nl.schellenberg.hk36ttc.ui.common.displayCgPosition
+import nl.schellenberg.hk36ttc.ui.common.displayCgPositionText
 import nl.schellenberg.hk36ttc.ui.common.displayFuelDensity
 import nl.schellenberg.hk36ttc.ui.common.displayFuelVolume
 import nl.schellenberg.hk36ttc.ui.common.displayMass
@@ -52,7 +56,8 @@ import nl.schellenberg.hk36ttc.ui.common.fuelVolumeSuffix
 import nl.schellenberg.hk36ttc.ui.common.massSuffix
 import nl.schellenberg.hk36ttc.ui.common.nativeFuelVolumeLitersInt
 import nl.schellenberg.hk36ttc.ui.common.nativeMassKgInt
-import nl.schellenberg.hk36ttc.ui.report.SharePdfButton
+import nl.schellenberg.hk36ttc.ui.report.SaveCalculationButton
+import nl.schellenberg.hk36ttc.ui.report.WbAircraftInfo
 import nl.schellenberg.hk36ttc.ui.report.WbReportLabels
 import nl.schellenberg.hk36ttc.ui.report.buildWbReport
 import nl.schellenberg.hk36ttc.ui.theme.status
@@ -63,7 +68,8 @@ fun WbScreen(
     repository: AircraftProfileRepository,
     wbConstants: WbConstantsData,
     profileId: Long,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenHistory: () -> Unit
 ) {
     val viewModel: WbViewModel = viewModel(factory = WbViewModel.factory(repository, profileId, wbConstants))
     val state by viewModel.state.collectAsState()
@@ -82,10 +88,16 @@ fun WbScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
+                actions = {
+                    IconButton(onClick = onOpenHistory) {
+                        Icon(Icons.Filled.History, contentDescription = stringResource(R.string.report_history_content_description))
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
@@ -165,10 +177,19 @@ fun WbScreen(
             val violationTexts = state.result?.violations?.map { violationText(it, units.mass, units.cgPosition) }.orEmpty()
             val warningTexts = state.result?.warnings?.map { warningText(it, units.mass) }.orEmpty()
             val result = state.result
+            val profile = state.profile
+            val aircraftInfo = profile?.let {
+                WbAircraftInfo(
+                    emptyMassDisplay = displayMass(it.emptyMassKg, units.mass),
+                    emptyMassCgDisplay = displayCgPosition(it.emptyMassCgPositionMm, units.cgPosition),
+                    mtowDisplay = displayMass(it.mtowKg, units.mass),
+                    cgForwardLimitDisplay = displayCgPosition(it.cgEnvelopeForwardLimitMm, units.cgPosition),
+                    cgAftLimitDisplay = displayCgPosition(it.cgEnvelopeAftLimitMm, units.cgPosition),
+                    fuelTankLabel = fuelTankTypeLabel(it.fuelTankType, wbConstants, units.fuelVolume)
+                )
+            }
 
-            SharePdfButton(
-                kind = "wb",
-                registration = registration,
+            SaveCalculationButton(
                 enabled = result != null,
                 buildDocument = { timestamp ->
                     buildWbReport(
@@ -176,6 +197,7 @@ fun WbScreen(
                         timestamp = timestamp,
                         labels = labels,
                         registration = registration,
+                        aircraftInfo = aircraftInfo,
                         pilotDisplay = displayMass(state.pilotKg, units.mass),
                         copilotDisplay = displayMass(state.copilotKg, units.mass),
                         fuelDisplay = displayFuelVolume(state.fuelLiters, units.fuelVolume),
@@ -185,12 +207,13 @@ fun WbScreen(
                         cgSuffix = cgPositionSuffix(units.cgPosition),
                         result = result,
                         totalMassDisplay = result?.let { displayMass(it.totalMassKg, units.mass) },
-                        cgPositionDisplay = result?.let { displayCgPosition(it.cgMm, units.cgPosition) },
+                        cgPositionDisplay = result?.let { displayCgPositionText(it.cgMm, units.cgPosition) },
                         marginToMtowDisplay = result?.let { displayMass(it.marginToMtowKg, units.mass) },
                         violationTexts = violationTexts,
                         warningTexts = warningTexts
                     )
-                }
+                },
+                onSave = { document -> viewModel.saveCalculation(document) }
             )
         }
     }
@@ -213,8 +236,27 @@ private fun wbReportLabels() = WbReportLabels(
     marginToMtow = stringResource(R.string.report_wb_margin_mtow),
     withinEnvelope = stringResource(R.string.wb_result_ok_heading),
     warningHeading = stringResource(R.string.wb_result_warning_heading),
+    // Aircraft section (Task: "PDF should also contain the data from the aircraft setting
+    // screen") — reuses the exact labels the Add/Edit Plane screen already shows for these
+    // fields, so the PDF never invents a second wording for the same figure.
+    sectionAircraft = stringResource(R.string.report_section_aircraft),
+    emptyMass = stringResource(R.string.profile_edit_empty_mass_label),
+    emptyMassCg = stringResource(R.string.profile_edit_empty_mass_cg_label),
+    mtow = stringResource(R.string.profile_edit_mtow_label),
+    cgForwardLimit = stringResource(R.string.profile_edit_cg_forward_label),
+    cgAftLimit = stringResource(R.string.profile_edit_cg_aft_label),
+    fuelTank = stringResource(R.string.profile_edit_fuel_tank_label),
     footer = stringResource(R.string.report_footer)
 )
+
+/** Same labels [nl.schellenberg.hk36ttc.ui.profile.ProfileEditScreen]'s fuel tank selector
+ * already uses, so the W&B PDF's aircraft section names the tank exactly as the Add/Edit Plane
+ * screen does — same capacity-in-the-pilot's-unit format, not a fixed liters figure. */
+@Composable
+private fun fuelTankTypeLabel(type: FuelTankType, wbConstants: WbConstantsData, fuelVolumeUnit: FuelVolumeUnit): String {
+    val capacityDisplay = displayFuelVolume(wbConstants.tankCapacityLiters(type), fuelVolumeUnit)
+    return stringResource(R.string.profile_edit_fuel_tank_capacity_format, capacityDisplay, fuelVolumeSuffix(fuelVolumeUnit))
+}
 
 /** Converts each violation's kg/mm figures to [massUnit]/[cgUnit] before formatting — both
  * sides of a CG-vs-limit comparison always go through the same conversion call, so a forward or
@@ -237,11 +279,11 @@ private fun violationText(violation: WBViolation, massUnit: MassUnit, cgUnit: Cg
     )
     is WBViolation.CgOutOfEnvelopeForward -> stringResource(
         R.string.wb_violation_cg_forward_format,
-        displayCgPosition(violation.cgMm, cgUnit), displayCgPosition(violation.forwardLimitMm, cgUnit), cgPositionSuffix(cgUnit)
+        displayCgPositionText(violation.cgMm, cgUnit), displayCgPositionText(violation.forwardLimitMm, cgUnit), cgPositionSuffix(cgUnit)
     )
     is WBViolation.CgOutOfEnvelopeAft -> stringResource(
         R.string.wb_violation_cg_aft_format,
-        displayCgPosition(violation.cgMm, cgUnit), displayCgPosition(violation.aftLimitMm, cgUnit), cgPositionSuffix(cgUnit)
+        displayCgPositionText(violation.cgMm, cgUnit), displayCgPositionText(violation.aftLimitMm, cgUnit), cgPositionSuffix(cgUnit)
     )
 }
 
@@ -305,7 +347,7 @@ private fun WbResultCard(result: WBResult, massUnit: MassUnit, cgUnit: CgPositio
             Text(
                 stringResource(
                     R.string.wb_result_cg_format,
-                    displayCgPosition(result.cgMm, cgUnit),
+                    displayCgPositionText(result.cgMm, cgUnit),
                     displayCgPosition(result.marginForwardMm, cgUnit),
                     displayCgPosition(result.marginAftMm, cgUnit),
                     cgPositionSuffix(cgUnit)

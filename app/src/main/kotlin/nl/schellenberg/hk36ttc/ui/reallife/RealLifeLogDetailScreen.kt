@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -63,6 +64,7 @@ import nl.schellenberg.hk36ttc.core.reallife.ReallifeDetectionConfigData
 import nl.schellenberg.hk36ttc.core.reallife.RollStartDetectionReason
 import nl.schellenberg.hk36ttc.core.reallife.TakeoffDetectionResult
 import nl.schellenberg.hk36ttc.core.reallife.TakeoffDistanceResult
+import nl.schellenberg.hk36ttc.core.units.AppUnits
 import nl.schellenberg.hk36ttc.data.local.AircraftProfileRepository
 import nl.schellenberg.hk36ttc.data.local.AirfieldEntity
 import nl.schellenberg.hk36ttc.data.local.ConditionsSource
@@ -71,7 +73,16 @@ import nl.schellenberg.hk36ttc.data.local.RealLifeLogEntity
 import nl.schellenberg.hk36ttc.data.local.RealLifeMarkerType
 import nl.schellenberg.hk36ttc.data.metar.HistoricalMetarRepository
 import nl.schellenberg.hk36ttc.data.metar.MetarRepository
+import nl.schellenberg.hk36ttc.ui.common.LocalAppUnits
+import nl.schellenberg.hk36ttc.ui.common.displayDistance
+import nl.schellenberg.hk36ttc.ui.common.displayHeight
+import nl.schellenberg.hk36ttc.ui.common.displayTemperature
+import nl.schellenberg.hk36ttc.ui.common.displayWindSpeed
+import nl.schellenberg.hk36ttc.ui.common.distanceSuffix
+import nl.schellenberg.hk36ttc.ui.common.heightSuffix
+import nl.schellenberg.hk36ttc.ui.common.temperatureSuffix
 import nl.schellenberg.hk36ttc.ui.common.uniformSegmentedRowHeight
+import nl.schellenberg.hk36ttc.ui.common.windSpeedSuffix
 import nl.schellenberg.hk36ttc.ui.perf.TakeoffSurfaceType
 import nl.schellenberg.hk36ttc.ui.perf.takeoffSurfaceLabel
 import nl.schellenberg.hk36ttc.ui.theme.status
@@ -101,6 +112,7 @@ fun RealLifeLogDetailScreen(
         )
     )
     val state by viewModel.state.collectAsState()
+    val units = LocalAppUnits.current
 
     Scaffold(
         topBar = {
@@ -166,12 +178,12 @@ fun RealLifeLogDetailScreen(
                     }
                 }
 
-                state.detection?.let { result -> DetectedEventsSection(result) }
+                state.detection?.let { result -> DetectedEventsSection(result, units) }
 
                 if (state.isEditingConditions) {
-                    ConditionsEditSection(state.form, state.airfields, viewModel)
+                    ConditionsEditSection(state.form, state.airfields, viewModel, units)
                 } else {
-                    ConditionsSummarySection(current, onEdit = viewModel::beginEditingConditions)
+                    ConditionsSummarySection(current, units, onEdit = { viewModel.beginEditingConditions(units) })
                 }
 
                 state.comparison?.let { comparison ->
@@ -179,7 +191,8 @@ fun RealLifeLogDetailScreen(
                         comparison,
                         measuredGroundRollM = state.detection?.groundRollDistance?.distanceM,
                         measuredTotalM = state.detection?.totalDistance?.distanceM,
-                        headwindExcluded = state.comparisonHeadwindExcluded
+                        headwindExcluded = state.comparisonHeadwindExcluded,
+                        units = units
                     )
                 }
 
@@ -234,7 +247,7 @@ private fun NoteRow(text: String, tone: NoteTone = NoteTone.WARNING) {
  * against a marker that itself has known input lag (see `docs/data/reallife-samples/README.md`),
  * not independent ground truth. */
 @Composable
-private fun DetectedEventsSection(result: TakeoffDetectionResult) {
+private fun DetectedEventsSection(result: TakeoffDetectionResult, units: AppUnits) {
     val rollStartNanos = result.rollStart.elapsedRealtimeNanos
     val liftOffNanos = result.altitudeEvents.liftOffNanos
     val fifteenMNanos = result.altitudeEvents.fifteenMNanos
@@ -257,10 +270,20 @@ private fun DetectedEventsSection(result: TakeoffDetectionResult) {
         // the more directly comparable and consequential of the two; the 15m figure additionally
         // folds in climb performance.
         result.groundRollDistance.distanceM?.let {
-            DetailRow(stringResource(R.string.reallife_detected_labeled_distance_format, stringResource(R.string.perf_ground_run_label), it))
+            DetailRow(
+                stringResource(
+                    R.string.reallife_detected_labeled_distance_format,
+                    stringResource(R.string.perf_ground_run_label), displayDistance(it, units.distance), distanceSuffix(units.distance)
+                )
+            )
         } ?: NoteRow(distanceUnavailableReason(result, result.groundRollDistance, result.altitudeEvents.liftOffNanos))
         result.totalDistance.distanceM?.let {
-            DetailRow(stringResource(R.string.reallife_detected_labeled_distance_format, stringResource(R.string.perf_obstacle_15m_label), it))
+            DetailRow(
+                stringResource(
+                    R.string.reallife_detected_labeled_distance_format,
+                    stringResource(R.string.perf_obstacle_15m_label), displayDistance(it, units.distance), distanceSuffix(units.distance)
+                )
+            )
         } ?: NoteRow(distanceUnavailableReason(result, result.totalDistance, result.altitudeEvents.fifteenMNanos))
         // The heading actually used for the comparison's headwind component -- computed silently
         // in the background from the GPS ground track, but always shown, never hidden.
@@ -298,15 +321,17 @@ private fun distanceUnavailableReason(result: TakeoffDetectionResult, distance: 
 }
 
 @Composable
-private fun ConditionsSummarySection(log: RealLifeLogEntity, onEdit: () -> Unit) {
+private fun ConditionsSummarySection(log: RealLifeLogEntity, units: AppUnits, onEdit: () -> Unit) {
     SectionCard(title = stringResource(R.string.reallife_conditions_heading)) {
         val surfaceType = log.surfaceType?.let { runCatching { TakeoffSurfaceType.valueOf(it) }.getOrNull() }
         if (surfaceType != null && log.slopePct != null && log.oatC != null && log.pressureAltM != null) {
             DetailRow(
                 stringResource(
                     R.string.reallife_conditions_summary_format,
-                    takeoffSurfaceLabel(surfaceType), log.slopePct, log.oatC, log.pressureAltM,
-                    log.windDirectionDeg ?: 0, log.windSpeedKts ?: 0
+                    takeoffSurfaceLabel(surfaceType), log.slopePct,
+                    displayTemperature(log.oatC, units.temperature), temperatureSuffix(units.temperature),
+                    displayHeight(log.pressureAltM, units.height), heightSuffix(units.height),
+                    log.windDirectionDeg ?: 0, displayWindSpeed(log.windSpeedKts ?: 0, units.windSpeed), windSpeedSuffix(units.windSpeed)
                 )
             )
             log.conditionsSource?.let { source ->
@@ -330,7 +355,8 @@ private fun ConditionsSummarySection(log: RealLifeLogEntity, onEdit: () -> Unit)
 private fun ConditionsEditSection(
     form: ConditionsFormState,
     airfields: List<AirfieldEntity>,
-    viewModel: RealLifeLogDetailViewModel
+    viewModel: RealLifeLogDetailViewModel,
+    units: AppUnits
 ) {
     SectionCard(title = stringResource(R.string.reallife_conditions_heading)) {
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().uniformSegmentedRowHeight()) {
@@ -363,7 +389,9 @@ private fun ConditionsEditSection(
                 )
             }
             Button(
-                onClick = { if (form.sourceMode == ConditionsSourceMode.LIVE) viewModel.fetchLive() else viewModel.fetchHistorical() },
+                onClick = {
+                    if (form.sourceMode == ConditionsSourceMode.LIVE) viewModel.fetchLive(units) else viewModel.fetchHistorical(units)
+                },
                 enabled = !form.fetchInProgress
             ) {
                 if (form.fetchInProgress) {
@@ -394,11 +422,27 @@ private fun ConditionsEditSection(
         )
         OutlinedTextField(
             value = form.oatC, onValueChange = viewModel::updateOatC,
-            label = { Text(stringResource(R.string.reallife_conditions_oat_label)) }, modifier = Modifier.fillMaxWidth()
+            label = {
+                Text(
+                    stringResource(
+                        R.string.reallife_conditions_label_with_unit_format,
+                        stringResource(R.string.reallife_conditions_oat_label), temperatureSuffix(units.temperature)
+                    )
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
             value = form.pressureAltM, onValueChange = viewModel::updatePressureAltM,
-            label = { Text(stringResource(R.string.reallife_conditions_pressure_alt_label)) }, modifier = Modifier.fillMaxWidth()
+            label = {
+                Text(
+                    stringResource(
+                        R.string.reallife_conditions_label_with_unit_format,
+                        stringResource(R.string.reallife_conditions_pressure_alt_label), heightSuffix(units.height)
+                    )
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
             value = form.windDirectionDeg, onValueChange = viewModel::updateWindDirectionDeg,
@@ -406,11 +450,19 @@ private fun ConditionsEditSection(
         )
         OutlinedTextField(
             value = form.windSpeedKts, onValueChange = viewModel::updateWindSpeedKts,
-            label = { Text(stringResource(R.string.reallife_conditions_wind_speed_label)) }, modifier = Modifier.fillMaxWidth()
+            label = {
+                Text(
+                    stringResource(
+                        R.string.reallife_conditions_label_with_unit_format,
+                        stringResource(R.string.reallife_conditions_wind_speed_label), windSpeedSuffix(units.windSpeed)
+                    )
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
         )
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = viewModel::saveConditions) { Text(stringResource(R.string.reallife_conditions_save_button)) }
+            Button(onClick = { viewModel.saveConditions(units) }) { Text(stringResource(R.string.reallife_conditions_save_button)) }
             OutlinedButton(onClick = viewModel::cancelEditingConditions) { Text(stringResource(R.string.reallife_conditions_cancel_button)) }
         }
     }
@@ -460,14 +512,15 @@ private fun ComparisonCard(
     comparison: TakeoffResult,
     measuredGroundRollM: Double?,
     measuredTotalM: Double?,
-    headwindExcluded: Boolean
+    headwindExcluded: Boolean,
+    units: AppUnits
 ) {
     SectionCard(title = stringResource(R.string.reallife_comparison_heading)) {
         if (comparison.tailwindBlocked) {
             NoteRow(stringResource(R.string.reallife_comparison_tailwind_warning), tone = NoteTone.ERROR)
         } else {
-            DistanceComparisonBlock(stringResource(R.string.perf_ground_run_label), comparison.s1M, measuredGroundRollM)
-            DistanceComparisonBlock(stringResource(R.string.perf_obstacle_15m_label), comparison.s2M, measuredTotalM)
+            DistanceComparisonBlock(stringResource(R.string.perf_ground_run_label), comparison.s1M, measuredGroundRollM, units)
+            DistanceComparisonBlock(stringResource(R.string.perf_obstacle_15m_label), comparison.s2M, measuredTotalM, units)
             if (comparison.outOfRangeWarning) {
                 NoteRow(stringResource(R.string.reallife_comparison_out_of_range_warning))
             }
@@ -480,9 +533,13 @@ private fun ComparisonCard(
 
 /** One AFM figure vs. its measured counterpart, as two side-by-side big numbers with a smaller
  * verschil row underneath -- replaces what used to be three separate stacked text rows per
- * distance (handboek/gemeten/verschil × two distances = six rows of plain text). */
+ * distance (handboek/gemeten/verschil × two distances = six rows of plain text). The measured
+ * figure and the difference are colour-coded against the AFM one -- red when the pilot actually
+ * needed more runway than predicted, green when less -- since that is the one fact this whole
+ * card exists to surface at a glance. */
 @Composable
-private fun DistanceComparisonBlock(label: String, handboekM: Double, measuredM: Double?) {
+private fun DistanceComparisonBlock(label: String, handboekM: Double, measuredM: Double?, units: AppUnits) {
+    val statusColors = MaterialTheme.status
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(label, style = MaterialTheme.typography.labelLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
@@ -492,7 +549,10 @@ private fun DistanceComparisonBlock(label: String, handboekM: Double, measuredM:
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(stringResource(R.string.reallife_comparison_meters_format, handboekM), style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    stringResource(R.string.reallife_comparison_meters_format, displayDistance(handboekM, units.distance), distanceSuffix(units.distance)),
+                    style = MaterialTheme.typography.headlineSmall
+                )
             }
             measuredM?.let {
                 Column {
@@ -501,15 +561,22 @@ private fun DistanceComparisonBlock(label: String, handboekM: Double, measuredM:
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(stringResource(R.string.reallife_comparison_meters_format, it), style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        stringResource(R.string.reallife_comparison_meters_format, displayDistance(it, units.distance), distanceSuffix(units.distance)),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = if (it > handboekM) statusColors.error else if (it < handboekM) statusColors.success else Color.Unspecified
+                    )
                 }
             }
         }
         measuredM?.let {
             Text(
-                stringResource(R.string.reallife_comparison_diff_only_format, it - handboekM),
+                stringResource(
+                    R.string.reallife_comparison_diff_only_format,
+                    displayDistance(it - handboekM, units.distance), distanceSuffix(units.distance)
+                ),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (it > handboekM) statusColors.error else if (it < handboekM) statusColors.success else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

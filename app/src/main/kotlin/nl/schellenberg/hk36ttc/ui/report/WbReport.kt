@@ -18,7 +18,31 @@ data class WbReportLabels(
     val marginToMtow: String,
     val withinEnvelope: String,
     val warningHeading: String,
+    /** Section heading plus row labels for the aircraft's own settings (see [WbAircraftInfo]) —
+     * reuses the exact labels the Add/Edit Plane screen already shows for these fields
+     * (`profile_edit_*`), so the PDF never invents a second wording for the same figure. */
+    val sectionAircraft: String,
+    val emptyMass: String,
+    val emptyMassCg: String,
+    val mtow: String,
+    val cgForwardLimit: String,
+    val cgAftLimit: String,
+    val fuelTank: String,
     val footer: String
+)
+
+/** The aircraft profile's own settings that feed the W&B calculation (empty mass, its CG
+ * position, MTOW, envelope limits, tank type) — already converted to the pilot's display unit
+ * by the caller, same as every other figure in this report. Null on [buildWbReport] exactly when
+ * no profile could be loaded (`WbFormState.profileNotFound`), in which case the section is
+ * skipped entirely rather than printed with placeholder values. */
+data class WbAircraftInfo(
+    val emptyMassDisplay: Int,
+    val emptyMassCgDisplay: Int,
+    val mtowDisplay: Int,
+    val cgForwardLimitDisplay: Int,
+    val cgAftLimitDisplay: Int,
+    val fuelTankLabel: String
 )
 
 /**
@@ -46,6 +70,8 @@ fun buildWbReport(
     timestamp: String,
     labels: WbReportLabels,
     registration: String?,
+    /** Null exactly when no profile is loaded — see [WbAircraftInfo]'s KDoc. */
+    aircraftInfo: WbAircraftInfo?,
     pilotDisplay: Int,
     copilotDisplay: Int,
     fuelDisplay: Int,
@@ -55,11 +81,26 @@ fun buildWbReport(
     cgSuffix: String,
     result: WBResult?,
     totalMassDisplay: Int?,
-    cgPositionDisplay: Int?,
+    cgPositionDisplay: String?,
     marginToMtowDisplay: Int?,
     violationTexts: List<String>,
     warningTexts: List<String>
 ): ReportDocument = ReportDocumentBuilder().apply {
+    // Placed before the pilot-entered inputs: it's the stable aircraft context the flight-
+    // specific figures below are computed against, kept in its own section so the two never
+    // read as one undifferentiated list (Frank's "should also contain the data from the
+    // aircraft setting screen" requirement).
+    if (aircraftInfo != null) {
+        section(labels.sectionAircraft) {
+            row(labels.emptyMass, "${aircraftInfo.emptyMassDisplay} $massSuffix")
+            row(labels.emptyMassCg, "${aircraftInfo.emptyMassCgDisplay} $cgSuffix")
+            row(labels.mtow, "${aircraftInfo.mtowDisplay} $massSuffix")
+            row(labels.cgForwardLimit, "${aircraftInfo.cgForwardLimitDisplay} $cgSuffix")
+            row(labels.cgAftLimit, "${aircraftInfo.cgAftLimitDisplay} $cgSuffix")
+            row(labels.fuelTank, aircraftInfo.fuelTankLabel)
+        }
+    }
+
     section(labels.sectionInput) {
         rowIfPresent(labels.registration, registration)
         row(labels.pilot, "$pilotDisplay $massSuffix")
@@ -75,9 +116,12 @@ fun buildWbReport(
             val signedMargin = if (marginToMtowDisplay >= 0) "+$marginToMtowDisplay" else marginToMtowDisplay.toString()
             row(labels.marginToMtow, "$signedMargin $massSuffix")
             // Only stated when it holds — a violation line below says the opposite far more
-            // specifically, and printing both would be contradictory.
+            // specifically, and printing both would be contradictory. Tone matches
+            // WbScreen.WbResultCard's own 2-state (success/warning) scheme — this screen never
+            // distinguishes a violation from a warning by colour on screen, so neither does the
+            // PDF.
             if (result.violations.isEmpty() && result.warnings.isEmpty()) {
-                statement(labels.withinEnvelope)
+                statement(labels.withinEnvelope, tone = ReportDocument.RowTone.SUCCESS)
             }
         }
     }
@@ -86,7 +130,7 @@ fun buildWbReport(
         if (violationTexts.isNotEmpty() || warningTexts.isNotEmpty()) {
             statement(labels.warningHeading, emphasized = true)
         }
-        violationTexts.forEach { statement("• $it", emphasized = true) }
-        warningTexts.forEach { statement("• $it", emphasized = true) }
+        violationTexts.forEach { statement("• $it", emphasized = true, tone = ReportDocument.RowTone.WARNING) }
+        warningTexts.forEach { statement("• $it", emphasized = true, tone = ReportDocument.RowTone.WARNING) }
     }
 }.build(title = title, timestamp = timestamp, footer = labels.footer)

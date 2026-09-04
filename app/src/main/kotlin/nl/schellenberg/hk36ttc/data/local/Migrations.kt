@@ -207,9 +207,35 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
     }
 }
 
+/** v11 -> v12: `aircraft_profiles.sortOrder`, so the homescreen list can offer manual
+ * long-press-drag reordering alongside its existing alphabetical default. Purely additive,
+ * nullable with no default — every existing profile reads back as `null`, which
+ * [AircraftProfileDao.observeAll]'s `ORDER BY` treats as "no manual position set yet", so
+ * nothing about the list's ordering changes until a pilot actually drags a row. */
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `aircraft_profiles` ADD COLUMN `sortOrder` INTEGER")
+    }
+}
+
+/** v12 -> v13: `saved_calculations`, so W&B/Take-off/Glider tow/Landing get a "Save" action that
+ * records a calculation in a list (mirroring Real Life Performance's recordings) instead of only
+ * sharing it immediately — see [SavedCalculationEntity]. Purely additive, no index: a pilot's
+ * saved-calculation count per registration is small (nothing like the tens of thousands of GPS
+ * samples a Real Life recording produces), so `WHERE profileId = ? AND type = ?` needs none. */
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `saved_calculations` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`profileId` INTEGER NOT NULL, `type` TEXT NOT NULL, `title` TEXT NOT NULL, `timestamp` TEXT NOT NULL, " +
+                "`createdAtEpochMs` INTEGER NOT NULL, `documentJson` TEXT NOT NULL)"
+        )
+    }
+}
+
 /** Every migration `AppDatabase` currently ships, in order. Add the next one here (and never
  * remove an old one) whenever `AppDatabase.version` is bumped again. */
 val ALL_MIGRATIONS = arrayOf(
     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8,
-    MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11
+    MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13
 )

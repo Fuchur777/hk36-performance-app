@@ -16,6 +16,7 @@ import nl.schellenberg.hk36ttc.core.metar.MetarConfigData
 import nl.schellenberg.hk36ttc.core.perf.PerformanceCorrectionsData
 import nl.schellenberg.hk36ttc.core.perf.parsePerformanceNormalData
 import nl.schellenberg.hk36ttc.core.reallife.ReallifeDetectionConfigData
+import nl.schellenberg.hk36ttc.core.units.AppUnits
 import nl.schellenberg.hk36ttc.data.local.AircraftProfileRepository
 import nl.schellenberg.hk36ttc.data.local.AirfieldEntity
 import nl.schellenberg.hk36ttc.data.local.ConditionsSource
@@ -97,12 +98,12 @@ class RealLifeLogDetailViewModelTest {
         val viewModel = viewModel(repository)
         testScheduler.advanceUntilIdle()
 
-        viewModel.beginEditingConditions()
+        viewModel.beginEditingConditions(AppUnits())
         viewModel.updateSurfaceType(TakeoffSurfaceType.ASFALT)
         viewModel.updateSlopePct("0")
         viewModel.updateOatC("15")
         viewModel.updatePressureAltM("0")
-        viewModel.saveConditions()
+        viewModel.saveConditions(AppUnits())
         testScheduler.advanceUntilIdle()
 
         val state = viewModel.state.value
@@ -119,12 +120,12 @@ class RealLifeLogDetailViewModelTest {
         val viewModel = viewModel(repository)
         testScheduler.advanceUntilIdle()
 
-        viewModel.beginEditingConditions()
+        viewModel.beginEditingConditions(AppUnits())
         viewModel.updateSurfaceType(TakeoffSurfaceType.ASFALT)
         viewModel.updateSlopePct("")
         viewModel.updateOatC("15")
         viewModel.updatePressureAltM("0")
-        viewModel.saveConditions()
+        viewModel.saveConditions(AppUnits())
         testScheduler.advanceUntilIdle()
 
         val state = viewModel.state.value
@@ -139,14 +140,14 @@ class RealLifeLogDetailViewModelTest {
         val viewModel = viewModel(repository)
         testScheduler.advanceUntilIdle()
 
-        viewModel.beginEditingConditions()
+        viewModel.beginEditingConditions(AppUnits())
         viewModel.updateSurfaceType(TakeoffSurfaceType.ASFALT)
         viewModel.updateSlopePct("0")
         viewModel.updateOatC("15")
         viewModel.updatePressureAltM("0")
         viewModel.updateWindDirectionDeg("260")
         viewModel.updateWindSpeedKts("10")
-        viewModel.saveConditions()
+        viewModel.saveConditions(AppUnits())
         testScheduler.advanceUntilIdle()
 
         val state = viewModel.state.value
@@ -168,13 +169,13 @@ class RealLifeLogDetailViewModelTest {
         val viewModel = viewModel(repository, metarRepository = metarRepository)
         testScheduler.advanceUntilIdle()
 
-        viewModel.beginEditingConditions()
+        viewModel.beginEditingConditions(AppUnits())
         viewModel.selectAirfield(1)
         // .join(), not testScheduler.advanceUntilIdle(): MetarRepository hops onto a real
         // Dispatchers.IO internally, outside the virtual test scheduler's control. join() is a
         // genuine suspend-until-complete that works regardless of which dispatcher the job
         // actually ran on.
-        viewModel.fetchLive().join()
+        viewModel.fetchLive(AppUnits()).join()
 
         val form = viewModel.state.value.form
         assertEquals(ConditionsSource.METAR_LIVE, form.source)
@@ -196,10 +197,10 @@ class RealLifeLogDetailViewModelTest {
         val viewModel = viewModel(repository, historicalMetarRepository = historicalMetarRepository)
         testScheduler.advanceUntilIdle()
 
-        viewModel.beginEditingConditions()
+        viewModel.beginEditingConditions(AppUnits())
         viewModel.updateSourceMode(ConditionsSourceMode.HISTORICAL)
         viewModel.updateManualStation("EHRD")
-        viewModel.fetchHistorical().join()
+        viewModel.fetchHistorical(AppUnits()).join()
 
         val form = viewModel.state.value.form
         assertEquals(ConditionsSource.METAR_HISTORICAL, form.source)

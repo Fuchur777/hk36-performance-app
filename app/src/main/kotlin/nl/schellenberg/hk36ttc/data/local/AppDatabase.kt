@@ -12,9 +12,9 @@ import androidx.room.TypeConverters
         WbInputEntity::class, TakeoffInputEntity::class, LandingInputEntity::class, SleepvluchtInputEntity::class,
         AirfieldEntity::class, RunwayStripEntity::class, FlightContextEntity::class, FavoriteAirfieldEntity::class,
         RealLifeLogEntity::class, LocationSampleEntity::class, ImuSampleEntity::class, BarometerSampleEntity::class,
-        RealLifeMarkerEntity::class
+        RealLifeMarkerEntity::class, SavedCalculationEntity::class
     ],
-    version = 11,
+    version = 13,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -42,6 +42,10 @@ abstract class AppDatabase : RoomDatabase() {
     /** Bulk access across all user tables, for export/import only — see [UserDataDao]. Adds no
      * entity and no schema change, so [version] stays where it is. */
     abstract fun userDataDao(): UserDataDao
+
+    /** "Save" instead of immediate share on the four calculation screens — see
+     * [SavedCalculationEntity]. */
+    abstract fun savedCalculationDao(): SavedCalculationDao
 
     companion object {
         @Volatile

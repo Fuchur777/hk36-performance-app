@@ -34,6 +34,8 @@ import nl.schellenberg.hk36ttc.data.local.FlightContextMode
 import nl.schellenberg.hk36ttc.data.local.GrassCondition
 import nl.schellenberg.hk36ttc.data.local.RunwayStripEntity
 import nl.schellenberg.hk36ttc.data.local.RunwaySurfaceType
+import nl.schellenberg.hk36ttc.data.local.SavedCalculationEntity
+import nl.schellenberg.hk36ttc.data.local.SavedCalculationType
 import nl.schellenberg.hk36ttc.data.local.TakeoffInputEntity
 import nl.schellenberg.hk36ttc.data.metar.MetarRepository
 import nl.schellenberg.hk36ttc.ui.common.LoadGuard
@@ -45,6 +47,8 @@ import nl.schellenberg.hk36ttc.ui.common.deriveWeather
 import nl.schellenberg.hk36ttc.ui.common.directionOptions
 import nl.schellenberg.hk36ttc.ui.common.surfaceType
 import nl.schellenberg.hk36ttc.ui.common.toCandidate
+import nl.schellenberg.hk36ttc.ui.report.ReportDocument
+import nl.schellenberg.hk36ttc.ui.report.reportDocumentJson
 
 /**
  * Dry grass keeps the AFM's own minimum penalty (§5.3.3, confirmed by AIC P173 §5) — wet
@@ -485,6 +489,23 @@ class TakeoffViewModel(
                     )
                 )
             }
+        }
+    }
+
+    /** Persists the exact [document] the pilot just built for the Save button — see
+     * `SaveCalculationButton`/`SavedCalculationListScreen`. */
+    fun saveCalculation(document: ReportDocument) {
+        viewModelScope.launch {
+            repository.saveCalculation(
+                SavedCalculationEntity(
+                    profileId = profileId,
+                    type = SavedCalculationType.TAKEOFF.name,
+                    title = document.title,
+                    timestamp = document.timestamp,
+                    createdAtEpochMs = System.currentTimeMillis(),
+                    documentJson = reportDocumentJson.encodeToString(document)
+                )
+            )
         }
     }
 

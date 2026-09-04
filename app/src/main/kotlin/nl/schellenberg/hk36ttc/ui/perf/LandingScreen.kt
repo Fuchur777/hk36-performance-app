@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -69,8 +70,9 @@ import nl.schellenberg.hk36ttc.ui.common.windSpeedSuffix
 import nl.schellenberg.hk36ttc.ui.report.PerformanceReportContext
 import nl.schellenberg.hk36ttc.ui.report.PerformanceReportResult
 import nl.schellenberg.hk36ttc.ui.report.RunwayReportEntry
-import nl.schellenberg.hk36ttc.ui.report.SharePdfButton
+import nl.schellenberg.hk36ttc.ui.report.SaveCalculationButton
 import nl.schellenberg.hk36ttc.ui.report.buildPerformanceReport
+import nl.schellenberg.hk36ttc.ui.report.runwayStatusTone
 import nl.schellenberg.hk36ttc.ui.theme.status
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,7 +84,8 @@ fun LandingScreen(
     performanceCorrections: PerformanceCorrectionsData,
     metarConfig: MetarConfigData,
     profileId: Long,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenHistory: () -> Unit
 ) {
     val viewModel: LandingViewModel = viewModel(
         factory = LandingViewModel.factory(
@@ -107,10 +110,16 @@ fun LandingScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
+                actions = {
+                    IconButton(onClick = onOpenHistory) {
+                        Icon(Icons.Filled.History, contentDescription = stringResource(R.string.report_history_content_description))
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
@@ -293,7 +302,8 @@ fun LandingScreen(
                     crosswindExceeded = row.advice.crosswindExceeded,
                     groundRunWithMarginM = row.fullResult?.l1WithMarginM,
                     obstacleWithMarginM = row.fullResult?.l2WithMarginM,
-                    remainingM = row.advice.remainingWithMarginM
+                    remainingM = row.advice.remainingWithMarginM,
+                    tone = runwayStatusTone(row.advice.status)
                 )
             }
             val singleResult = state.result?.takeIf { !state.showRunwayResults }
@@ -301,9 +311,7 @@ fun LandingScreen(
             // Hoisted out of buildDocument: that lambda runs on tap, outside composable context.
             val manualSurfaceLabel = landingSurfaceLabel(state.surfaceType)
 
-            SharePdfButton(
-                kind = "landing",
-                registration = state.registration,
+            SaveCalculationButton(
                 enabled = state.showRunwayResults || singleResult != null,
                 buildDocument = { timestamp ->
                     buildPerformanceReport(
@@ -342,7 +350,8 @@ fun LandingScreen(
                         units = units,
                         extraNotes = listOf(mtowNote)
                     )
-                }
+                },
+                onSave = { document -> viewModel.saveCalculation(document) }
             )
         }
     }

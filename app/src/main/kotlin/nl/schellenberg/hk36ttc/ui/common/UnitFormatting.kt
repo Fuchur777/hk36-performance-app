@@ -92,6 +92,20 @@ private fun rawCgPosition(nativeMm: Double, unit: CgPositionUnit): Double = when
 fun displayCgPosition(nativeMm: Double, unit: CgPositionUnit): Int = roundForDisplay(rawCgPosition(nativeMm, unit), RoundMode.NEAREST)
 fun displayCgPosition(nativeMm: Int, unit: CgPositionUnit): Int = displayCgPosition(nativeMm.toDouble(), unit)
 
+/** Same conversion as [displayCgPosition], but formatted to 2 decimal places for inches instead
+ * of rounded to a whole number — an inch (≈25.4mm) is coarse enough that whole-number rounding
+ * can hide a CG position that is genuinely inside vs. outside the envelope by a fraction of an
+ * inch. Millimetres stay whole numbers, matching every other quantity in this file — a
+ * millimetre is already fine-grained enough that a decimal would be false precision. */
+fun displayCgPositionText(nativeMm: Double, unit: CgPositionUnit): String = when (unit) {
+    CgPositionUnit.MM -> displayCgPosition(nativeMm, unit).toString()
+    // Locale.ROOT explicitly -- unlike every displayXxx above (all Int, so locale-independent by
+    // construction), a formatted decimal string defaults to the JVM's regional locale and would
+    // print "10,50" instead of "10.50" on a comma-decimal device otherwise.
+    CgPositionUnit.INCH -> String.format(java.util.Locale.ROOT, "%.2f", rawCgPosition(nativeMm, unit))
+}
+fun displayCgPositionText(nativeMm: Int, unit: CgPositionUnit): String = displayCgPositionText(nativeMm.toDouble(), unit)
+
 fun nativeCgPositionMm(displayValue: Double, unit: CgPositionUnit): Double = when (unit) {
     CgPositionUnit.MM -> displayValue
     CgPositionUnit.INCH -> UnitConversions.inchesToMm(displayValue)

@@ -132,6 +132,17 @@ fun MetarSummary(
                             color = MaterialTheme.colorScheme.error
                         )
                     }
+                    if (windGustKts != null) {
+                        // Always shown, regardless of [warning] — gusts are informational only
+                        // and never feed a calculation, so a pilot needs to know that wherever
+                        // this card renders, not just where a wind-derivation warning already
+                        // happens to be shown.
+                        Text(
+                            stringResource(R.string.airfield_edit_metar_summary_gust_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                     val ageMinutes = MetarAge.minutesSince(metar)
                     val stale = ageMinutes >= metarConfig.staleAfterMinutes
                     val ageText = if (stale) {

@@ -32,10 +32,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import nl.schellenberg.hk36ttc.R
 import nl.schellenberg.hk36ttc.data.catalog.AirportCatalogRepository
+import nl.schellenberg.hk36ttc.ui.common.LocalAppUnits
+import nl.schellenberg.hk36ttc.ui.common.displayHeight
+import nl.schellenberg.hk36ttc.ui.common.heightSuffix
 
 /**
  * Search the worldwide OurAirports catalogue and turn an entry into one of the pilot's own
@@ -61,6 +63,7 @@ fun AirportCatalogScreen(
     val results by viewModel.results.collectAsState()
     val scope = rememberCoroutineScope()
     val networkError = stringResource(R.string.airport_catalog_refresh_failed)
+    val units = LocalAppUnits.current
 
     Scaffold(
         topBar = {
@@ -160,7 +163,13 @@ fun AirportCatalogScreen(
                             supportingContent = {
                                 val place = listOfNotNull(entry.municipality, entry.isoCountry).joinToString(", ")
                                 val elevation = entry.elevationM
-                                    ?.let { stringResource(R.string.airfield_list_elevation_format, it.roundToInt()) }
+                                    ?.let {
+                                        stringResource(
+                                            R.string.airfield_list_elevation_format,
+                                            displayHeight(it, units.height),
+                                            heightSuffix(units.height)
+                                        )
+                                    }
                                     ?: stringResource(R.string.airport_catalog_no_elevation)
                                 Text(listOf(entry.displayCode, place, elevation).filter { it.isNotBlank() }.joinToString(" · "))
                             }

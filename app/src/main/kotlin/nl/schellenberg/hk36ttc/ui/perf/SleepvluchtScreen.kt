@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,8 +67,9 @@ import nl.schellenberg.hk36ttc.ui.report.PerformanceReportContext
 import nl.schellenberg.hk36ttc.ui.report.PerformanceReportResult
 import nl.schellenberg.hk36ttc.ui.report.ReportDocument
 import nl.schellenberg.hk36ttc.ui.report.RunwayReportEntry
-import nl.schellenberg.hk36ttc.ui.report.SharePdfButton
+import nl.schellenberg.hk36ttc.ui.report.SaveCalculationButton
 import nl.schellenberg.hk36ttc.ui.report.buildPerformanceReport
+import nl.schellenberg.hk36ttc.ui.report.runwayStatusTone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,7 +82,8 @@ fun SleepvluchtScreen(
     sailplaneTypes: SailplaneTypesData,
     metarConfig: MetarConfigData,
     profileId: Long,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenHistory: () -> Unit
 ) {
     val viewModel: SleepvluchtViewModel = viewModel(
         factory = SleepvluchtViewModel.factory(
@@ -107,10 +110,16 @@ fun SleepvluchtScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
+                actions = {
+                    IconButton(onClick = onOpenHistory) {
+                        Icon(Icons.Filled.History, contentDescription = stringResource(R.string.report_history_content_description))
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
@@ -330,7 +339,8 @@ fun SleepvluchtScreen(
                     crosswindExceeded = row.advice.crosswindExceeded,
                     groundRunWithMarginM = row.fullResult?.s1WithMarginM,
                     obstacleWithMarginM = row.fullResult?.s2WithMarginM,
-                    remainingM = row.advice.remainingWithMarginM
+                    remainingM = row.advice.remainingWithMarginM,
+                    tone = runwayStatusTone(row.advice.status)
                 )
             }
             val singleResult = state.result?.takeIf { !state.showRunwayResults }
@@ -350,9 +360,7 @@ fun SleepvluchtScreen(
             // along rather than the button simply being unavailable.
             val blockNotes = state.result?.blockReasons.orEmpty().map { towBlockReasonText(it) }
 
-            SharePdfButton(
-                kind = "sleepvlucht",
-                registration = state.registration,
+            SaveCalculationButton(
                 enabled = state.showRunwayResults || singleResult != null,
                 buildDocument = { timestamp ->
                     buildPerformanceReport(
@@ -398,7 +406,8 @@ fun SleepvluchtScreen(
                         ),
                         extraNotes = listOfNotNull(classNote) + blockNotes
                     )
-                }
+                },
+                onSave = { document -> viewModel.saveCalculation(document) }
             )
         }
     }

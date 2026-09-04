@@ -32,6 +32,10 @@ class FakeAircraftProfileDao : AircraftProfileDao {
         profiles.value = profiles.value.filterNot { it.id == profile.id }
     }
 
+    override suspend fun updateSortOrder(id: Long, sortOrder: Long) {
+        profiles.value = profiles.value.map { if (it.id == id) it.copy(sortOrder = sortOrder) else it }
+    }
+
     /** Test helper: seed a profile directly under its own id, bypassing [insert]'s auto-id. */
     fun seed(profile: AircraftProfileEntity) {
         profiles.value = profiles.value + profile
@@ -255,6 +259,26 @@ class FakeRealLifeMarkerDao : RealLifeMarkerDao {
     override suspend fun deleteByLogId(logId: Long) { markers.removeAll { it.logId == logId } }
 }
 
+class FakeSavedCalculationDao : SavedCalculationDao {
+    private val calculations = mutableListOf<SavedCalculationEntity>()
+    private var nextId = 1L
+
+    override fun observeByProfileAndType(profileId: Long, type: String): Flow<List<SavedCalculationEntity>> =
+        MutableStateFlow(
+            calculations.filter { it.profileId == profileId && it.type == type }.sortedByDescending { it.createdAtEpochMs }
+        )
+
+    override suspend fun insert(calculation: SavedCalculationEntity): Long {
+        val id = nextId++
+        calculations += calculation.copy(id = id)
+        return id
+    }
+
+    override suspend fun delete(calculation: SavedCalculationEntity) { calculations.removeAll { it.id == calculation.id } }
+
+    override suspend fun deleteByProfileId(profileId: Long) { calculations.removeAll { it.profileId == profileId } }
+}
+
 /** Builds a real [AircraftProfileRepository] backed entirely by the fakes above. */
 fun fakeAircraftProfileRepository(
     profileDao: FakeAircraftProfileDao = FakeAircraftProfileDao(),
@@ -273,6 +297,7 @@ fun fakeAircraftProfileRepository(
     imuSampleDao: FakeImuSampleDao = FakeImuSampleDao(),
     barometerSampleDao: FakeBarometerSampleDao = FakeBarometerSampleDao(),
     realLifeMarkerDao: FakeRealLifeMarkerDao = FakeRealLifeMarkerDao(),
+    savedCalculationDao: FakeSavedCalculationDao = FakeSavedCalculationDao(),
     /** Straight pass-through: the fakes are plain in-memory lists, so there is nothing to roll
      * back. Production supplies a real Room transaction (see Hk36Application). */
     transaction: suspend (suspend () -> Unit) -> Unit = { block -> block() }
@@ -280,5 +305,6 @@ fun fakeAircraftProfileRepository(
     profileDao, lastWbResultDao, favoriteSailplaneTypeDao,
     wbInputDao, takeoffInputDao, landingInputDao, sleepvluchtInputDao,
     airfieldDao, runwayStripDao, flightContextDao, favoriteAirfieldDao,
-    realLifeLogDao, locationSampleDao, imuSampleDao, barometerSampleDao, realLifeMarkerDao, transaction
+    realLifeLogDao, locationSampleDao, imuSampleDao, barometerSampleDao, realLifeMarkerDao,
+    savedCalculationDao, transaction
 )

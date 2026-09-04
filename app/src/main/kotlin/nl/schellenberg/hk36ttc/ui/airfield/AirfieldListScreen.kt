@@ -47,6 +47,9 @@ import nl.schellenberg.hk36ttc.R
 import nl.schellenberg.hk36ttc.data.catalog.AirportCatalogRepository
 import nl.schellenberg.hk36ttc.data.local.AirfieldEntity
 import nl.schellenberg.hk36ttc.data.local.AircraftProfileRepository
+import nl.schellenberg.hk36ttc.ui.common.LocalAppUnits
+import nl.schellenberg.hk36ttc.ui.common.displayHeight
+import nl.schellenberg.hk36ttc.ui.common.heightSuffix
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +64,7 @@ fun AirfieldListScreen(
     val rows by viewModel.rows.collectAsState()
     val refreshResult by viewModel.refreshResult.collectAsState()
     var airfieldPendingDelete by remember { mutableStateOf<AirfieldEntity?>(null) }
+    val units = LocalAppUnits.current
 
     refreshResult?.let { result ->
         AlertDialog(
@@ -140,7 +144,11 @@ fun AirfieldListScreen(
                             headlineContent = { Text(airfield.name) },
                             supportingContent = {
                                 Text(
-                                    stringResource(R.string.airfield_list_elevation_format, airfield.elevationM.toInt()),
+                                    stringResource(
+                                        R.string.airfield_list_elevation_format,
+                                        displayHeight(airfield.elevationM, units.height),
+                                        heightSuffix(units.height)
+                                    ),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             },

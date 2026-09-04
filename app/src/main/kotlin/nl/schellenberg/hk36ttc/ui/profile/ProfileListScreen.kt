@@ -1,5 +1,6 @@
 package nl.schellenberg.hk36ttc.ui.profile
 
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,11 +9,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -32,15 +34,23 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import nl.schellenberg.hk36ttc.R
 import nl.schellenberg.hk36ttc.data.local.AircraftProfileEntity
@@ -62,6 +72,17 @@ fun ProfileListScreen(
     val profiles by viewModel.profiles.collectAsState()
     var menuExpanded by remember { mutableStateOf(false) }
     var profilePendingDelete by remember { mutableStateOf<AircraftProfileEntity?>(null) }
+
+    // Local copy the drag gesture reorders live, ahead of the DB write that lands on release —
+    // see the drag handle below. Only re-synced from the DB while nothing is being dragged, so a
+    // profile added/deleted elsewhere never clobbers an in-progress drag.
+    var orderedProfiles by remember { mutableStateOf(profiles) }
+    var draggedIndex by remember { mutableStateOf<Int?>(null) }
+    var dragOffsetY by remember { mutableFloatStateOf(0f) }
+    val itemHeightsPx = remember { mutableStateMapOf<Int, Int>() }
+    LaunchedEffect(profiles) {
+        if (draggedIndex == null) orderedProfiles = profiles
+    }
 
     Scaffold(
         topBar = {
@@ -126,7 +147,7 @@ fun ProfileListScreen(
             }
         }
     ) { padding ->
-        if (profiles.isEmpty()) {
+        if (orderedProfiles.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(padding),
             ) {
@@ -151,12 +172,65 @@ fun ProfileListScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize().padding(padding)
             ) {
-                items(profiles, key = { it.id }) { profile ->
+                itemsIndexed(orderedProfiles, key = { _, profile -> profile.id }) { index, profile ->
                     Card(
                         onClick = { onOpenProfile(profile) },
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        modifier = Modifier
+                            .onGloballyPositioned { coordinates -> itemHeightsPx[index] = coordinates.size.height }
+                            .graphicsLayer {
+                                translationY = if (index == draggedIndex) dragOffsetY else 0f
+                            }
+                            .zIndex(if (index == draggedIndex) 1f else 0f)
+                            .alpha(if (index == draggedIndex) 0.9f else 1f)
                     ) {
                         ListItem(
+                            leadingContent = {
+                                // Long-press-drag lives on its own handle rather than the whole
+                                // card, so it never fights the card's own onClick (open profile)
+                                // or the edit/delete buttons alongside it.
+                                Icon(
+                                    Icons.Filled.DragHandle,
+                                    contentDescription = stringResource(R.string.profile_list_drag_handle_content_description),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.pointerInput(profile.id) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = {
+                                                draggedIndex = index
+                                                dragOffsetY = 0f
+                                            },
+                                            onDragEnd = {
+                                                draggedIndex = null
+                                                dragOffsetY = 0f
+                                                viewModel.reorderProfiles(orderedProfiles.map { it.id })
+                                            },
+                                            onDragCancel = {
+                                                draggedIndex = null
+                                                dragOffsetY = 0f
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                val currentIndex = draggedIndex ?: return@detectDragGesturesAfterLongPress
+                                                val currentHeight = itemHeightsPx[currentIndex] ?: return@detectDragGesturesAfterLongPress
+                                                dragOffsetY += dragAmount.y
+                                                if (dragOffsetY > currentHeight / 2 && currentIndex < orderedProfiles.lastIndex) {
+                                                    orderedProfiles = orderedProfiles.toMutableList().apply {
+                                                        add(currentIndex + 1, removeAt(currentIndex))
+                                                    }
+                                                    draggedIndex = currentIndex + 1
+                                                    dragOffsetY -= currentHeight
+                                                } else if (dragOffsetY < -currentHeight / 2 && currentIndex > 0) {
+                                                    orderedProfiles = orderedProfiles.toMutableList().apply {
+                                                        add(currentIndex - 1, removeAt(currentIndex))
+                                                    }
+                                                    draggedIndex = currentIndex - 1
+                                                    dragOffsetY += currentHeight
+                                                }
+                                            }
+                                        )
+                                    }
+                                )
+                            },
                             headlineContent = { Text(profile.registration) },
                             trailingContent = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {

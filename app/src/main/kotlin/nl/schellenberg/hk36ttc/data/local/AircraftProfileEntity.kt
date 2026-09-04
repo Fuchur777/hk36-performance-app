@@ -14,7 +14,14 @@ data class AircraftProfileEntity(
     val mtowKg: Double,
     val cgEnvelopeForwardLimitMm: Double,
     val cgEnvelopeAftLimitMm: Double,
-    val fuelTankType: FuelTankType
+    val fuelTankType: FuelTankType,
+    /** Manual homescreen position set by long-press-drag reordering — `null` until the pilot
+     * drags a row for the first time, so every profile sorts alphabetically by [registration]
+     * (the default) until then. Once set, ties are broken by ascending value; a brand-new
+     * profile is always `null` at creation, so it lands after every already-positioned one
+     * (see [AircraftProfileDao.observeAll]'s `ORDER BY`), alphabetically among the other unset
+     * ones. */
+    val sortOrder: Long? = null
 )
 
 fun AircraftProfileEntity.toDomain(): AircraftProfile = AircraftProfile(
@@ -27,7 +34,7 @@ fun AircraftProfileEntity.toDomain(): AircraftProfile = AircraftProfile(
     fuelTankType = fuelTankType
 )
 
-fun AircraftProfile.toEntity(id: Long = 0): AircraftProfileEntity = AircraftProfileEntity(
+fun AircraftProfile.toEntity(id: Long = 0, sortOrder: Long? = null): AircraftProfileEntity = AircraftProfileEntity(
     id = id,
     registration = registration,
     emptyMassKg = emptyMassKg,
@@ -35,5 +42,6 @@ fun AircraftProfile.toEntity(id: Long = 0): AircraftProfileEntity = AircraftProf
     mtowKg = mtowKg,
     cgEnvelopeForwardLimitMm = cgEnvelopeForwardLimitMm,
     cgEnvelopeAftLimitMm = cgEnvelopeAftLimitMm,
-    fuelTankType = fuelTankType
+    fuelTankType = fuelTankType,
+    sortOrder = sortOrder
 )

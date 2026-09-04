@@ -16,6 +16,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -184,7 +185,12 @@ internal fun FavoriteSailplaneTypeDropdown(
                 .clickable { menuExpanded = true }
         )
         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-            favoriteTypes.forEach { type ->
+            // Plain Material3 DropdownMenuItem has no per-item container-color slot, so an
+            // alternating row background (Frank's spreadsheet request) isn't achievable here —
+            // a HorizontalDivider between rows is the fallback the request itself allows for
+            // exactly this case.
+            favoriteTypes.forEachIndexed { index, type ->
+                if (index > 0) HorizontalDivider()
                 DropdownMenuItem(
                     text = {
                         Text(

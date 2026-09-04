@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -75,8 +76,9 @@ import nl.schellenberg.hk36ttc.ui.report.PerformanceReportLabels
 import nl.schellenberg.hk36ttc.ui.report.PerformanceReportResult
 import nl.schellenberg.hk36ttc.ui.report.RunwayReportEntry
 import nl.schellenberg.hk36ttc.ui.report.RunwayRowLabels
-import nl.schellenberg.hk36ttc.ui.report.SharePdfButton
+import nl.schellenberg.hk36ttc.ui.report.SaveCalculationButton
 import nl.schellenberg.hk36ttc.ui.report.buildPerformanceReport
+import nl.schellenberg.hk36ttc.ui.report.runwayStatusTone
 import nl.schellenberg.hk36ttc.ui.theme.status
 import kotlin.math.roundToInt
 
@@ -89,7 +91,8 @@ fun TakeoffScreen(
     performanceCorrections: PerformanceCorrectionsData,
     metarConfig: MetarConfigData,
     profileId: Long,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenHistory: () -> Unit
 ) {
     val viewModel: TakeoffViewModel = viewModel(
         factory = TakeoffViewModel.factory(
@@ -114,10 +117,16 @@ fun TakeoffScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
+                actions = {
+                    IconButton(onClick = onOpenHistory) {
+                        Icon(Icons.Filled.History, contentDescription = stringResource(R.string.report_history_content_description))
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
@@ -308,7 +317,8 @@ fun TakeoffScreen(
                     crosswindExceeded = row.advice.crosswindExceeded,
                     groundRunWithMarginM = row.fullResult?.s1WithMarginM,
                     obstacleWithMarginM = row.fullResult?.s2WithMarginM,
-                    remainingM = row.advice.remainingWithMarginM
+                    remainingM = row.advice.remainingWithMarginM,
+                    tone = runwayStatusTone(row.advice.status)
                 )
             }
             val singleResult = state.result?.takeIf { !state.showRunwayResults }
@@ -317,9 +327,7 @@ fun TakeoffScreen(
             // composable context, so every @Composable label lookup has to be hoisted.
             val manualSurfaceLabel = takeoffSurfaceLabel(state.surfaceType)
 
-            SharePdfButton(
-                kind = "takeoff",
-                registration = state.registration,
+            SaveCalculationButton(
                 enabled = state.showRunwayResults || singleResult != null,
                 buildDocument = { timestamp ->
                     buildPerformanceReport(
@@ -355,7 +363,8 @@ fun TakeoffScreen(
                         runways = runwayEntries,
                         units = units
                     )
-                }
+                },
+                onSave = { document -> viewModel.saveCalculation(document) }
             )
         }
     }

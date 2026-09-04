@@ -69,6 +69,7 @@ class Hk36Application : Application() {
             database.imuSampleDao(),
             database.barometerSampleDao(),
             database.realLifeMarkerDao(),
+            database.savedCalculationDao(),
             transaction = { block -> database.withTransaction { block() } }
         )
         val catalogDatabase = AirportCatalogDatabase.getInstance(this)

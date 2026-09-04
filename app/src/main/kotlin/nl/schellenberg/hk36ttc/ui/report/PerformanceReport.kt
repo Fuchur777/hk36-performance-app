@@ -121,7 +121,13 @@ fun buildPerformanceReport(
     section(labels.sectionResult) {
         if (result != null) {
             if (result.tailwindBlocked) {
-                statement(labels.tailwindNotSupported, emphasized = true)
+                // WARNING, not ERROR: on screen this exact state renders as TakeoffScreen's
+                // TailwindBlockedCard, which uses statusColors.warning (orange) — the same tier
+                // as a blocked-tow BlockedReasonsCard on Sleepvlucht — not the red used for
+                // DOES_NOT_FIT/TAILWIND_NOT_SUPPORTED in the per-runway list. Verified against
+                // both cards' `CardDefaults.cardColors(...)` before picking this, rather than
+                // assuming "blocked" implies the reddest tone.
+                statement(labels.tailwindNotSupported, emphasized = true, tone = ReportDocument.RowTone.WARNING)
             } else {
                 row(labels.groundRun, "${displayDistance(result.groundRunWithMarginM, units.distance)} $distanceSuf", emphasized = true)
                 row(labels.obstacle, "${displayDistance(result.obstacleWithMarginM, units.distance)} $distanceSuf", emphasized = true)
@@ -136,7 +142,9 @@ fun buildPerformanceReport(
     }
 
     section(labels.sectionNotes) {
-        if (result?.outOfRange == true) statement(labels.outOfRangeWarning, emphasized = true)
+        if (result?.outOfRange == true) {
+            statement(labels.outOfRangeWarning, emphasized = true, tone = ReportDocument.RowTone.WARNING)
+        }
         extraNotes.forEach { statement(it) }
     }
 }.build(title = title, timestamp = timestamp, footer = labels.footer)

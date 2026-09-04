@@ -14,8 +14,12 @@ import nl.schellenberg.hk36ttc.core.wb.WBInput
 import nl.schellenberg.hk36ttc.core.wb.WBResult
 import nl.schellenberg.hk36ttc.core.wb.WbConstantsData
 import nl.schellenberg.hk36ttc.data.local.AircraftProfileRepository
+import nl.schellenberg.hk36ttc.data.local.SavedCalculationEntity
+import nl.schellenberg.hk36ttc.data.local.SavedCalculationType
 import nl.schellenberg.hk36ttc.data.local.WbInputEntity
 import nl.schellenberg.hk36ttc.data.local.toDomain
+import nl.schellenberg.hk36ttc.ui.report.ReportDocument
+import nl.schellenberg.hk36ttc.ui.report.reportDocumentJson
 
 /**
  * Whole-number inputs, matching the stepper UI. `copilotKg = 0` IS the "solo flight" signal
@@ -94,6 +98,23 @@ class WbViewModel(
             repository.saveLastWbResult(profileId, result.totalMassKg)
             repository.saveWbInput(
                 WbInputEntity(profileId, current.pilotKg, current.copilotKg, current.fuelLiters, current.baggageKg)
+            )
+        }
+    }
+
+    /** Persists the exact [document] the pilot just built for the Save button — see
+     * `SaveCalculationButton`/`SavedCalculationListScreen`. */
+    fun saveCalculation(document: ReportDocument) {
+        viewModelScope.launch {
+            repository.saveCalculation(
+                SavedCalculationEntity(
+                    profileId = profileId,
+                    type = SavedCalculationType.WB.name,
+                    title = document.title,
+                    timestamp = document.timestamp,
+                    createdAtEpochMs = System.currentTimeMillis(),
+                    documentJson = reportDocumentJson.encodeToString(document)
+                )
             )
         }
     }

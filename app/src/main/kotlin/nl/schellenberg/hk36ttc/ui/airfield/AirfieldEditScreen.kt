@@ -68,8 +68,11 @@ import nl.schellenberg.hk36ttc.ui.common.IntStepperField
 import nl.schellenberg.hk36ttc.ui.common.LocalAppUnits
 import nl.schellenberg.hk36ttc.ui.common.MetarSummary
 import nl.schellenberg.hk36ttc.ui.common.deriveOppositeDesignator
+import nl.schellenberg.hk36ttc.ui.common.displayDistance
 import nl.schellenberg.hk36ttc.ui.common.displayHeight
+import nl.schellenberg.hk36ttc.ui.common.distanceSuffix
 import nl.schellenberg.hk36ttc.ui.common.heightSuffix
+import nl.schellenberg.hk36ttc.ui.common.nativeDistanceMetersInt
 import nl.schellenberg.hk36ttc.ui.common.nativeHeightMetersInt
 import nl.schellenberg.hk36ttc.ui.common.padDesignatorNumber
 import nl.schellenberg.hk36ttc.ui.common.uniformSegmentedRowHeight
@@ -296,21 +299,44 @@ fun AirfieldEditScreen(
                     }
                 }
                 runways.forEach { strip ->
+                    val surfaceLabel = when (RunwaySurfaceType.valueOf(strip.surface)) {
+                        RunwaySurfaceType.ASPHALT -> stringResource(R.string.airfield_edit_runway_surface_asphalt)
+                        RunwaySurfaceType.GRASS -> stringResource(R.string.airfield_edit_runway_surface_grass)
+                    }
+                    // Two physically separate strips at the same field can share a heading and
+                    // therefore the same plain designator (e.g. a parallel grass and asphalt
+                    // "02") — disambiguate the DISPLAYED label only, never the stored
+                    // designatorA/B themselves, which stay plain padded numbers so
+                    // deriveOppositeDesignator and anything else parsing them keeps working.
+                    val hasSurfaceCollision = runways.any { other ->
+                        other.id != strip.id && other.designatorA == strip.designatorA && other.surface != strip.surface
+                    }
+                    val displayDesignatorA = if (hasSurfaceCollision) {
+                        stringResource(R.string.airfield_edit_runway_designator_with_surface_format, strip.designatorA, surfaceLabel)
+                    } else {
+                        strip.designatorA
+                    }
+                    val displayDesignatorB = if (hasSurfaceCollision) {
+                        stringResource(R.string.airfield_edit_runway_designator_with_surface_format, strip.designatorB, surfaceLabel)
+                    } else {
+                        strip.designatorB
+                    }
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                         ListItem(
                             headlineContent = {
                                 Text(
-                                    if (strip.oneWay) strip.designatorA
-                                    else stringResource(R.string.airfield_edit_runway_item_format, strip.designatorA, strip.designatorB)
+                                    if (strip.oneWay) displayDesignatorA
+                                    else stringResource(R.string.airfield_edit_runway_item_format, displayDesignatorA, displayDesignatorB)
                                 )
                             },
                             supportingContent = {
-                                val surfaceLabel = when (RunwaySurfaceType.valueOf(strip.surface)) {
-                                    RunwaySurfaceType.ASPHALT -> stringResource(R.string.airfield_edit_runway_surface_asphalt)
-                                    RunwaySurfaceType.GRASS -> stringResource(R.string.airfield_edit_runway_surface_grass)
-                                }
                                 Text(
-                                    stringResource(R.string.airfield_edit_runway_item_detail_format, strip.lengthM.toInt(), surfaceLabel),
+                                    stringResource(
+                                        R.string.airfield_edit_runway_item_detail_format,
+                                        displayDistance(strip.lengthM, units.distance),
+                                        distanceSuffix(units.distance),
+                                        surfaceLabel
+                                    ),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             },
@@ -398,6 +424,7 @@ private fun RunwayEditDialog(
     onConfirm: (RunwayStripFormState) -> Unit
 ) {
     var form by remember { mutableStateOf(initial) }
+    val units = LocalAppUnits.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -408,7 +435,10 @@ private fun RunwayEditDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().clickable { form = form.copy(oneWay = !form.oneWay) }
@@ -475,12 +505,12 @@ private fun RunwayEditDialog(
                 )
                 IntStepperField(
                     label = stringResource(R.string.airfield_edit_runway_length_label),
-                    value = form.lengthM,
-                    onValueChange = { form = form.copy(lengthM = it) },
-                    min = 100,
-                    max = 3000,
-                    suffix = "m",
-                    step = 10
+                    value = displayDistance(form.lengthM, units.distance),
+                    onValueChange = { form = form.copy(lengthM = nativeDistanceMetersInt(it, units.distance)) },
+                    min = displayDistance(100, units.distance),
+                    max = displayDistance(3000, units.distance),
+                    suffix = distanceSuffix(units.distance),
+                    step = displayDistance(10, units.distance).coerceAtLeast(1)
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(stringResource(R.string.airfield_edit_runway_surface_label), style = MaterialTheme.typography.labelLarge)

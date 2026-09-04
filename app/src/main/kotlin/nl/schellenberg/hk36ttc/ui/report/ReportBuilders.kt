@@ -1,5 +1,6 @@
 package nl.schellenberg.hk36ttc.ui.report
 
+import nl.schellenberg.hk36ttc.core.metar.RunwayAdviceStatus
 import nl.schellenberg.hk36ttc.core.units.AppUnits
 import nl.schellenberg.hk36ttc.core.units.WindSpeedUnit
 import nl.schellenberg.hk36ttc.ui.common.displayDistance
@@ -33,20 +34,21 @@ class ReportDocumentBuilder {
     class SectionBuilder {
         internal val rows = mutableListOf<ReportDocument.Row>()
 
-        /** A measurement: label on the left, value on the right. */
-        fun row(label: String, value: String, emphasized: Boolean = false) {
-            rows += ReportDocument.Row(label, value, emphasized)
+        /** A measurement: label on the left, value on the right. [tone] mirrors the same
+         * success/warning/error colour the on-screen result card already shows for this figure. */
+        fun row(label: String, value: String, emphasized: Boolean = false, tone: ReportDocument.RowTone? = null) {
+            rows += ReportDocument.Row(label, value, emphasized, tone)
         }
 
         /** A statement rather than a measurement — a warning or status, printed full width. */
-        fun statement(text: String, emphasized: Boolean = false) {
-            rows += ReportDocument.Row(text, null, emphasized)
+        fun statement(text: String, emphasized: Boolean = false, tone: ReportDocument.RowTone? = null) {
+            rows += ReportDocument.Row(text, null, emphasized, tone)
         }
 
         /** Skips the row entirely when [value] is null, so optional figures don't need an `if`
          * at every call site. */
-        fun rowIfPresent(label: String, value: String?, emphasized: Boolean = false) {
-            if (value != null) row(label, value, emphasized)
+        fun rowIfPresent(label: String, value: String?, emphasized: Boolean = false, tone: ReportDocument.RowTone? = null) {
+            if (value != null) row(label, value, emphasized, tone)
         }
 
         fun addAll(other: List<ReportDocument.Row>) {
@@ -69,8 +71,29 @@ data class RunwayReportEntry(
     val crosswindExceeded: Boolean,
     val groundRunWithMarginM: Double?,
     val obstacleWithMarginM: Double?,
-    val remainingM: Double?
+    val remainingM: Double?,
+    /** Mirrors the same colour [nl.schellenberg.hk36ttc.ui.common.runwayStatusPresentation]
+     * already gives this runway's card on screen — see [runwayStatusTone]. Null only makes
+     * sense for a caller that deliberately has no on-screen colour to mirror; every screen that
+     * builds runway entries always has one. */
+    val tone: ReportDocument.RowTone? = null
 )
+
+/**
+ * Maps the shared 4-tier on-screen colour scheme
+ * ([nl.schellenberg.hk36ttc.ui.common.runwayStatusPresentation]) down to the PDF's 3-tone
+ * palette: [RunwayAdviceStatus.RECOMMENDED] and [RunwayAdviceStatus.FITS] both render green
+ * on screen (success/caution are both "still safe, just not the top pick") and both map to
+ * [ReportDocument.RowTone.SUCCESS]; [RunwayAdviceStatus.FITS_WITHOUT_MARGIN] (orange) maps to
+ * [ReportDocument.RowTone.WARNING]; [RunwayAdviceStatus.DOES_NOT_FIT] and
+ * [RunwayAdviceStatus.TAILWIND_NOT_SUPPORTED] (both red on screen) map to
+ * [ReportDocument.RowTone.ERROR].
+ */
+fun runwayStatusTone(status: RunwayAdviceStatus): ReportDocument.RowTone = when (status) {
+    RunwayAdviceStatus.RECOMMENDED, RunwayAdviceStatus.FITS -> ReportDocument.RowTone.SUCCESS
+    RunwayAdviceStatus.FITS_WITHOUT_MARGIN -> ReportDocument.RowTone.WARNING
+    RunwayAdviceStatus.DOES_NOT_FIT, RunwayAdviceStatus.TAILWIND_NOT_SUPPORTED -> ReportDocument.RowTone.ERROR
+}
 
 /** Column labels for [runwayReportRows], passed in because `:app`'s report layer has no
  * resources of its own at this level — see [ReportDocumentBuilder]'s note. */
@@ -101,7 +124,7 @@ fun runwayReportRows(
     val windSpeedSuf = windSpeedSuffix(units.windSpeed)
     val distanceSuf = distanceSuffix(units.distance)
     entries.forEach { entry ->
-        add(ReportDocument.Row("${entry.label} — ${entry.statusLabel}", null, emphasized = true))
+        add(ReportDocument.Row("${entry.label} — ${entry.statusLabel}", null, emphasized = true, tone = entry.tone))
         add(ReportDocument.Row("    ${labels.surface}", entry.surfaceLabel))
         add(
             ReportDocument.Row(

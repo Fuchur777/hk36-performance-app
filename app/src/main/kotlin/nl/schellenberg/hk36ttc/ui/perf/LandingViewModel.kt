@@ -35,6 +35,8 @@ import nl.schellenberg.hk36ttc.data.local.GrassCondition
 import nl.schellenberg.hk36ttc.data.local.LandingInputEntity
 import nl.schellenberg.hk36ttc.data.local.RunwayStripEntity
 import nl.schellenberg.hk36ttc.data.local.RunwaySurfaceType
+import nl.schellenberg.hk36ttc.data.local.SavedCalculationEntity
+import nl.schellenberg.hk36ttc.data.local.SavedCalculationType
 import nl.schellenberg.hk36ttc.data.metar.MetarRepository
 import nl.schellenberg.hk36ttc.ui.common.LoadGuard
 import nl.schellenberg.hk36ttc.ui.common.MetarAutoRefresher
@@ -45,6 +47,8 @@ import nl.schellenberg.hk36ttc.ui.common.deriveWeather
 import nl.schellenberg.hk36ttc.ui.common.directionOptions
 import nl.schellenberg.hk36ttc.ui.common.surfaceType
 import nl.schellenberg.hk36ttc.ui.common.toCandidate
+import nl.schellenberg.hk36ttc.ui.report.ReportDocument
+import nl.schellenberg.hk36ttc.ui.report.reportDocumentJson
 
 /** Supplement 11 publishes no landing correction for anything but a paved runway — the grass
  * factors come from AIC P173 instead, and "Aangepast" lets the pilot enter their own estimate
@@ -403,6 +407,23 @@ class LandingViewModel(
 
     /** Upper bound for the "Aangepast" custom surface-factor stepper, from AIC P173. */
     fun maxCustomSurfaceFactorPct(): Int = (corrections.grassLandingFactors.veryShortGrassFactorUpperBound * 100).roundToInt()
+
+    /** Persists the exact [document] the pilot just built for the Save button — see
+     * `SaveCalculationButton`/`SavedCalculationListScreen`. */
+    fun saveCalculation(document: ReportDocument) {
+        viewModelScope.launch {
+            repository.saveCalculation(
+                SavedCalculationEntity(
+                    profileId = profileId,
+                    type = SavedCalculationType.LANDING.name,
+                    title = document.title,
+                    timestamp = document.timestamp,
+                    createdAtEpochMs = System.currentTimeMillis(),
+                    documentJson = reportDocumentJson.encodeToString(document)
+                )
+            )
+        }
+    }
 
     companion object {
         fun factory(

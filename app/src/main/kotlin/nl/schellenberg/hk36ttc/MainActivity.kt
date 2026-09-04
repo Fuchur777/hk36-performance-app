@@ -45,6 +45,7 @@ import nl.schellenberg.hk36ttc.data.local.CalculationDataResult
 import nl.schellenberg.hk36ttc.data.local.CalculationDataStore
 import nl.schellenberg.hk36ttc.data.local.LanguagePreference
 import nl.schellenberg.hk36ttc.data.local.RealLifePreferences
+import nl.schellenberg.hk36ttc.data.local.SavedCalculationType
 import nl.schellenberg.hk36ttc.data.local.UnitPreferences
 import nl.schellenberg.hk36ttc.ui.common.LocalAppUnits
 import nl.schellenberg.hk36ttc.ui.about.AboutScreen
@@ -60,6 +61,7 @@ import nl.schellenberg.hk36ttc.ui.profile.ProfileListScreen
 import nl.schellenberg.hk36ttc.ui.reallife.RealLifeLogDetailScreen
 import nl.schellenberg.hk36ttc.ui.reallife.RealLifeLogListScreen
 import nl.schellenberg.hk36ttc.ui.reallife.RealLifeRecordScreen
+import nl.schellenberg.hk36ttc.ui.report.SavedCalculationListScreen
 import nl.schellenberg.hk36ttc.ui.sailplane.SailplaneTypesScreen
 import nl.schellenberg.hk36ttc.ui.settings.SettingsScreen
 import nl.schellenberg.hk36ttc.ui.theme.Hk36ttcTheme
@@ -77,6 +79,7 @@ private object Routes {
     const val REAL_LIFE_LOGS = "real_life_logs/{profileId}"
     const val REAL_LIFE_RECORD = "real_life_record/{profileId}"
     const val REAL_LIFE_LOG_DETAIL = "real_life_log_detail/{profileId}/{logId}"
+    const val SAVED_CALCULATIONS = "saved_calculations/{profileId}/{type}"
     const val SAILPLANE_TYPES = "sailplane_types"
     const val AIRFIELDS = "airfields"
     const val AIRFIELD_EDIT = "airfield_edit/{airfieldId}"
@@ -94,6 +97,7 @@ private object Routes {
     fun realLifeLogs(id: Long) = "real_life_logs/$id"
     fun realLifeRecord(id: Long) = "real_life_record/$id"
     fun realLifeLogDetail(profileId: Long, logId: Long) = "real_life_log_detail/$profileId/$logId"
+    fun savedCalculations(profileId: Long, type: SavedCalculationType) = "saved_calculations/$profileId/${type.name}"
 }
 
 class MainActivity : ComponentActivity() {
@@ -326,7 +330,8 @@ private fun Hk36NavHost(
                 repository = repository,
                 wbConstants = appData.wbConstants,
                 profileId = profileId,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onOpenHistory = { navController.navigate(Routes.savedCalculations(profileId, SavedCalculationType.WB)) }
             )
         }
         composable(Routes.TAKEOFF) { backStackEntry ->
@@ -338,7 +343,8 @@ private fun Hk36NavHost(
                 performanceCorrections = appData.performanceCorrections,
                 metarConfig = appData.metarConfig,
                 profileId = profileId,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onOpenHistory = { navController.navigate(Routes.savedCalculations(profileId, SavedCalculationType.TAKEOFF)) }
             )
         }
         composable(Routes.SLEEPVLUCHT) { backStackEntry ->
@@ -352,7 +358,8 @@ private fun Hk36NavHost(
                 sailplaneTypes = appData.sailplaneTypes,
                 metarConfig = appData.metarConfig,
                 profileId = profileId,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onOpenHistory = { navController.navigate(Routes.savedCalculations(profileId, SavedCalculationType.GLIDER_TOW)) }
             )
         }
         composable(Routes.LANDING) { backStackEntry ->
@@ -364,7 +371,8 @@ private fun Hk36NavHost(
                 performanceCorrections = appData.performanceCorrections,
                 metarConfig = appData.metarConfig,
                 profileId = profileId,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onOpenHistory = { navController.navigate(Routes.savedCalculations(profileId, SavedCalculationType.LANDING)) }
             )
         }
         composable(Routes.REAL_LIFE_LOGS) { backStackEntry ->
@@ -398,6 +406,18 @@ private fun Hk36NavHost(
                 historicalMetarRepository = historicalMetarRepository,
                 metarConfig = appData.metarConfig,
                 reallifeDetectionConfig = appData.reallifeDetectionConfig,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.SAVED_CALCULATIONS) { backStackEntry ->
+            val profileId = backStackEntry.arguments?.getString("profileId")?.toLongOrNull() ?: 0L
+            val type = backStackEntry.arguments?.getString("type")
+                ?.let { runCatching { SavedCalculationType.valueOf(it) }.getOrNull() }
+                ?: SavedCalculationType.WB
+            SavedCalculationListScreen(
+                repository = repository,
+                profileId = profileId,
+                type = type,
                 onBack = { navController.popBackStack() }
             )
         }

@@ -23,6 +23,7 @@ import nl.schellenberg.hk36ttc.core.perf.TakeoffResult
 import nl.schellenberg.hk36ttc.core.reallife.ReallifeDetectionConfigData
 import nl.schellenberg.hk36ttc.core.reallife.TakeoffDetectionResult
 import nl.schellenberg.hk36ttc.core.reallife.TakeoffDetector
+import nl.schellenberg.hk36ttc.core.units.AppUnits
 import nl.schellenberg.hk36ttc.data.local.AircraftProfileRepository
 import nl.schellenberg.hk36ttc.data.local.AirfieldEntity
 import nl.schellenberg.hk36ttc.data.local.ConditionsSource
@@ -32,6 +33,12 @@ import nl.schellenberg.hk36ttc.data.metar.HistoricalMetarRepository
 import nl.schellenberg.hk36ttc.data.metar.HistoricalMetarResult
 import nl.schellenberg.hk36ttc.data.metar.MetarRepository
 import nl.schellenberg.hk36ttc.data.metar.MetarRepository.Companion.stationCode
+import nl.schellenberg.hk36ttc.ui.common.displayHeight
+import nl.schellenberg.hk36ttc.ui.common.displayTemperature
+import nl.schellenberg.hk36ttc.ui.common.displayWindSpeed
+import nl.schellenberg.hk36ttc.ui.common.nativeHeightMetersInt
+import nl.schellenberg.hk36ttc.ui.common.nativeTemperatureCelsiusInt
+import nl.schellenberg.hk36ttc.ui.common.nativeWindSpeedKnotsInt
 import nl.schellenberg.hk36ttc.ui.perf.TakeoffSurfaceType
 
 /** Which of the three ways to fill in [ConditionsFormState] the pilot currently has selected in
@@ -143,7 +150,12 @@ class RealLifeLogDetailViewModel(
 
     // --- Edit-form entry/exit ---
 
-    fun beginEditingConditions() {
+    /** [units] converts the log's stored native-unit values (always Celsius/metres/knots — see
+     * [nl.schellenberg.hk36ttc.core.units.AppUnits]'s KDoc) to the pilot's display units for
+     * editing, the same way every calculation screen's fields do; [saveConditions] converts back
+     * on the way out. Slope (%) and wind direction (°) have no unit choice, so they pass through
+     * unconverted. */
+    fun beginEditingConditions(units: AppUnits) {
         val log = _state.value.log ?: return
         _state.update {
             it.copy(
@@ -157,10 +169,10 @@ class RealLifeLogDetailViewModel(
                     surfaceType = log.surfaceType?.let { s -> runCatching { TakeoffSurfaceType.valueOf(s) }.getOrNull() } ?: TakeoffSurfaceType.ASFALT,
                     slopePct = log.slopePct?.toString() ?: "0",
                     airfieldId = log.airfieldId,
-                    oatC = log.oatC?.toString() ?: "",
-                    pressureAltM = log.pressureAltM?.toString() ?: "",
+                    oatC = log.oatC?.let { displayTemperature(it, units.temperature).toString() } ?: "",
+                    pressureAltM = log.pressureAltM?.let { displayHeight(it, units.height).toString() } ?: "",
                     windDirectionDeg = log.windDirectionDeg?.toString() ?: "",
-                    windSpeedKts = log.windSpeedKts?.toString() ?: "",
+                    windSpeedKts = log.windSpeedKts?.let { displayWindSpeed(it, units.windSpeed).toString() } ?: "",
                     metarRaw = log.metarRaw,
                     metarObservedAtEpochMs = log.metarObservedAtEpochMs,
                     source = log.conditionsSource?.let { s -> runCatching { ConditionsSource.valueOf(s) }.getOrNull() } ?: ConditionsSource.MANUAL
@@ -207,7 +219,7 @@ class RealLifeLogDetailViewModel(
      * dispatcher, so a test awaits completion via `job.join()` rather than
      * `testScheduler.advanceUntilIdle()`, which only controls the virtual scheduler. Callers in
      * production (a Compose `onClick`) simply ignore the return value. */
-    fun fetchLive(): Job {
+    fun fetchLive(units: AppUnits): Job {
         val airfieldId = _state.value.form.airfieldId ?: run {
             updateForm { it.copy(fetchError = "Kies eerst een vliegveld.") }
             return Job().apply { complete() }
@@ -226,7 +238,10 @@ class RealLifeLogDetailViewModel(
                 updateForm { it.copy(fetchInProgress = false, fetchError = "Geen METAR beschikbaar voor dit station.") }
                 return@launch
             }
-            applyParsedMetar(raw, observedAtEpochMs = System.currentTimeMillis(), source = ConditionsSource.METAR_LIVE, elevationM = refreshed.elevationM)
+            applyParsedMetar(
+                raw, observedAtEpochMs = System.currentTimeMillis(), source = ConditionsSource.METAR_LIVE,
+                elevationM = refreshed.elevationM, units = units
+            )
         }
     }
 
@@ -234,7 +249,7 @@ class RealLifeLogDetailViewModel(
      * backfills the 9 already-recorded logs. Station comes from the selected airfield, or from a
      * manually typed ICAO code when no airfield applies. Returns the launched [Job] -- see
      * [fetchLive]'s KDoc for why. */
-    fun fetchHistorical(): Job {
+    fun fetchHistorical(units: AppUnits): Job {
         val log = _state.value.log ?: return Job().apply { complete() }
         val form = _state.value.form
         return viewModelScope.launch {
@@ -247,7 +262,10 @@ class RealLifeLogDetailViewModel(
             }
             when (val result = historicalMetarRepository.fetchNearest(station, log.startedAtEpochMs, metarConfig)) {
                 is HistoricalMetarResult.Success ->
-                    applyParsedMetar(result.rawMetar, result.observedAtEpochMs, ConditionsSource.METAR_HISTORICAL, selectedAirfield?.elevationM)
+                    applyParsedMetar(
+                        result.rawMetar, result.observedAtEpochMs, ConditionsSource.METAR_HISTORICAL,
+                        selectedAirfield?.elevationM, units
+                    )
                 HistoricalMetarResult.NotFound ->
                     updateForm { it.copy(fetchInProgress = false, fetchError = "Geen historische METAR gevonden voor deze datum.") }
                 HistoricalMetarResult.Disabled ->
@@ -258,7 +276,12 @@ class RealLifeLogDetailViewModel(
         }
     }
 
-    private fun applyParsedMetar(raw: String, observedAtEpochMs: Long, source: ConditionsSource, elevationM: Double?) {
+    /** [units]: the fetched METAR's temperature/pressure-altitude/wind-speed are always native
+     * (Celsius/metres/knots), so they're converted to display units here the same way
+     * [beginEditingConditions] converts the log's stored values -- otherwise a form field would
+     * silently switch from showing the pilot's chosen unit to a raw native one the moment a
+     * fetch completes. */
+    private fun applyParsedMetar(raw: String, observedAtEpochMs: Long, source: ConditionsSource, elevationM: Double?, units: AppUnits) {
         when (val parsed = MetarParser.parse(raw)) {
             is MetarParseResult.Success -> {
                 val metar = parsed.metar
@@ -268,7 +291,8 @@ class RealLifeLogDetailViewModel(
                 // custom getter with side effects in a different compilation unit.
                 val qnhHpa = metar.qnhHpa
                 val pressureAltM = if (elevationM != null && qnhHpa != null) {
-                    PressureAltitude.fromElevationAndQnh(elevationM, qnhHpa).coerceAtLeast(0.0).toInt().toString()
+                    val nativeM = PressureAltitude.fromElevationAndQnh(elevationM, qnhHpa).coerceAtLeast(0.0).toInt()
+                    displayHeight(nativeM, units.height).toString()
                 } else {
                     _state.value.form.pressureAltM
                 }
@@ -282,10 +306,10 @@ class RealLifeLogDetailViewModel(
                     it.copy(
                         fetchInProgress = false,
                         fetchError = null,
-                        oatC = metar.temperatureC.toInt().toString(),
+                        oatC = displayTemperature(metar.temperatureC.toInt(), units.temperature).toString(),
                         pressureAltM = pressureAltM,
                         windDirectionDeg = windDir,
-                        windSpeedKts = metar.windSpeedKts.toInt().toString(),
+                        windSpeedKts = displayWindSpeed(metar.windSpeedKts.toInt(), units.windSpeed).toString(),
                         metarRaw = raw,
                         metarObservedAtEpochMs = observedAtEpochMs,
                         source = source
@@ -307,7 +331,7 @@ class RealLifeLogDetailViewModel(
 
     // --- Save ---
 
-    fun saveConditions() {
+    fun saveConditions(units: AppUnits) {
         val log = _state.value.log ?: return
         val form = _state.value.form
         viewModelScope.launch {
@@ -317,10 +341,10 @@ class RealLifeLogDetailViewModel(
                 // No `?: 0.0` fallback -- a blank field means "unknown", same as every sibling
                 // field below, not a deliberately-entered flat runway.
                 slopePct = form.slopePct.toDoubleOrNull(),
-                oatC = form.oatC.toIntOrNull(),
-                pressureAltM = form.pressureAltM.toIntOrNull(),
+                oatC = form.oatC.toIntOrNull()?.let { nativeTemperatureCelsiusInt(it, units.temperature) },
+                pressureAltM = form.pressureAltM.toIntOrNull()?.let { nativeHeightMetersInt(it, units.height) },
                 windDirectionDeg = form.windDirectionDeg.toIntOrNull(),
-                windSpeedKts = form.windSpeedKts.toIntOrNull(),
+                windSpeedKts = form.windSpeedKts.toIntOrNull()?.let { nativeWindSpeedKnotsInt(it, units.windSpeed) },
                 metarRaw = form.metarRaw,
                 metarObservedAtEpochMs = form.metarObservedAtEpochMs,
                 conditionsSource = form.source.name

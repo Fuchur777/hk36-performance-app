@@ -49,7 +49,7 @@
     <string name="settings_unit_us_gallons">US gal</string>
 
     <string name="settings_real_life_heading">Real Life Performance</string>
-    <string name="settings_real_life_explanation">Toont een extra menu-item voor het opnemen van ruwe GPS-/sensordata tijdens een start (alleen voor test-/kalibratiedoeleinden).</string>
+    <string name="settings_real_life_explanation">Toont een extra menu-item voor het opnemen van ruwe GPS-/sensordata tijdens een start. Om de werkelijke prestaties te vergelijken met het handboek en het AIC.</string>
     <string name="settings_data_heading">Gegevens</string>
     <string name="settings_data_explanation">Maak een back-up van alles wat je zelf hebt ingevoerd: kisten, vliegvelden met banen, favorieten, je laatst ingevulde rekenwaarden en je taalkeuze.</string>
     <string name="settings_data_export">Gegevens exporteren</string>
@@ -92,7 +92,8 @@
     <!-- Zweeftypes -->
     <string name="sailplane_types_title">Zweefvliegtuigen</string>
     <string name="sailplane_types_search_label">Zoeken</string>
-    <string name="sailplane_types_row_detail_format">Leeggewicht %1$d kg · MTOW %2$d kg · L/D %3$s</string>
+    <string name="sailplane_types_favorite_hint">Favoriete zweefvliegtuigtypes verschijnen in de kiezer bij sleepvlucht.</string>
+    <string name="sailplane_types_row_detail_format">Leeggewicht %1$d %4$s · MTOW %2$d %4$s · L/D %3$s</string>
     <string name="sailplane_types_favorite_remove">Favoriet verwijderen</string>
     <string name="sailplane_types_favorite_add">Favoriet maken</string>
     <string name="sailplane_types_source_footer">Bron: XCSoar open-source polar-database (GPL-2.0-or-later). L/D berekend uit de Polarlijst van XCSoar.</string>
@@ -104,6 +105,7 @@
     <string name="profile_list_empty_body">Voeg een HK36 TTC-registratie toe met de gegevens uit je eigen Weeg- en Zwaartepuntsrapport.</string>
     <string name="profile_list_edit_content_description">Bewerken</string>
     <string name="profile_list_delete_content_description">Registratie verwijderen</string>
+    <string name="profile_list_drag_handle_content_description">Sleep om te verplaatsen</string>
     <string name="profile_list_delete_confirm_title">Registratie verwijderen?</string>
     <string name="profile_list_delete_confirm_body_format">Weet je zeker dat je %1$s wilt verwijderen? Dit verwijdert ook alle opgeslagen rekeninvoer (W&amp;B, Take-off, Landing, Sleepvlucht) voor deze registratie. Dit kan niet ongedaan worden gemaakt.</string>
 
@@ -119,7 +121,7 @@
     <string name="reallife_notes_label">Notities (optioneel)</string>
     <string name="reallife_start_button">Start opname</string>
     <string name="reallife_stop_button">Stop opname</string>
-    <string name="reallife_marker_heading">Markeringen (optioneel, bijv. door een copiloot)</string>
+    <string name="reallife_marker_heading">Markeringen (optioneel)</string>
     <string name="reallife_marker_roll_start">Start rol</string>
     <string name="reallife_marker_lift_off">Loskomen</string>
     <string name="reallife_marker_fifteen_m">15 m</string>
@@ -128,7 +130,7 @@
     <string name="reallife_detected_roll_start">Start rol</string>
     <string name="reallife_detected_lift_off">Loskomen</string>
     <string name="reallife_detected_fifteen_m">15 m</string>
-    <string name="reallife_detected_labeled_distance_format">%1$s: %2$.0f m</string>
+    <string name="reallife_detected_labeled_distance_format">%1$s: %2$d %3$s</string>
     <string name="reallife_detected_gps_fallback_note">Hoogte bepaald via GPS (geen barometer beschikbaar) — minder nauwkeurig dan barometrisch.</string>
     <string name="reallife_detected_low_confidence_note">Startpunt van de rol niet bevestigd door een gedetecteerde bocht — mogelijk minder betrouwbaar.</string>
     <string name="reallife_detected_reason_out_of_range">Afstand niet berekend: tijdstippen vallen buiten de GPS-opname.</string>
@@ -140,7 +142,7 @@
     <string name="reallife_detected_heading_format">Gemeten koers tijdens de rol: %1$.0f°</string>
     <string name="reallife_conditions_heading">Vluchtcondities</string>
     <string name="reallife_conditions_none_yet">Nog geen condities vastgelegd voor deze opname.</string>
-    <string name="reallife_conditions_summary_format">%1$s, helling %2$.1f%%, %3$d°C, drukhoogte %4$d m, wind %5$d°/%6$d kt</string>
+    <string name="reallife_conditions_summary_format">%1$s, helling %2$.1f%%, %3$d %4$s, drukhoogte %5$d %6$s, wind %7$d°/%8$d %9$s</string>
     <string name="reallife_conditions_source_label_format">Bron: %1$s</string>
     <string name="reallife_conditions_metar_used_format">Gebruikte METAR: %1$s</string>
     <string name="reallife_conditions_edit_button">Condities bewerken</string>
@@ -155,15 +157,16 @@
     <string name="reallife_conditions_fetch_button">Ophalen</string>
     <string name="reallife_conditions_surface_label">Ondergrond</string>
     <string name="reallife_conditions_slope_label">Helling (%)</string>
-    <string name="reallife_conditions_oat_label">Temperatuur (°C)</string>
-    <string name="reallife_conditions_pressure_alt_label">Drukhoogte (m)</string>
+    <string name="reallife_conditions_oat_label">Temperatuur</string>
+    <string name="reallife_conditions_pressure_alt_label">Drukhoogte</string>
     <string name="reallife_conditions_wind_direction_label">Windrichting (°)</string>
-    <string name="reallife_conditions_wind_speed_label">Windsnelheid (kts)</string>
+    <string name="reallife_conditions_wind_speed_label">Windsnelheid</string>
+    <string name="reallife_conditions_label_with_unit_format">%1$s (%2$s)</string>
     <string name="reallife_comparison_heading">Handboek vs. gemeten</string>
     <string name="reallife_comparison_afm_label">Handboek</string>
     <string name="reallife_comparison_measured_label">Gemeten</string>
-    <string name="reallife_comparison_meters_format">%1$.0f m</string>
-    <string name="reallife_comparison_diff_only_format">Verschil: %1$+.0f m</string>
+    <string name="reallife_comparison_meters_format">%1$d %2$s</string>
+    <string name="reallife_comparison_diff_only_format">Verschil: %1$+d %2$s</string>
     <string name="reallife_comparison_tailwind_warning">Handboek geblokkeerd: rugwind (geen AFM-gegevens beschikbaar)</string>
     <string name="reallife_comparison_out_of_range_warning">Let op: buiten het gepubliceerde AFM-bereik</string>
     <string name="reallife_comparison_wind_excluded_warning">Wind niet meegerekend: geen gedetecteerde koers om kop-/staartwind te bepalen (handboekvergelijking gaat uit van windstil)</string>
@@ -173,6 +176,7 @@
     <string name="reallife_list_empty">Nog geen opnames voor deze registratie.</string>
     <string name="reallife_delete_confirm_title">Opname verwijderen</string>
     <string name="reallife_delete_confirm_body">Deze opname en alle bijbehorende meetgegevens worden definitief verwijderd.</string>
+    <string name="reallife_list_row_configuration_format">Starten: %1$s</string>
     <string name="reallife_list_row_duration_format">Duur: %1$d:%2$02d</string>
     <string name="reallife_list_row_incomplete">Niet afgerond</string>
     <string name="reallife_list_row_samples_format">%1$d GPS-punten</string>
@@ -188,15 +192,14 @@
     <string name="profile_edit_title_new">Nieuwe kist</string>
     <string name="profile_edit_title_existing">Registratie bewerken</string>
     <string name="profile_edit_intro">Vul hier de informatie in zoals je deze kan vinden in het laatste Weeg- en Zwaartepuntsrapport van de kist.</string>
-    <string name="profile_edit_registration_label">Registratie (bv. PH-XXX)</string>
+    <string name="profile_edit_registration_label">Registratie</string>
     <string name="profile_edit_empty_mass_label">Leeg gewicht</string>
     <string name="profile_edit_mtow_label">MTOW</string>
     <string name="profile_edit_empty_mass_cg_label">Leeg gewicht CG-positie</string>
     <string name="profile_edit_cg_forward_label">CG-envelop voorgrens</string>
     <string name="profile_edit_cg_aft_label">CG-envelop achtergrens</string>
     <string name="profile_edit_fuel_tank_label">Brandstoftank</string>
-    <string name="profile_edit_fuel_tank_standard">Standaard (55 L)</string>
-    <string name="profile_edit_fuel_tank_long_range">Long range (79 L)</string>
+    <string name="profile_edit_fuel_tank_capacity_format">%1$d %2$s</string>
     <string name="profile_edit_save">Opslaan</string>
     <string name="profile_edit_error_required">Verplicht</string>
     <string name="profile_edit_error_aft_limit">Achtergrens moet groter zijn dan voorgrens</string>
@@ -213,13 +216,13 @@
     <string name="wb_result_warning_heading">Waarschuwing</string>
     <string name="wb_result_ok_heading">Binnen de MTOW en CG envelop</string>
     <string name="wb_result_total_mass_format">Totaalgewicht: %1$d %3$s (marge: %2$d %3$s)</string>
-    <string name="wb_result_cg_format">CG: %1$d %4$s (marge voor: %2$d %4$s, marge achter: %3$d %4$s)</string>
+    <string name="wb_result_cg_format">CG: %1$s %4$s (marge voor: %2$d %4$s, marge achter: %3$d %4$s)</string>
     <string name="wb_violation_mtow_exceeded_format">Totaalgewicht %1$d %4$s overschrijdt MTOW %2$d %4$s (%3$d %4$s te veel).</string>
     <string name="wb_violation_seat_limit_pilot_format">Piloot %1$d %3$s overschrijdt max. stoelbelasting %2$d %3$s.</string>
     <string name="wb_violation_seat_limit_copilot_format">Copiloot %1$d %3$s overschrijdt max. stoelbelasting %2$d %3$s.</string>
     <string name="wb_violation_baggage_limit_format">Bagage %1$d %3$s overschrijdt max. bagage %2$d %3$s.</string>
-    <string name="wb_violation_cg_forward_format">CG %1$d %3$s ligt voor de voorwaartse grens (%2$d %3$s).</string>
-    <string name="wb_violation_cg_aft_format">CG %1$d %3$s ligt achter de achterwaartse grens (%2$d %3$s).</string>
+    <string name="wb_violation_cg_forward_format">CG %1$s %3$s ligt voor de voorwaartse grens (%2$s %3$s).</string>
+    <string name="wb_violation_cg_aft_format">CG %1$s %3$s ligt achter de achterwaartse grens (%2$s %3$s).</string>
     <string name="wb_warning_trim_with_mass_format">Solo-vlucht met slechts %1$d %4$s op de stoelen (&lt; %2$d %4$s minimum) — trimgewicht vereist (indicatief %3$d %4$s, zie AMM).</string>
     <string name="wb_warning_trim_without_mass_format">Solo-vlucht met slechts %1$d %3$s op de stoelen (&lt; %2$d %3$s minimum) — trimgewicht vereist (buiten gepubliceerde tabel, zie AMM).</string>
 
@@ -266,6 +269,7 @@
     <string name="report_title_landing">Landen</string>
     <string name="report_title_sleepvlucht">Slepen</string>
     <string name="report_title_format">%1$s — %2$s</string>
+    <string name="report_section_aircraft">Vliegtuig</string>
     <string name="report_section_input">Invoer</string>
     <string name="report_section_weather">Weer &amp; vliegveld</string>
     <string name="report_section_result">Resultaat</string>
@@ -283,6 +287,11 @@
     <string name="report_wb_cg">Zwaartepunt (CG)</string>
     <string name="report_wb_margin_mtow">Marge tot MTOW</string>
     <string name="report_footer">Gegenereerd door HK36TTC Calc. Geen gecertificeerd EFB — het vlieghandboek blijft altijd leidend. Controleer de waarden vóór gebruik.</string>
+    <string name="report_history_content_description">Opgeslagen berekeningen</string>
+    <string name="report_saved_calculations_format">Opgeslagen berekeningen — %1$s</string>
+    <string name="report_saved_list_empty">Nog geen opgeslagen berekeningen voor deze registratie.</string>
+    <string name="report_saved_delete_confirm_title">Berekening verwijderen</string>
+    <string name="report_saved_delete_confirm_body">Deze opgeslagen berekening wordt definitief verwijderd.</string>
 
     <!-- Take-off -->
     <string name="takeoff_title_format">Take-off — %1$s</string>
@@ -318,7 +327,7 @@
     <string name="sleepvlucht_glider_weight_label">Sleepgewicht (zweefvliegtuig)</string>
     <string name="sleepvlucht_ld_known_label">Glijgetal (L/D) bekend</string>
     <string name="sleepvlucht_ld_label">Glijgetal (L/D)</string>
-    <string name="sleepvlucht_favorite_type_label">Zweefvliegtuigtypes (favoriet)</string>
+    <string name="sleepvlucht_favorite_type_label">Zweefvliegtuig</string>
     <string name="sleepvlucht_favorite_type_placeholder">Kies een type</string>
     <string name="sleepvlucht_favorite_type_option_format">%1$s (%2$d %4$s MTOW, L/D %3$s)</string>
     <string name="sleepvlucht_instruction_flight_label">Instructie TMG Glidertow (DBO)</string>
@@ -364,7 +373,7 @@
     <string name="airfield_list_delete_content_description">Vliegveld verwijderen</string>
     <string name="airfield_list_empty_title">Nog geen vliegvelden toegevoegd.</string>
     <string name="airfield_list_empty_body">Voeg een vliegveld toe om baangegevens op te slaan en te hergebruiken bij take-off, landing en sleepvlucht.</string>
-    <string name="airfield_list_elevation_format">%1$d m boven zeeniveau</string>
+    <string name="airfield_list_elevation_format">%1$d %2$s boven zeeniveau</string>
     <string name="airfield_list_delete_confirm_title">Vliegveld verwijderen?</string>
     <string name="airfield_list_delete_confirm_body_format">Weet je zeker dat je %1$s wilt verwijderen? Alle opgeslagen banen van dit vliegveld gaan ook verloren.</string>
     <string name="airfield_list_favorite_add">Favoriet maken</string>
@@ -395,7 +404,8 @@
     <string name="airfield_edit_metar_error_missing_wind">Herkende geen windgroep (bijv. 24012KT) in de METAR.</string>
     <string name="airfield_edit_metar_error_missing_temperature">Herkende geen temperatuur/dauwpunt (bijv. 18/12) in de METAR.</string>
     <string name="airfield_edit_metar_summary_wind_format">Wind %1$d° / %2$d kt</string>
-    <string name="airfield_edit_metar_summary_wind_gust_format">Wind %1$d° / %2$d kt, vlagen tot %3$d kt</string>
+    <string name="airfield_edit_metar_summary_wind_gust_format">Wind %1$d° / %2$d kt (vlagen tot %3$d kt)</string>
+    <string name="airfield_edit_metar_summary_gust_warning">Vlagen worden niet gebruikt in de prestatieberekening of de handboeklimieten.</string>
     <string name="airfield_edit_metar_summary_wind_variable">Wind variabel, %1$d kt — richting onbekend, vul deze handmatig in bij de berekening</string>
     <string name="airfield_edit_metar_summary_wind_variable_short">Wind variabel, %1$d kt</string>
     <string name="airfield_edit_metar_summary_temperature_format">Temperatuur %1$d°C</string>
@@ -429,7 +439,8 @@
     <string name="airfield_edit_runways_save_first_hint">Sla eerst het vliegveld op voordat je banen toevoegt.</string>
     <string name="airfield_edit_add_runway">Baan toevoegen</string>
     <string name="airfield_edit_runway_item_format">%1$s / %2$s</string>
-    <string name="airfield_edit_runway_item_detail_format">%1$d m · %2$s</string>
+    <string name="airfield_edit_runway_designator_with_surface_format">%1$s (%2$s)</string>
+    <string name="airfield_edit_runway_item_detail_format">%1$d %2$s · %3$s</string>
     <string name="airfield_edit_runway_edit_content_description">Baan bewerken</string>
     <string name="airfield_edit_runway_delete_content_description">Baan verwijderen</string>
     <string name="airfield_edit_runway_delete_confirm_title">Baan verwijderen?</string>

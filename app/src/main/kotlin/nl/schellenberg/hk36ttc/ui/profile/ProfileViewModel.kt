@@ -27,6 +27,14 @@ class ProfileListViewModel(private val repository: AircraftProfileRepository) : 
         }
     }
 
+    /** Persists a full manual reorder — [orderedIds] is every profile id in its new top-to-bottom
+     * order, as dragged in [ProfileListScreen]. */
+    fun reorderProfiles(orderedIds: List<Long>) {
+        viewModelScope.launch {
+            repository.reorderProfiles(orderedIds)
+        }
+    }
+
     companion object {
         fun factory(repository: AircraftProfileRepository) = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {

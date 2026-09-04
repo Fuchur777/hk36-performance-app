@@ -21,6 +21,7 @@ class AircraftProfileRepository(
     private val imuSampleDao: ImuSampleDao,
     private val barometerSampleDao: BarometerSampleDao,
     private val realLifeMarkerDao: RealLifeMarkerDao,
+    private val savedCalculationDao: SavedCalculationDao,
     /** Runs [block] in one database transaction. A lambda rather than the `AppDatabase` itself
      * so this class stays testable on the JVM — the same shape [nl.schellenberg.hk36ttc.data.export.UserDataRepository]
      * and [nl.schellenberg.hk36ttc.data.catalog.AirportCatalogRepository] already take. */
@@ -35,12 +36,24 @@ class AircraftProfileRepository(
     suspend fun getById(id: Long): AircraftProfileEntity? = dao.getById(id)
 
     suspend fun save(profile: AircraftProfile, id: Long = 0): Long =
-        if (id == 0L) dao.insert(profile.toEntity()) else {
-            dao.update(profile.toEntity(id))
+        if (id == 0L) {
+            dao.insert(profile.toEntity())
+        } else {
+            // toEntity() has no way to know the row's current sortOrder — look it up so an
+            // edit-and-save never undoes a manual homescreen drag by silently resetting it.
+            dao.update(profile.toEntity(id, sortOrder = dao.getById(id)?.sortOrder))
             id
         }
 
     suspend fun delete(profile: AircraftProfileEntity) = dao.delete(profile)
+
+    /** Persists a full manual reorder of the homescreen list: [orderedIds] is every profile id
+     * in its new top-to-bottom order. Assigns sequential positions rather than nudging just the
+     * dragged row, since a plain drag-and-drop only ever reports "here is the whole list now" —
+     * see [nl.schellenberg.hk36ttc.ui.profile.ProfileListScreen]. */
+    suspend fun reorderProfiles(orderedIds: List<Long>) = transaction {
+        orderedIds.forEachIndexed { index, id -> dao.updateSortOrder(id, index.toLong()) }
+    }
 
     /** Deletes a registration and every per-registration calculation input tied to it (W&B,
      * Take-off, Landing, Sleepvlucht, last W&B result, flight context), so removing a
@@ -66,7 +79,17 @@ class AircraftProfileRepository(
             realLifeMarkerDao.deleteByLogId(logId)
         }
         realLifeLogDao.deleteByProfileId(profile.id)
+        savedCalculationDao.deleteByProfileId(profile.id)
     }
+
+    // --- Saved calculations (W&B/Take-off/Glider tow/Landing "Save" action) ---
+
+    fun observeSavedCalculations(profileId: Long, type: SavedCalculationType): Flow<List<SavedCalculationEntity>> =
+        savedCalculationDao.observeByProfileAndType(profileId, type.name)
+
+    suspend fun saveCalculation(calculation: SavedCalculationEntity): Long = savedCalculationDao.insert(calculation)
+
+    suspend fun deleteCalculation(calculation: SavedCalculationEntity) = savedCalculationDao.delete(calculation)
 
     /** Called after every W&B recalculation so other modules can read "what this aircraft
      * actually weighs right now" instead of a separate, easily-stale manual entry. */

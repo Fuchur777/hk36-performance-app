@@ -33,10 +33,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import nl.schellenberg.hk36ttc.R
+import nl.schellenberg.hk36ttc.core.units.FuelVolumeUnit
 import nl.schellenberg.hk36ttc.core.wb.FuelTankType
 import nl.schellenberg.hk36ttc.core.wb.WbConstantsData
 import nl.schellenberg.hk36ttc.data.local.AircraftProfileRepository
 import nl.schellenberg.hk36ttc.ui.common.IntStepperField
+import nl.schellenberg.hk36ttc.ui.common.LocalAppUnits
+import nl.schellenberg.hk36ttc.ui.common.cgPositionSuffix
+import nl.schellenberg.hk36ttc.ui.common.displayCgPosition
+import nl.schellenberg.hk36ttc.ui.common.displayFuelVolume
+import nl.schellenberg.hk36ttc.ui.common.displayMass
+import nl.schellenberg.hk36ttc.ui.common.fuelVolumeSuffix
+import nl.schellenberg.hk36ttc.ui.common.massSuffix
+import nl.schellenberg.hk36ttc.ui.common.nativeCgPositionMmInt
+import nl.schellenberg.hk36ttc.ui.common.nativeMassKgInt
 import nl.schellenberg.hk36ttc.ui.common.uniformSegmentedRowHeight
 
 private fun ProfileFieldError.toStringRes(): Int = when (this) {
@@ -56,6 +66,7 @@ fun ProfileEditScreen(
     val viewModel: ProfileEditViewModel =
         viewModel(factory = ProfileEditViewModel.factory(repository, profileId, wbConstants))
     val state by viewModel.state.collectAsState()
+    val units = LocalAppUnits.current
 
     LaunchedEffect(state.isSaved) {
         if (state.isSaved) onSaved()
@@ -111,55 +122,57 @@ fun ProfileEditScreen(
             // kg-velden bij elkaar...
             IntStepperField(
                 label = stringResource(R.string.profile_edit_empty_mass_label),
-                value = state.emptyMassKg,
-                onValueChange = { v -> viewModel.update { it.copy(emptyMassKg = v) } },
-                min = 400,
-                max = 700,
-                suffix = "kg"
+                value = displayMass(state.emptyMassKg, units.mass),
+                onValueChange = { v -> viewModel.update { it.copy(emptyMassKg = nativeMassKgInt(v, units.mass)) } },
+                min = displayMass(400, units.mass),
+                max = displayMass(700, units.mass),
+                suffix = massSuffix(units.mass)
             )
 
             IntStepperField(
                 label = stringResource(R.string.profile_edit_mtow_label),
-                value = state.mtowKg,
-                onValueChange = { v -> viewModel.update { it.copy(mtowKg = v) } },
-                min = 600,
-                max = 800,
-                suffix = "kg"
+                value = displayMass(state.mtowKg, units.mass),
+                onValueChange = { v -> viewModel.update { it.copy(mtowKg = nativeMassKgInt(v, units.mass)) } },
+                min = displayMass(600, units.mass),
+                max = displayMass(800, units.mass),
+                suffix = massSuffix(units.mass)
             )
 
             // ...dan de mm-velden bij elkaar
             IntStepperField(
                 label = stringResource(R.string.profile_edit_empty_mass_cg_label),
-                value = state.emptyMassCgPositionMm,
-                onValueChange = { v -> viewModel.update { it.copy(emptyMassCgPositionMm = v) } },
-                min = 300,
-                max = 500,
-                suffix = "mm"
+                value = displayCgPosition(state.emptyMassCgPositionMm, units.cgPosition),
+                onValueChange = { v -> viewModel.update { it.copy(emptyMassCgPositionMm = nativeCgPositionMmInt(v, units.cgPosition)) } },
+                min = displayCgPosition(300, units.cgPosition),
+                max = displayCgPosition(500, units.cgPosition),
+                suffix = cgPositionSuffix(units.cgPosition)
             )
 
             IntStepperField(
                 label = stringResource(R.string.profile_edit_cg_forward_label),
-                value = state.cgEnvelopeForwardLimitMm,
-                onValueChange = { v -> viewModel.update { it.copy(cgEnvelopeForwardLimitMm = v) } },
-                min = 300,
-                max = 450,
-                suffix = "mm"
+                value = displayCgPosition(state.cgEnvelopeForwardLimitMm, units.cgPosition),
+                onValueChange = { v -> viewModel.update { it.copy(cgEnvelopeForwardLimitMm = nativeCgPositionMmInt(v, units.cgPosition)) } },
+                min = displayCgPosition(300, units.cgPosition),
+                max = displayCgPosition(450, units.cgPosition),
+                suffix = cgPositionSuffix(units.cgPosition)
             )
 
             IntStepperField(
                 label = stringResource(R.string.profile_edit_cg_aft_label),
-                value = state.cgEnvelopeAftLimitMm,
-                onValueChange = { v -> viewModel.update { it.copy(cgEnvelopeAftLimitMm = v) } },
-                min = 350,
-                max = 500,
-                suffix = "mm",
+                value = displayCgPosition(state.cgEnvelopeAftLimitMm, units.cgPosition),
+                onValueChange = { v -> viewModel.update { it.copy(cgEnvelopeAftLimitMm = nativeCgPositionMmInt(v, units.cgPosition)) } },
+                min = displayCgPosition(350, units.cgPosition),
+                max = displayCgPosition(500, units.cgPosition),
+                suffix = cgPositionSuffix(units.cgPosition),
                 isError = state.errors.containsKey("cgEnvelopeAftLimitMm"),
                 supportingText = state.errors["cgEnvelopeAftLimitMm"]?.let { stringResource(it.toStringRes()) }
             )
 
             FuelTankSelector(
                 selected = state.fuelTankType,
-                onSelected = { v -> viewModel.update { it.copy(fuelTankType = v) } }
+                onSelected = { v -> viewModel.update { it.copy(fuelTankType = v) } },
+                wbConstants = wbConstants,
+                fuelVolumeUnit = units.fuelVolume
             )
 
             Button(
@@ -178,13 +191,19 @@ fun ProfileEditScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FuelTankSelector(selected: FuelTankType, onSelected: (FuelTankType) -> Unit) {
+private fun FuelTankSelector(
+    selected: FuelTankType,
+    onSelected: (FuelTankType) -> Unit,
+    wbConstants: WbConstantsData,
+    fuelVolumeUnit: FuelVolumeUnit
+) {
     val options = FuelTankType.entries
+    // The two options are told apart purely by their converted capacity (55 L / 79 L become
+    // ~15/21 US gal) — matching how every other quantity in this screen displays in the pilot's
+    // chosen unit rather than the AFM's own liters.
     val label: @Composable (FuelTankType) -> String = { type ->
-        when (type) {
-            FuelTankType.STANDARD_55L -> stringResource(R.string.profile_edit_fuel_tank_standard)
-            FuelTankType.LONG_RANGE_79L -> stringResource(R.string.profile_edit_fuel_tank_long_range)
-        }
+        val capacityDisplay = displayFuelVolume(wbConstants.tankCapacityLiters(type), fuelVolumeUnit)
+        stringResource(R.string.profile_edit_fuel_tank_capacity_format, capacityDisplay, fuelVolumeSuffix(fuelVolumeUnit))
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

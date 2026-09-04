@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -167,18 +168,28 @@ private fun LogRow(
         modifier = Modifier.fillMaxWidth()
     ) {
         ListItem(
-            headlineContent = { Text("$startedText — $configurationLabel") },
+            headlineContent = { Text(startedText) },
             leadingContent = {
-                Icon(
-                    imageVector = if (conditionsComplete) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
-                    contentDescription = stringResource(
-                        if (conditionsComplete) R.string.reallife_list_status_complete else R.string.reallife_list_status_log_only
-                    ),
-                    tint = if (conditionsComplete) MaterialTheme.status.success else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Boxed to the same 48dp footprint as the trailing IconButton below — a bare
+                // 24dp Icon here would sit visually higher than the delete button once the
+                // supporting content grows to three lines, since ListItem centers each slot on
+                // its own measured height rather than a shared one.
+                Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = if (conditionsComplete) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+                        contentDescription = stringResource(
+                            if (conditionsComplete) R.string.reallife_list_status_complete else R.string.reallife_list_status_log_only
+                        ),
+                        tint = if (conditionsComplete) MaterialTheme.status.success else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             },
             supportingContent = {
                 Column {
+                    Text(
+                        stringResource(R.string.reallife_list_row_configuration_format, configurationLabel),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     Text(
                         if (durationSeconds != null) {
                             stringResource(R.string.reallife_list_row_duration_format, durationSeconds / 60, durationSeconds % 60)
@@ -197,12 +208,14 @@ private fun LogRow(
                 }
             },
             trailingContent = {
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Filled.Delete,
-                        contentDescription = stringResource(R.string.common_delete),
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = stringResource(R.string.common_delete),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             },
             colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
